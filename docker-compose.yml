@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - PATIENT_SERVICE_URL=http://patient:8001
+      - PREDICTION_SERVICE_URL=http://prediction:8002
+      - SIMULATION_SERVICE_URL=http://simulation:8003
+    depends_on:
+      - patient
+      - prediction
+      - simulation
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Patient Service
+  patient:
+    build:
+      context: .
+      dockerfile: services/patient/Dockerfile
+    container_name: patient-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://patient_user:patient_pass@patient-db:5432/patient_db
+    depends_on:
+      - patient-db
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Patient Database
+  patient-db:
+    image: postgres:15-alpine
+    container_name: patient-db
+    environment:
+      - POSTGRES_USER=patient_user
+      - POSTGRES_PASSWORD=patient_pass
+      - POSTGRES_DB=patient_db
+    volumes:
+      - patient-db-data:/var/lib/postgresql/data
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patient_user -d patient_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prediction Service
+  prediction:
+    build:
+      context: .
+      dockerfile: services/prediction/Dockerfile
+    container_name: prediction-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://prediction_user:prediction_pass@prediction-db:5432/prediction_db
+    depends_on:
+      - prediction-db
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prediction Database
+  prediction-db:
+    image: postgres:15-alpine
+    container_name: prediction-db
+    environment:
+      - POSTGRES_USER=prediction_user
+      - POSTGRES_PASSWORD=prediction_pass
+      - POSTGRES_DB=prediction_db
+    volumes:
+      - prediction-db-data:/var/lib/postgresql/data
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prediction_user -d prediction_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Simulation Service
+  simulation:
+    build:
+      context: .
+      dockerfile: services/simulation/Dockerfile
+    container_name: simulation-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://simulation_user:simulation_pass@simulation-db:5432/simulation_db
+    depends_on:
+      - simulation-db
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Simulation Database
+  simulation-db:
+    image: postgres:15-alpine
+    container_name: simulation-db
+    environment:
+      - POSTGRES_USER=simulation_user
+      - POSTGRES_PASSWORD=simulation_pass
+      - POSTGRES_DB=simulation_db
+    volumes:
+      - simulation-db-data:/var/lib/postgresql/data
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simulation_user -d simulation_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  sadeci-network:
+    driver: bridge
+
+volumes:
+  patient-db-data:
+  prediction-db-data:
+  simulation-db-data:
