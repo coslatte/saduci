@@ -2,6 +2,7 @@
 import os
 import random
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
@@ -12,8 +13,21 @@ import sys
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from shared.schemas import HealthCheck, SimulationRequest, SimulationResponse
+from shared.schemas import (
+    HealthCheck,
+    SimulationRequest,
+    SimulationResponse,
+    ICUPatientSimulationRequest,
+    ICUPatientSimulationResponse
+)
 from shared.utils import get_logger
+
+# Import SimUCI for real patient simulation
+try:
+    from simuci import Experiment, single_run, multiple_replication
+    SIMUCI_AVAILABLE = True
+except ImportError:
+    SIMUCI_AVAILABLE = False
 
 logger = get_logger(__name__)
 
@@ -239,6 +253,7 @@ async def get_patient_simulations(
     }
 
 
+
 @app.get("/scenarios")
 async def list_scenarios():
     """List available simulation scenarios."""
@@ -258,9 +273,216 @@ async def list_scenarios():
                 "name": "intervention_outcomes",
                 "description": "Simulate outcomes of different medical interventions",
                 "required_parameters": ["intervention", "patient_risk"]
+            },
+            {
+                "name": "icu_patient_simulation",
+                "description": "Real ICU patient simulation using SimUCI discrete-event engine",
+                "required_parameters": ["age", "apache", "diagnosis codes", "ventilation parameters"],
+                "available": SIMUCI_AVAILABLE
             }
         ]
     }
+
+
+# ============================================================================
+# SimUCI Integration - Real ICU Patient Simulation
+# ============================================================================
+
+
+class ICUSimulationEngine:
+    """
+    Wrapper for SimUCI discrete-event simulation engine.
+    Provides real-life ICU patient trajectory simulation.
+    """
+
+    def __init__(self):
+        """Initialize ICU simulation engine with centroids data."""
+        self.centroids_path = Path(__file__).parent / "data" / "centroids.csv"
+        if not self.centroids_path.exists():
+            logger.warning(f"Centroids file not found at {self.centroids_path}")
+            raise FileNotFoundError(
+                "Centroids CSV file required for SimUCI simulation. "
+                "Please ensure centroids.csv exists in the data directory."
+            )
+
+    def run_icu_simulation(
+        self,
+        age: int,
+        diagnosis_admission1: int,
+        diagnosis_admission2: int,
+        diagnosis_admission3: int,
+        diagnosis_admission4: int,
+        apache: int,
+        respiratory_insufficiency: int,
+        artificial_ventilation: int,
+        uti_stay: int,
+        vam_time: int,
+        preuti_stay_time: int,
+        percent: int = 10,
+        n_replications: int = 100
+    ) -> Dict[str, Any]:
+        """
+        Run ICU patient simulation using SimUCI.
+
+        Args:
+            age: Patient age (14-100 years)
+            diagnosis_admission1-4: Diagnosis codes (0-30)
+            apache: APACHE II score (0-70)
+            respiratory_insufficiency: Respiratory insufficiency severity (0-8)
+            artificial_ventilation: Ventilation type (0-3)
+            uti_stay: ICU stay duration in hours
+            vam_time: Mechanical ventilation time in hours
+            preuti_stay_time: Pre-ICU stay time in hours
+            percent: Percentage parameter (1-100)
+            n_replications: Number of simulation replications
+
+        Returns:
+            Dictionary with simulation results and statistics
+        """
+        if not SIMUCI_AVAILABLE:
+            raise RuntimeError("SimUCI library is not installed. Cannot run ICU simulation.")
+
+        try:
+            # Create experiment with patient parameters
+            experiment = Experiment(
+                age=age,
+                diagnosis_admission1=diagnosis_admission1,
+                diagnosis_admission2=diagnosis_admission2,
+                diagnosis_admission3=diagnosis_admission3,
+                diagnosis_admission4=diagnosis_admission4,
+                apache=apache,
+                respiratory_insufficiency=respiratory_insufficiency,
+                artificial_ventilation=artificial_ventilation,
+                uti_stay=uti_stay,
+                vam_time=vam_time,
+                preuti_stay_time=preuti_stay_time,
+                percent=percent,
+                validate=True  # Enable input validation
+            )
+
+            # Run multiple replications to get statistical results
+            logger.info(f"Running {n_replications} simulation replications...")
+            results_df = multiple_replication(
+                experiment,
+                n_reps=n_replications,
+                centroids_path=str(self.centroids_path)
+            )
+
+            # Compute statistics
+            statistics = {
+                "mean": results_df.mean().to_dict(),
+                "std": results_df.std().to_dict(),
+                "min": results_df.min().to_dict(),
+                "max": results_df.max().to_dict(),
+                "median": results_df.median().to_dict(),
+            }
+
+            # Get first replication as sample result
+            sample_result = single_run(
+                experiment,
+                centroids_path=str(self.centroids_path)
+            )
+
+            return {
+                "sample_result": sample_result,
+                "statistics": statistics,
+                "n_replications": n_replications,
+                "all_results": results_df.to_dict(orient="records")[:10]  # First 10 for display
+            }
+
+        except ValueError as e:
+            logger.error(f"Validation error in ICU simulation: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid patient parameters: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error running ICU simulation: {e}")
+            raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}")
+
+
+@app.post("/simulations/icu", response_model=ICUPatientSimulationResponse)
+async def create_icu_simulation(
+    request: ICUPatientSimulationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Create and run a real ICU patient simulation using SimUCI.
+
+    This endpoint uses the SimUCI discrete-event simulation engine to model
+    real-life ICU patient trajectories based on clinical parameters.
+
+    The simulation uses:
+    - Patient clustering based on clinical features
+    - Statistical distributions from real ICU data
+    - Discrete-event simulation for realistic time progression
+    - Multiple replications for statistical validation
+
+    Returns detailed simulation results including:
+    - Sample simulation outcome
+    - Statistical measures (mean, std, min, max, median)
+    - Multiple replication results for analysis
+    """
+    if not SIMUCI_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="SimUCI simulation engine is not available. Please install simuci package."
+        )
+
+    logger.info(f"Running ICU simulation for patient {request.patient_id}")
+
+    # Run ICU simulation
+    try:
+        engine = ICUSimulationEngine()
+        results = engine.run_icu_simulation(
+            age=request.age,
+            diagnosis_admission1=request.diagnosis_admission1,
+            diagnosis_admission2=request.diagnosis_admission2,
+            diagnosis_admission3=request.diagnosis_admission3,
+            diagnosis_admission4=request.diagnosis_admission4,
+            apache=request.apache,
+            respiratory_insufficiency=request.respiratory_insufficiency,
+            artificial_ventilation=request.artificial_ventilation,
+            uti_stay=request.uti_stay,
+            vam_time=request.vam_time,
+            preuti_stay_time=request.preuti_stay_time,
+            percent=request.percent,
+            n_replications=request.n_replications
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error running ICU simulation: {e}")
+        raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}")
+
+    # Save simulation to database
+    db_simulation = SimulationRecord(
+        patient_id=request.patient_id,
+        scenario="icu_patient_simulation",
+        parameters={
+            "age": request.age,
+            "diagnosis_admission1": request.diagnosis_admission1,
+            "diagnosis_admission2": request.diagnosis_admission2,
+            "diagnosis_admission3": request.diagnosis_admission3,
+            "diagnosis_admission4": request.diagnosis_admission4,
+            "apache": request.apache,
+            "respiratory_insufficiency": request.respiratory_insufficiency,
+            "artificial_ventilation": request.artificial_ventilation,
+            "uti_stay": request.uti_stay,
+            "vam_time": request.vam_time,
+            "preuti_stay_time": request.preuti_stay_time,
+            "percent": request.percent,
+            "n_replications": request.n_replications
+        },
+        results=results
+    )
+    db.add(db_simulation)
+    db.commit()
+    db.refresh(db_simulation)
+
+    return ICUPatientSimulationResponse(
+        patient_id=request.patient_id,
+        simulation_results=results,
+        statistics=results.get("statistics"),
+        timestamp=db_simulation.created_at.isoformat()
+    )
 
 
 if __name__ == "__main__":
