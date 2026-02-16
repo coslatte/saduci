@@ -113,9 +113,12 @@ This release addresses critical security vulnerabilities in dependencies:
 
 ### How to Report
 
-If you discover a security vulnerability, please report it via email with the subject "[SECURITY] SADECI-Core Vulnerability Report".
+If you discover a security vulnerability, please report it through one of the following methods:
 
-Include:
+1. **GitHub Security Advisories** (Recommended): Use the "Security" tab in the repository to privately report vulnerabilities
+2. **Email**: Contact the repository maintainers via the email associated with the project
+
+When reporting, include:
 1. Description of the vulnerability
 2. Steps to reproduce
 3. Potential impact
