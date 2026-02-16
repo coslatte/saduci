@@ -4,8 +4,8 @@
 
 | Version | Supported          | Security Status |
 | ------- | ------------------ | --------------- |
-| 1.0.1   | :white_check_mark: | Secure - All vulnerabilities patched |
-| 1.0.0   | :x:                | Deprecated - Known vulnerabilities |
+| 1.0.1   | Yes                | Secure - All vulnerabilities patched |
+| 1.0.0   | No                 | Deprecated - Known vulnerabilities |
 
 ## Security Updates
 
@@ -38,10 +38,10 @@ This release addresses critical security vulnerabilities in dependencies:
 - **Resolution**: Updated to python-multipart 0.0.22 in Patient service
 
 #### Updated Services
-- ✅ API Gateway: FastAPI 0.109.1
-- ✅ Patient Service: FastAPI 0.109.1, python-multipart 0.0.22
-- ✅ Prediction Service: FastAPI 0.109.1
-- ✅ Simulation Service: FastAPI 0.109.1
+- API Gateway: FastAPI 0.109.1
+- Patient Service: FastAPI 0.109.1, python-multipart 0.0.22
+- Prediction Service: FastAPI 0.109.1
+- Simulation Service: FastAPI 0.109.1
 
 ## Security Best Practices
 
@@ -113,11 +113,12 @@ This release addresses critical security vulnerabilities in dependencies:
 
 ### How to Report
 
-If you discover a security vulnerability, please email:
-- **Email**: security@your-organization.com (replace with actual email)
-- **Subject**: [SECURITY] SADECI-Core Vulnerability Report
+If you discover a security vulnerability, please report it through one of the following methods:
 
-Include:
+1. **GitHub Security Advisories** (Recommended): Use the "Security" tab in the repository to privately report vulnerabilities
+2. **Email**: Contact the repository maintainers via the email associated with the project
+
+When reporting, include:
 1. Description of the vulnerability
 2. Steps to reproduce
 3. Potential impact
@@ -215,5 +216,4 @@ Before deploying to production, ensure:
 ---
 
 **Last Updated**: 2024-01-15  
-**Security Contact**: security@your-organization.com (replace with actual)  
 **Version**: 1.0.1

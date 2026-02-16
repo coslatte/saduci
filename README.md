@@ -4,7 +4,7 @@
 
 > **Security Note**: All dependencies have been updated to patched versions to address known vulnerabilities (FastAPI 0.109.1, python-multipart 0.0.22).
 
-## 🏗️ Architecture
+## Architecture
 
 This system implements a microservices architecture with the following components:
 
@@ -41,18 +41,18 @@ This system implements a microservices architecture with the following component
 
 ### Key Features
 
-- ✅ **Microservices Architecture**: Independent, scalable services
-- ✅ **Docker Compose Orchestration**: Easy deployment and scaling
-- ✅ **JWT Authentication**: Secure API access via API Gateway
-- ✅ **PostgreSQL per Service**: Isolated databases for each service
-- ✅ **REST API Communication**: Standard inter-service communication
-- ✅ **Shared Pydantic Schemas**: Type-safe data validation
-- ✅ **Alembic Migrations**: Database version control
-- ✅ **Health Checks**: Service monitoring and health status
-- ✅ **Structured Logging**: Centralized logging configuration
-- ✅ **Environment Configuration**: `.env` files for each service
+- **Microservices Architecture**: Independent, scalable services
+- **Docker Compose Orchestration**: Easy deployment and scaling
+- **JWT Authentication**: Secure API access via API Gateway
+- **PostgreSQL per Service**: Isolated databases for each service
+- **REST API Communication**: Standard inter-service communication
+- **Shared Pydantic Schemas**: Type-safe data validation
+- **Alembic Migrations**: Database version control
+- **Health Checks**: Service monitoring and health status
+- **Structured Logging**: Centralized logging configuration
+- **Environment Configuration**: `.env` files for each service
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -93,7 +93,7 @@ Each service provides interactive API documentation via Swagger UI:
 - Prediction Service: http://localhost:8002/docs
 - Simulation Service: http://localhost:8003/docs
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### Authentication
 
@@ -183,7 +183,7 @@ curl -X POST "http://localhost:8000/api/simulations/icu" \
 
 > **Note**: The ICU patient simulation uses [SimUCI](https://github.com/coslatte/simuci), a discrete-event simulation engine for realistic ICU patient trajectories. See [SIMUCI_INTEGRATION.md](SIMUCI_INTEGRATION.md) for detailed documentation.
 
-## 🛠️ Development
+## Development
 
 ### Local Development Setup
 
@@ -270,7 +270,7 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-## 🔒 Security
+## Security
 
 - Change default passwords in production
 - Use strong SECRET_KEY for JWT tokens
@@ -280,7 +280,7 @@ alembic downgrade -1
 - Implement rate limiting
 - Add request validation
 
-## 📊 Monitoring
+## Monitoring
 
 Health check endpoints are available for all services:
 
@@ -291,7 +291,7 @@ curl http://localhost:8002/health  # Prediction Service
 curl http://localhost:8003/health  # Simulation Service
 ```
 
-## 🧪 Testing
+## Testing
 
 To stop all services:
 
@@ -305,11 +305,11 @@ To stop and remove volumes:
 docker-compose down -v
 ```
 
-## 📝 License
+## License
 
 This project is part of the Clinical Intelligence Core for ICU.
 
-## 🔬 SimUCI Integration
+## SimUCI Integration
 
 This project integrates [SimUCI](https://github.com/coslatte/simuci), a discrete-event simulation engine for realistic ICU patient trajectory modeling. SimUCI provides:
 - Real-world patient simulation based on clinical data
@@ -319,7 +319,7 @@ This project integrates [SimUCI](https://github.com/coslatte/simuci), a discrete
 
 For detailed information about the SimUCI integration, see [SIMUCI_INTEGRATION.md](SIMUCI_INTEGRATION.md).
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -327,6 +327,6 @@ For detailed information about the SimUCI integration, see [SIMUCI_INTEGRATION.m
 4. Push to the branch
 5. Create a Pull Request
 
-## 📧 Contact
+## Contact
 
 For questions or support, please open an issue in the repository.
