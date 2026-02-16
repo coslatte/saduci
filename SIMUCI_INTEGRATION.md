@@ -4,6 +4,10 @@
 
 This document describes the integration of [SimUCI](https://github.com/coslatte/simuci) into the SADECI-Core simulation service. SimUCI is an ICU discrete-event simulation engine that provides realistic patient trajectory modeling based on real clinical data.
 
+## Requirements
+
+**Important:** SimUCI requires Python 3.12+. All Docker images and local development environments must use Python 3.12 or higher to support this integration.
+
 ## What is SimUCI?
 
 SimUCI is a Python package that:
