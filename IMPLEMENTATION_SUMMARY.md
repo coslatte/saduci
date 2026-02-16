@@ -162,7 +162,7 @@ sadeci-core/
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Python | 3.11+ |
-| Framework | FastAPI | 0.104.1 |
+| Framework | FastAPI | 0.109.1 |
 | Server | Uvicorn | 0.24.0 |
 | Database | PostgreSQL | 15 |
 | ORM | SQLAlchemy | 2.0.23 |

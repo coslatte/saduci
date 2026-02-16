@@ -2,6 +2,8 @@
 
 **Clinical Intelligence Core for ICU** - A Python microservices backend with FastAPI for clinical data management, ML predictions, and scenario simulations.
 
+> **Security Note**: All dependencies have been updated to patched versions to address known vulnerabilities (FastAPI 0.109.1, python-multipart 0.0.22).
+
 ## 🏗️ Architecture
 
 This system implements a microservices architecture with the following components:

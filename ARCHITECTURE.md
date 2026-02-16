@@ -319,7 +319,7 @@ Developer → Git → Docker Compose → Build → Test → Deploy
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Python | 3.11+ |
-| API Framework | FastAPI | 0.104.1 |
+| API Framework | FastAPI | 0.109.1 |
 | ASGI Server | Uvicorn | 0.24.0 |
 | ORM | SQLAlchemy | 2.0.23 |
 | Database | PostgreSQL | 15 |
