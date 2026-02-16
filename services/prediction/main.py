@@ -1,6 +1,6 @@
 """Prediction service - ML model integration."""
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, JSON
@@ -38,7 +38,7 @@ class PredictionRecord(Base):
     features = Column(JSON, nullable=False)
     prediction = Column(JSON, nullable=False)
     confidence = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # Create tables

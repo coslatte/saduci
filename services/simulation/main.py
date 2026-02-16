@@ -1,6 +1,7 @@
 """Simulation service - clinical scenario simulations."""
 import os
-from datetime import datetime
+import random
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
@@ -36,7 +37,7 @@ class SimulationRecord(Base):
     scenario = Column(String, nullable=False)
     parameters = Column(JSON, nullable=False)
     results = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # Create tables
@@ -115,7 +116,6 @@ class SimulationEngine:
         results = []
         for hour in range(0, duration_hours + 1, 2):
             # Simple variation model
-            import random
             random.seed(hour)  # For consistency
             
             hr_variation = random.randint(-5, 5)

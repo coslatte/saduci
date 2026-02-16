@@ -1,14 +1,15 @@
 """Patient service - CRUD operations and clinical data import."""
 import os
+import csv
+import io
+import json
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 import sys
-import csv
-import io
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -40,8 +41,8 @@ class Patient(Base):
     date_of_birth = Column(DateTime, nullable=False)
     gender = Column(String, nullable=False)
     clinical_data = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
 
 # Create tables
@@ -122,7 +123,7 @@ async def update_patient(
     for field, value in update_data.items():
         setattr(patient, field, value)
     
-    patient.updated_at = datetime.utcnow()
+    patient.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(patient)
     
@@ -173,7 +174,6 @@ async def import_clinical_data(
             # Parse clinical data if present
             clinical_data = None
             if 'clinical_data' in row and row['clinical_data']:
-                import json
                 clinical_data = json.loads(row['clinical_data'])
             
             patient = Patient(
