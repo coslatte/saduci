@@ -281,5 +281,3 @@ Email security concerns to the maintainers.
 ## License
 
 By contributing, you agree that your contributions will be licensed under the same license as the project.
-
-Thank you for contributing to SADECI-Core! 🎉
