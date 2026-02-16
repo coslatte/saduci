@@ -84,12 +84,12 @@ Successfully integrated the [SimUCI](https://github.com/coslatte/simuci) discret
 
 ## Testing Results
 
-✓ SimUCI imports successfully
-✓ Experiment creation with validation
-✓ Single simulation runs correctly
-✓ Multiple replications work as expected
-✓ Statistical calculations accurate
-✓ No security vulnerabilities detected (CodeQL)
+- SimUCI imports successfully
+- Experiment creation with validation
+- Single simulation runs correctly
+- Multiple replications work as expected
+- Statistical calculations accurate
+- No security vulnerabilities detected (CodeQL)
 
 **Sample Test Output:**
 ```
@@ -106,9 +106,9 @@ post_uci    164.8
 ## Code Review Addressed
 
 All code review feedback addressed:
-1. ✓ Optimized data conversion using `.head(10)` instead of slicing
-2. ✓ Increased time parameter limits from 365 to 8760 hours (~1 year)
-3. ✓ Clarified UTI naming (Unidad de Terapia Intensiva = ICU in Spanish)
+1. Optimized data conversion using `.head(10)` instead of slicing
+2. Increased time parameter limits from 365 to 8760 hours (~1 year)
+3. Clarified UTI naming (Unidad de Terapia Intensiva = ICU in Spanish)
 
 ## API Usage Example
 
@@ -167,11 +167,11 @@ This implementation mirrors the logic from:
 
 ## Security
 
-✓ No vulnerabilities detected by CodeQL
-✓ Input validation on all parameters
-✓ JWT authentication required for API access
-✓ Database records properly stored
-✓ Error handling implemented
+- No vulnerabilities detected by CodeQL
+- Input validation on all parameters
+- JWT authentication required for API access
+- Database records properly stored
+- Error handling implemented
 
 ## Future Enhancements
 

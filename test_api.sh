@@ -38,17 +38,17 @@ test_endpoint() {
     body=$(echo "$response" | sed '$d')
     
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-        echo -e "${GREEN}✓ PASSED${NC} (HTTP $http_code)"
+        echo -e "${GREEN}PASSED${NC} (HTTP $http_code)"
         return 0
     else
-        echo -e "${RED}✗ FAILED${NC} (HTTP $http_code)"
+        echo -e "${RED}FAILED${NC} (HTTP $http_code)"
         echo "Response: $body"
         return 1
     fi
 }
 
 # 1. Test Health Checks
-echo "1️⃣  Testing Health Checks"
+echo "1. Testing Health Checks"
 echo "------------------------"
 test_endpoint "API Gateway Health" "$BASE_URL/health"
 test_endpoint "Patient Service Health" "$PATIENT_URL/health"
@@ -57,7 +57,7 @@ test_endpoint "Simulation Service Health" "$SIMULATION_URL/health"
 echo ""
 
 # 2. Test Authentication
-echo "2️⃣  Testing Authentication"
+echo "2. Testing Authentication"
 echo "------------------------"
 login_response=$(curl -s -X POST "$BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
@@ -66,15 +66,15 @@ login_response=$(curl -s -X POST "$BASE_URL/auth/login" \
 TOKEN=$(echo $login_response | grep -o '"access_token":"[^"]*' | sed 's/"access_token":"//')
 
 if [ -z "$TOKEN" ]; then
-    echo -e "${RED}✗ Failed to get authentication token${NC}"
+    echo -e "${RED}Failed to get authentication token${NC}"
     exit 1
 else
-    echo -e "${GREEN}✓ Successfully obtained JWT token${NC}"
+    echo -e "${GREEN}Successfully obtained JWT token${NC}"
 fi
 echo ""
 
 # 3. Test Patient Service
-echo "3️⃣  Testing Patient Service"
+echo "3. Testing Patient Service"
 echo "------------------------"
 
 # Create a patient
@@ -94,7 +94,7 @@ test_endpoint "Get Specific Patient" "$BASE_URL/api/patients/TEST001" "GET" "" "
 echo ""
 
 # 4. Test Prediction Service
-echo "4️⃣  Testing Prediction Service"
+echo "4. Testing Prediction Service"
 echo "------------------------"
 
 # List available models
@@ -128,7 +128,7 @@ test_endpoint "Get Patient Predictions" "$PREDICTION_URL/predictions/TEST001"
 echo ""
 
 # 5. Test Simulation Service
-echo "5️⃣  Testing Simulation Service"
+echo "5. Testing Simulation Service"
 echo "------------------------"
 
 # List available scenarios
@@ -165,13 +165,13 @@ echo ""
 
 # Summary
 echo "===================================="
-echo -e "${GREEN}✅ All tests completed!${NC}"
+echo -e "${GREEN}All tests completed!${NC}"
 echo ""
-echo "📊 Summary:"
+echo "Summary:"
 echo "  - Health checks: All services are healthy"
 echo "  - Authentication: JWT tokens working"
 echo "  - Patient Service: CRUD operations functional"
 echo "  - Prediction Service: ML predictions working"
 echo "  - Simulation Service: Clinical simulations working"
 echo ""
-echo "🎉 SADECI-Core is fully operational!"
+echo "SADECI-Core is fully operational!"
