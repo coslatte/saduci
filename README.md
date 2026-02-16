@@ -64,18 +64,21 @@ This system implements a microservices architecture with the following component
 ### Running with Docker Compose
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/coslatte/sadeci-core.git
    cd sadeci-core
    ```
 
 2. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 3. **Build and start all services**
+
    ```bash
    docker-compose up --build
    ```
@@ -190,23 +193,27 @@ curl -X POST "http://localhost:8000/api/simulations/icu" \
 ### Local Development Setup
 
 1. **Create a virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 2. **Install dependencies for a service**
+
    ```bash
    pip install -r services/patient/requirements.txt
    ```
 
 3. **Run database migrations**
+
    ```bash
    cd services/patient
    alembic upgrade head
    ```
 
 4. **Run a service locally**
+
    ```bash
    python services/patient/main.py
    ```
