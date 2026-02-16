@@ -17,7 +17,7 @@ Thank you for your interest in contributing to SADECI-Core! This document provid
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.11+
+- Python 3.12+
 - Git
 
 ### Local Development

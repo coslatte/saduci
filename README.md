@@ -57,7 +57,7 @@ This system implements a microservices architecture with the following component
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.11+ (for local development)
+- Python 3.12+ (for local development, required for SimUCI integration)
 
 ### Running with Docker Compose
 
