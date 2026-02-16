@@ -77,11 +77,13 @@ The simulation engine is based on research and real-world ICU data, making it si
 | `apache` | integer | 0-70 | APACHE II severity score |
 | `respiratory_insufficiency` | integer | 0-8 | Respiratory insufficiency severity level |
 | `artificial_ventilation` | integer | 0-3 | Type of artificial ventilation |
-| `uti_stay` | integer | 1-365 | Expected ICU stay in hours |
-| `vam_time` | integer | 0-365 | Mechanical ventilation time in hours |
-| `preuti_stay_time` | integer | 0-365 | Pre-ICU stay time in hours |
+| `uti_stay` | integer | 1-8760 | Expected ICU stay in hours (UTI = "Unidad de Terapia Intensiva" in Spanish, max ~1 year) |
+| `vam_time` | integer | 0-8760 | Mechanical ventilation time in hours (max ~1 year) |
+| `preuti_stay_time` | integer | 0-8760 | Pre-ICU stay time in hours (max ~1 year) |
 | `percent` | integer | 1-100 | Simulation percentage parameter |
 | `n_replications` | integer | 1-1000 | Number of simulation replications |
+
+> **Note**: The parameter name `uti_stay` refers to ICU stay (from Spanish "Unidad de Terapia Intensiva"), not "Urinary Tract Infection". This naming is preserved from the original SimUCI library for consistency.
 
 **Response:**
 ```json

@@ -32,9 +32,10 @@ class ICUPatientSimulationRequest(BaseModel):
     apache: int = Field(..., ge=0, le=70, description="APACHE II score")
     respiratory_insufficiency: int = Field(..., ge=0, le=8, description="Respiratory insufficiency severity")
     artificial_ventilation: int = Field(..., ge=0, le=3, description="Artificial ventilation type")
-    uti_stay: int = Field(..., ge=1, le=365, description="Expected ICU stay in hours")
-    vam_time: int = Field(..., ge=0, le=365, description="Mechanical ventilation time in hours")
-    preuti_stay_time: int = Field(..., ge=0, le=365, description="Pre-ICU stay time in hours")
+    # Note: uti_stay refers to ICU (Unidad de Terapia Intensiva) stay, not Urinary Tract Infection
+    uti_stay: int = Field(..., ge=1, le=8760, description="Expected ICU (UTI) stay in hours (max ~1 year)")
+    vam_time: int = Field(..., ge=0, le=8760, description="Mechanical ventilation time in hours (max ~1 year)")
+    preuti_stay_time: int = Field(..., ge=0, le=8760, description="Pre-ICU stay time in hours (max ~1 year)")
     percent: int = Field(10, ge=1, le=100, description="Percentage parameter for simulation")
     n_replications: int = Field(100, ge=1, le=1000, description="Number of simulation replications")
 

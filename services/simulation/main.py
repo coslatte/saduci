@@ -387,7 +387,7 @@ class ICUSimulationEngine:
                 "sample_result": sample_result,
                 "statistics": statistics,
                 "n_replications": n_replications,
-                "all_results": results_df.to_dict(orient="records")[:10]  # First 10 for display
+                "all_results": results_df.head(10).to_dict(orient="records")  # First 10 for display
             }
 
         except ValueError as e:
