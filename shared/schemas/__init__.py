@@ -5,7 +5,12 @@ from .health import HealthCheck
 from .patient import PatientBase, PatientCreate, PatientUpdate, PatientResponse
 from .user import UserBase, UserCreate, UserResponse
 from .prediction import PredictionRequest, PredictionResponse
-from .simulation import SimulationRequest, SimulationResponse
+from .simulation import (
+    SimulationRequest,
+    SimulationResponse,
+    ICUPatientSimulationRequest,
+    ICUPatientSimulationResponse
+)
 
 __all__ = [
     "HealthCheck",
@@ -20,4 +25,6 @@ __all__ = [
     "PredictionResponse",
     "SimulationRequest",
     "SimulationResponse",
+    "ICUPatientSimulationRequest",
+    "ICUPatientSimulationResponse",
 ]

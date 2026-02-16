@@ -152,6 +152,16 @@ async def create_simulation(simulation_data: dict, user: dict = Depends(get_curr
         raise HTTPException(status_code=500, detail="Simulation service unavailable")
 
 
+@app.post("/api/simulations/icu")
+async def create_icu_simulation(simulation_data: dict, user: dict = Depends(get_current_user)):
+    """Forward ICU patient simulation request to simulation service."""
+    try:
+        return await simulation_client.post("/simulations/icu", simulation_data)
+    except Exception as e:
+        logger.error(f"Error forwarding ICU simulation to simulation service: {e}")
+        raise HTTPException(status_code=500, detail="ICU simulation service unavailable")
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
