@@ -34,6 +34,9 @@ This system implements a microservices architecture with the following component
    - Treatment response modeling
    - Vital signs projections
    - Intervention outcome analysis
+   - **Real ICU patient simulation using SimUCI**
+   - Discrete-event simulation engine for realistic patient trajectories
+   - Patient clustering and statistical validation
    - PostgreSQL database for simulation records
 
 ### Key Features
@@ -159,7 +162,26 @@ curl -X POST "http://localhost:8000/api/simulations" \
       "duration_hours": 24
     }
   }'
+
+# Run a real ICU patient simulation (SimUCI)
+curl -X POST "http://localhost:8000/api/simulations/icu" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patient_id": "P001",
+    "age": 55,
+    "apache": 20,
+    "diagnosis_admission1": 11,
+    "respiratory_insufficiency": 5,
+    "artificial_ventilation": 1,
+    "uti_stay": 100,
+    "vam_time": 50,
+    "preuti_stay_time": 10,
+    "n_replications": 100
+  }'
 ```
+
+> **Note**: The ICU patient simulation uses [SimUCI](https://github.com/coslatte/simuci), a discrete-event simulation engine for realistic ICU patient trajectories. See [SIMUCI_INTEGRATION.md](SIMUCI_INTEGRATION.md) for detailed documentation.
 
 ## 🛠️ Development
 
@@ -286,6 +308,16 @@ docker-compose down -v
 ## 📝 License
 
 This project is part of the Clinical Intelligence Core for ICU.
+
+## 🔬 SimUCI Integration
+
+This project integrates [SimUCI](https://github.com/coslatte/simuci), a discrete-event simulation engine for realistic ICU patient trajectory modeling. SimUCI provides:
+- Real-world patient simulation based on clinical data
+- Patient clustering for accurate modeling
+- Statistical validation and confidence measures
+- Integration with [SimUCI-Streamlit](https://github.com/coslatte/SimUCI-Streamlit) UI
+
+For detailed information about the SimUCI integration, see [SIMUCI_INTEGRATION.md](SIMUCI_INTEGRATION.md).
 
 ## 🤝 Contributing
 
