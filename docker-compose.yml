@@ -10,7 +10,11 @@ services:
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - AUTH_USERNAME=${AUTH_USERNAME:?AUTH_USERNAME is required}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:?AUTH_PASSWORD is required}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
       - PATIENT_SERVICE_URL=http://patient:8001
       - PREDICTION_SERVICE_URL=http://prediction:8002
       - SIMULATION_SERVICE_URL=http://simulation:8003
@@ -34,11 +38,11 @@ services:
       dockerfile: services/patient/Dockerfile
     container_name: patient-service
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     environment:
       - PORT=8001
       - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://patient_user:patient_pass@patient-db:5432/patient_db
+      - DATABASE_URL=postgresql://patient_user:${PATIENT_DB_PASSWORD:?PATIENT_DB_PASSWORD is required}@patient-db:5432/patient_db
     depends_on:
       - patient-db
     networks:
@@ -56,7 +60,7 @@ services:
     container_name: patient-db
     environment:
       - POSTGRES_USER=patient_user
-      - POSTGRES_PASSWORD=patient_pass
+      - POSTGRES_PASSWORD=${PATIENT_DB_PASSWORD:?PATIENT_DB_PASSWORD is required}
       - POSTGRES_DB=patient_db
     volumes:
       - patient-db-data:/var/lib/postgresql/data
@@ -76,11 +80,11 @@ services:
       dockerfile: services/prediction/Dockerfile
     container_name: prediction-service
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     environment:
       - PORT=8002
       - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://prediction_user:prediction_pass@prediction-db:5432/prediction_db
+      - DATABASE_URL=postgresql://prediction_user:${PREDICTION_DB_PASSWORD:?PREDICTION_DB_PASSWORD is required}@prediction-db:5432/prediction_db
     depends_on:
       - prediction-db
     networks:
@@ -98,7 +102,7 @@ services:
     container_name: prediction-db
     environment:
       - POSTGRES_USER=prediction_user
-      - POSTGRES_PASSWORD=prediction_pass
+      - POSTGRES_PASSWORD=${PREDICTION_DB_PASSWORD:?PREDICTION_DB_PASSWORD is required}
       - POSTGRES_DB=prediction_db
     volumes:
       - prediction-db-data:/var/lib/postgresql/data
@@ -118,11 +122,11 @@ services:
       dockerfile: services/simulation/Dockerfile
     container_name: simulation-service
     ports:
-      - "8003:8003"
+      - "127.0.0.1:8003:8003"
     environment:
       - PORT=8003
       - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://simulation_user:simulation_pass@simulation-db:5432/simulation_db
+      - DATABASE_URL=postgresql://simulation_user:${SIMULATION_DB_PASSWORD:?SIMULATION_DB_PASSWORD is required}@simulation-db:5432/simulation_db
     depends_on:
       - simulation-db
     networks:
@@ -140,7 +144,7 @@ services:
     container_name: simulation-db
     environment:
       - POSTGRES_USER=simulation_user
-      - POSTGRES_PASSWORD=simulation_pass
+      - POSTGRES_PASSWORD=${SIMULATION_DB_PASSWORD:?SIMULATION_DB_PASSWORD is required}
       - POSTGRES_DB=simulation_db
     volumes:
       - simulation-db-data:/var/lib/postgresql/data

@@ -75,6 +75,7 @@ This system implements a microservices architecture with the following component
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
+   # Required: SECRET_KEY, AUTH_USERNAME, AUTH_PASSWORD, and DB passwords
    ```
 
 3. **Build and start all services**
@@ -131,7 +132,7 @@ Each service provides interactive API documentation via Swagger UI:
 # Login to get JWT token
 curl -X POST "http://localhost:8000/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
+  -d "{\"username\": \"${AUTH_USERNAME}\", \"password\": \"${AUTH_PASSWORD}\"}"
 ```
 
 ### Patient Management
@@ -316,6 +317,7 @@ alembic downgrade -1
 
 - Change default passwords in production
 - Use strong SECRET_KEY for JWT tokens
+- Set explicit AUTH_USERNAME and AUTH_PASSWORD values
 - Configure CORS appropriately
 - Use HTTPS in production
 - Keep dependencies updated

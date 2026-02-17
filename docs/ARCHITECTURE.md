@@ -229,6 +229,7 @@ Client → API Gateway (verify JWT) → Simulation Service →
 ### Network Security
 - Services communicate within Docker network
 - Only API Gateway exposed externally
+- Internal service port bindings restricted to localhost for host-level testing
 - Database ports not exposed to host
 
 ### Data Security

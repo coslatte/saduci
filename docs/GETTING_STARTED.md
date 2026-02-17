@@ -105,7 +105,7 @@ Once running, you can access:
 ```bash
 curl -X POST "http://localhost:8000/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
+  -d "{\"username\": \"${AUTH_USERNAME}\", \"password\": \"${AUTH_PASSWORD}\"}"
 ```
 
 This returns a JWT token. Save it for subsequent requests.

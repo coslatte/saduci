@@ -1,4 +1,6 @@
 """Authentication utilities for JWT token handling."""
+import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
@@ -8,10 +10,16 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-# These should be overridden by environment variables in production
-SECRET_KEY = "your-secret-key-change-this-in-production"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+DEFAULT_SECRET_PLACEHOLDER = "your-secret-key-change-this-in-production"
+_configured_secret = os.getenv("SECRET_KEY", "").strip()
+if _configured_secret and _configured_secret != DEFAULT_SECRET_PLACEHOLDER:
+    SECRET_KEY = _configured_secret
+else:
+    # Avoid predictable shared defaults when SECRET_KEY is missing or left unchanged.
+    SECRET_KEY = secrets.token_urlsafe(48)
+
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 
 def get_password_hash(password: str) -> str:

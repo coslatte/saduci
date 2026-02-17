@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import shutil
 import subprocess
 import time
@@ -345,7 +346,12 @@ class SadeciInitializer:
         self._http_get_json("http://localhost:8000/api/patients", token=token)
 
     def _authenticate(self) -> str:
-        payload = json.dumps({"username": "admin", "password": "admin123"}).encode("utf-8")
+        username = os.getenv("AUTH_USERNAME")
+        password = os.getenv("AUTH_PASSWORD")
+        if not username or not password:
+            raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD are required for authentication smoke tests")
+
+        payload = json.dumps({"username": username, "password": password}).encode("utf-8")
         request = urllib.request.Request(
             url="http://localhost:8000/auth/login",
             method="POST",

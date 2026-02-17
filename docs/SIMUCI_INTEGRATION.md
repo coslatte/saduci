@@ -144,7 +144,7 @@ The simulation engine is based on research and real-world ICU data, making it si
 # Login to get JWT token
 curl -X POST "http://localhost:8000/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
+  -d "{\"username\": \"${AUTH_USERNAME}\", \"password\": \"${AUTH_PASSWORD}\"}"
 
 # Run ICU simulation
 curl -X POST "http://localhost:8000/api/simulations/icu" \

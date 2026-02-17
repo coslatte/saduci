@@ -9,6 +9,30 @@
 
 ## Security Updates
 
+### Architecture Security Review (2026-02-17)
+
+The following design and architecture issues were identified and fixed in this repository:
+
+1. **API Gateway accepted any non-empty credentials**
+   - **Impact**: Attackers could obtain valid JWT tokens with arbitrary usernames/passwords.
+   - **Fix**: Gateway login now validates against configured `AUTH_USERNAME` and `AUTH_PASSWORD` values, and startup fails if they are missing.
+
+2. **Predictable JWT secret fallback**
+   - **Impact**: Tokens could be forged when default placeholder secrets were used.
+   - **Fix**: JWT signing now uses `SECRET_KEY` from environment and falls back to a cryptographically random runtime secret instead of a fixed string.
+
+3. **Overly permissive CORS policy**
+   - **Impact**: `allow_origins=["*"]` with credentialed requests risked unintended cross-origin access patterns.
+   - **Fix**: CORS is now environment-configurable via `CORS_ALLOW_ORIGINS` and credentials are disabled automatically when wildcard origins are used.
+
+4. **Internal services exposed on all host interfaces**
+   - **Impact**: Patient, prediction, and simulation services could be reached directly from external networks, bypassing API gateway controls.
+   - **Fix**: Docker port bindings for internal services are now restricted to `127.0.0.1`.
+
+5. **Hardcoded database passwords in service wiring**
+   - **Impact**: Weak static credentials increased unauthorized access risk and reduced secret rotation capability.
+   - **Fix**: Docker Compose now requires password environment variables for all service and database containers.
+
 ### Version 1.0.1 (2024-01-15) - CRITICAL SECURITY RELEASE
 
 This release addresses critical security vulnerabilities in dependencies:

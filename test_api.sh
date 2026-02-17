@@ -7,6 +7,13 @@ BASE_URL="http://localhost:8000"
 PATIENT_URL="http://localhost:8001"
 PREDICTION_URL="http://localhost:8002"
 SIMULATION_URL="http://localhost:8003"
+AUTH_USERNAME="${AUTH_USERNAME:-}"
+AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+
+if [ -z "$AUTH_USERNAME" ] || [ -z "$AUTH_PASSWORD" ]; then
+    echo "Please export AUTH_USERNAME and AUTH_PASSWORD before running this script."
+    exit 1
+fi
 
 echo "🧪 Testing SADECI-Core API Endpoints"
 echo "===================================="
@@ -61,7 +68,7 @@ echo "2. Testing Authentication"
 echo "------------------------"
 login_response=$(curl -s -X POST "$BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}')
+  -d "{\"username\": \"${AUTH_USERNAME}\", \"password\": \"${AUTH_PASSWORD}\"}")
 
 TOKEN=$(echo $login_response | grep -o '"access_token":"[^"]*' | sed 's/"access_token":"//')
 

@@ -15,8 +15,8 @@ POST /auth/login
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "admin123"
+  "username": "${AUTH_USERNAME}",
+  "password": "${AUTH_PASSWORD}"
 }
 ```
 

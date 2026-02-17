@@ -18,6 +18,24 @@ from shared.utils import get_logger, create_access_token, verify_token, ServiceC
 logger = get_logger(__name__)
 security = HTTPBearer()
 
+
+def _parse_cors_origins(raw_origins: str) -> list[str]:
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    return origins or ["http://localhost:3000", "http://localhost:8000"]
+
+
+AUTH_USERNAME = os.getenv("AUTH_USERNAME")
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD")
+if not AUTH_USERNAME or not AUTH_PASSWORD:
+    raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD must be configured")
+
+CORS_ALLOW_ORIGINS = _parse_cors_origins(
+    os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:8000")
+)
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+if "*" in CORS_ALLOW_ORIGINS:
+    CORS_ALLOW_CREDENTIALS = False
+
 app = FastAPI(
     title="API Gateway",
     description="API Gateway for sadeci-core - handles routing and JWT authentication",
@@ -27,8 +45,8 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -84,9 +102,7 @@ async def login(request: LoginRequest):
 
     In production, this should verify against a user database.
     """
-    # Simplified authentication for demo purposes
-    # In production, verify against database
-    if request.username and request.password:
+    if request.username == AUTH_USERNAME and request.password == AUTH_PASSWORD:
         access_token = create_access_token(
             data={"sub": request.username},
             expires_delta=timedelta(minutes=30)
