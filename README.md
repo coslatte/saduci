@@ -59,7 +59,7 @@ This system implements a microservices architecture with the following component
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.12+ (for local development, required for SimUCI integration)
+- Python 3.13+ (for local development, required for SimUCI integration)
 
 ### Running with Docker Compose
 
@@ -88,6 +88,31 @@ This system implements a microservices architecture with the following component
    - Patient Service: http://localhost:8001
    - Prediction Service: http://localhost:8002
    - Simulation Service: http://localhost:8003
+
+### Initialization CLI (Interactive)
+
+The repository includes an interactive initialization CLI to orchestrate:
+
+- Container integrity checks (Docker + Compose + service definitions)
+- Stack initialization (`up -d --build`)
+- Integration testing (`test_api.sh` when available, HTTP smoke fallback otherwise)
+
+Run interactive mode:
+
+```bash
+python main.py
+```
+
+Or run direct commands:
+
+```bash
+python main.py check     # Validate Docker/Compose integrity
+python main.py init      # Initialize containers
+python main.py status    # Verify services state
+python main.py test      # Run tests
+python main.py full      # Integrity + init + testing
+python main.py down      # Stop stack
+```
 
 ### API Documentation
 
@@ -217,6 +242,14 @@ curl -X POST "http://localhost:8000/api/simulations/icu" \
    ```bash
    python services/patient/main.py
    ```
+
+### Unit Testing
+
+Run unit tests to validate shared architecture components (schemas, auth, service health endpoints, and simulation/prediction engines):
+
+```bash
+pytest
+```
 
 ### Project Structure
 

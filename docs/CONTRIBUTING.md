@@ -17,23 +17,26 @@ Thank you for your interest in contributing to SADECI-Core! This document provid
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.12+
+- Python 3.13+
 - Git
 
 ### Local Development
 
 1. **Set up the environment**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 2. **Start services**
+
    ```bash
    docker compose up --build
    ```
 
 3. **Run tests**
+
    ```bash
    ./test_api.sh
    ```
@@ -43,18 +46,21 @@ Thank you for your interest in contributing to SADECI-Core! This document provid
 To work on a specific service without Docker:
 
 1. **Set up virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 2. **Install dependencies**
+
    ```bash
    cd services/patient  # or any other service
    pip install -r requirements.txt
    ```
 
 3. **Run the service**
+
    ```bash
    python main.py
    ```
@@ -69,6 +75,7 @@ To work on a specific service without Docker:
 - Write docstrings for all public functions and classes
 
 Example:
+
 ```python
 def create_patient(patient: PatientCreate, db: Session) -> Patient:
     """
@@ -99,6 +106,7 @@ def create_patient(patient: PatientCreate, db: Session) -> Patient:
 ### Manual Testing
 
 Use the provided test script:
+
 ```bash
 ./test_api.sh
 ```
@@ -117,6 +125,7 @@ When adding new features:
 When changing database models:
 
 1. **Create a migration**
+
    ```bash
    cd services/patient
    alembic revision --autogenerate -m "Description of changes"
@@ -127,6 +136,7 @@ When changing database models:
    - Verify upgrade and downgrade functions
 
 3. **Test the migration**
+
    ```bash
    alembic upgrade head
    alembic downgrade -1
@@ -140,6 +150,7 @@ When changing database models:
 To add a new microservice:
 
 1. **Create service directory**
+
    ```bash
    mkdir -p services/new-service
    ```
@@ -160,6 +171,7 @@ To add a new microservice:
    - Add API docs
 
 5. **Add health check**
+
    ```python
    @app.get("/health")
    async def health_check():
@@ -197,6 +209,7 @@ To add a new prediction model:
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat(patient): add CSV import functionality
 

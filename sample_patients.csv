@@ -1,7 +1,0 @@
-# Sample patients for testing
-patient_id,first_name,last_name,date_of_birth,gender,clinical_data
-P001,John,Doe,1980-01-15,M,"{""diagnosis"": ""ARDS"", ""admission_date"": ""2024-01-01""}"
-P002,Jane,Smith,1975-05-20,F,"{""diagnosis"": ""Sepsis"", ""admission_date"": ""2024-01-02""}"
-P003,Robert,Johnson,1968-11-30,M,"{""diagnosis"": ""Cardiac arrest"", ""admission_date"": ""2024-01-03""}"
-P004,Maria,Garcia,1982-07-08,F,"{""diagnosis"": ""Pneumonia"", ""admission_date"": ""2024-01-04""}"
-P005,David,Lee,1990-03-22,M,"{""diagnosis"": ""Trauma"", ""admission_date"": ""2024-01-05""}"

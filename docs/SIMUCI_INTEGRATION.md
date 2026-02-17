@@ -6,7 +6,7 @@ This document describes the integration of [SimUCI](https://github.com/coslatte/
 
 ## Requirements
 
-**Important:** SimUCI requires Python 3.12+. All Docker images and local development environments must use Python 3.12 or higher to support this integration.
+**Important:** SimUCI requires Python 3.13+. All Docker images and local development environments must use Python 3.13 or higher to support this integration.
 
 ## What is SimUCI?
 

@@ -28,6 +28,12 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 5. Follow security best practices (change defaults, use strong secrets)
 6. Keep dependencies updated and patched
 
+### Environment & versioning (for AI agents)
+- Use `uv` as the Python version manager and command runner for development and CI. AI agents must invoke Python and pip through `uv` (for example `uv run -m pytest`, `uv pip install ...`) instead of calling the system Python directly.
+- Maintain exactly one project virtual environment: `.venv`. Do not create or depend on additional virtual environments.
+- The project virtual environment must use `Python 3.13`. Agents must ensure `uv` is configured to use Python 3.13 and must not change the project's Python version.
+- Always activate or use the repository `.venv` before running commands; avoid global installs. Avoid installing packages globally or in other virtual environments that are not the project `.venv`.
+
 ### File Organization
 - Services in `services/` directory
 - Shared code in `shared/` directory
@@ -36,7 +42,7 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 - Database migrations with Alembic
 
 ### Key Technologies
-- Python 3.12+ (required for SimUCI)
+- Python 3.13+ (required for SimUCI)
 - FastAPI for APIs
 - PostgreSQL for databases
 - Docker & Docker Compose

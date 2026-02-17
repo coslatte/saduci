@@ -1,12 +1,12 @@
 """API Gateway service - routing and JWT authentication."""
 import os
+import sys
 from datetime import timedelta
-from typing import Optional
+
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import sys
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -60,14 +60,14 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     """Verify JWT token and return user info."""
     token = credentials.credentials
     payload = verify_token(token)
-    
+
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return payload
 
 
@@ -81,7 +81,7 @@ async def health_check():
 async def login(request: LoginRequest):
     """
     Authenticate user and return JWT token.
-    
+
     In production, this should verify against a user database.
     """
     # Simplified authentication for demo purposes
@@ -92,7 +92,7 @@ async def login(request: LoginRequest):
             expires_delta=timedelta(minutes=30)
         )
         return TokenResponse(access_token=access_token)
-    
+
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password"
@@ -101,65 +101,65 @@ async def login(request: LoginRequest):
 
 # Patient service endpoints
 @app.get("/api/patients")
-async def list_patients(user: dict = Depends(get_current_user)):
+async def list_patients(_current_user: dict = Depends(get_current_user)):
     """Forward request to patient service."""
     try:
         return await patient_client.get("/patients")
     except Exception as e:
-        logger.error(f"Error forwarding to patient service: {e}")
-        raise HTTPException(status_code=500, detail="Patient service unavailable")
+        logger.error("Error forwarding to patient service: %s", e)
+        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
 
 
 @app.post("/api/patients")
-async def create_patient(patient_data: dict, user: dict = Depends(get_current_user)):
+async def create_patient(patient_data: dict, _current_user: dict = Depends(get_current_user)):
     """Forward request to patient service."""
     try:
         return await patient_client.post("/patients", patient_data)
     except Exception as e:
-        logger.error(f"Error forwarding to patient service: {e}")
-        raise HTTPException(status_code=500, detail="Patient service unavailable")
+        logger.error("Error forwarding to patient service: %s", e)
+        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
 
 
 @app.get("/api/patients/{patient_id}")
-async def get_patient(patient_id: str, user: dict = Depends(get_current_user)):
+async def get_patient(patient_id: str, _current_user: dict = Depends(get_current_user)):
     """Forward request to patient service."""
     try:
         return await patient_client.get(f"/patients/{patient_id}")
     except Exception as e:
-        logger.error(f"Error forwarding to patient service: {e}")
-        raise HTTPException(status_code=500, detail="Patient service unavailable")
+        logger.error("Error forwarding to patient service: %s", e)
+        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
 
 
 # Prediction service endpoints
 @app.post("/api/predictions")
-async def create_prediction(prediction_data: dict, user: dict = Depends(get_current_user)):
+async def create_prediction(prediction_data: dict, _current_user: dict = Depends(get_current_user)):
     """Forward request to prediction service."""
     try:
         return await prediction_client.post("/predictions", prediction_data)
     except Exception as e:
-        logger.error(f"Error forwarding to prediction service: {e}")
-        raise HTTPException(status_code=500, detail="Prediction service unavailable")
+        logger.error("Error forwarding to prediction service: %s", e)
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 # Simulation service endpoints
 @app.post("/api/simulations")
-async def create_simulation(simulation_data: dict, user: dict = Depends(get_current_user)):
+async def create_simulation(simulation_data: dict, _current_user: dict = Depends(get_current_user)):
     """Forward request to simulation service."""
     try:
         return await simulation_client.post("/simulations", simulation_data)
     except Exception as e:
-        logger.error(f"Error forwarding to simulation service: {e}")
-        raise HTTPException(status_code=500, detail="Simulation service unavailable")
+        logger.error("Error forwarding to simulation service: %s", e)
+        raise HTTPException(status_code=500, detail="Simulation service unavailable") from e
 
 
 @app.post("/api/simulations/icu")
-async def create_icu_simulation(simulation_data: dict, user: dict = Depends(get_current_user)):
+async def create_icu_simulation(simulation_data: dict, _current_user: dict = Depends(get_current_user)):
     """Forward ICU patient simulation request to simulation service."""
     try:
         return await simulation_client.post("/simulations/icu", simulation_data)
     except Exception as e:
-        logger.error(f"Error forwarding ICU simulation to simulation service: {e}")
-        raise HTTPException(status_code=500, detail="ICU simulation service unavailable")
+        logger.error("Error forwarding ICU simulation to simulation service: %s", e)
+        raise HTTPException(status_code=500, detail="ICU simulation service unavailable") from e
 
 
 if __name__ == "__main__":

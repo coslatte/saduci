@@ -1,14 +1,15 @@
 """Simulation service - clinical scenario simulations."""
 import os
+import sys
 import random
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
+
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-import sys
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -45,7 +46,7 @@ Base = declarative_base()
 class SimulationRecord(Base):
     """Simulation database model."""
     __tablename__ = "simulations"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(String, index=True, nullable=False)
     scenario = Column(String, nullable=False)
@@ -92,12 +93,12 @@ class SimulationEngine:
         """
         if scenario == "treatment_response":
             return self._simulate_treatment_response(parameters)
-        elif scenario == "vital_signs_projection":
+        if scenario == "vital_signs_projection":
             return self._simulate_vital_signs(parameters)
-        elif scenario == "intervention_outcomes":
+        if scenario == "intervention_outcomes":
             return self._simulate_intervention_outcomes(parameters)
-        else:
-            raise ValueError(f"Unknown scenario: {scenario}")
+
+        raise ValueError(f"Unknown scenario: {scenario}")
     
     def _simulate_treatment_response(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Simulate treatment response over time."""
@@ -199,16 +200,20 @@ async def create_simulation(
     - vital_signs_projection: Project vital signs over time
     - intervention_outcomes: Simulate outcomes of different interventions
     """
-    logger.info(f"Running simulation for patient {request.patient_id}, scenario: {request.scenario}")
-    
+    logger.info(
+        "Running simulation for patient %s, scenario: %s",
+        request.patient_id,
+        request.scenario,
+    )
+
     # Run simulation
     try:
-        engine = SimulationEngine()
-        results = engine.run_simulation(request.scenario, request.parameters)
+        simulation_engine = SimulationEngine()
+        results = simulation_engine.run_simulation(request.scenario, request.parameters)
     except Exception as e:
-        logger.error(f"Error running simulation: {e}")
-        raise HTTPException(status_code=500, detail=f"Simulation failed: {str(e)}")
-    
+        logger.error("Error running simulation: %s", e)
+        raise HTTPException(status_code=500, detail=f"Simulation failed: {str(e)}") from e
+
     # Save simulation to database
     db_simulation = SimulationRecord(
         patient_id=request.patient_id,
@@ -219,7 +224,7 @@ async def create_simulation(
     db.add(db_simulation)
     db.commit()
     db.refresh(db_simulation)
-    
+
     return SimulationResponse(
         patient_id=request.patient_id,
         scenario=request.scenario,
@@ -237,7 +242,7 @@ async def get_patient_simulations(
     simulations = db.query(SimulationRecord).filter(
         SimulationRecord.patient_id == patient_id
     ).all()
-    
+
     return {
         "patient_id": patient_id,
         "simulations": [
@@ -299,13 +304,13 @@ class ICUSimulationEngine:
         """Initialize ICU simulation engine with centroids data."""
         self.centroids_path = Path(__file__).parent / "data" / "centroids.csv"
         if not self.centroids_path.exists():
-            logger.warning(f"Centroids file not found at {self.centroids_path}")
+            logger.warning("Centroids file not found at %s", self.centroids_path)
             raise FileNotFoundError(
                 "Centroids CSV file required for SimUCI simulation. "
                 "Please ensure centroids.csv exists in the data directory."
             )
 
-    def run_icu_simulation(
+    def run_icu_simulation(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         self,
         age: int,
         diagnosis_admission1: int,
@@ -361,7 +366,7 @@ class ICUSimulationEngine:
             )
 
             # Run multiple replications to get statistical results
-            logger.info(f"Running {n_replications} simulation replications...")
+            logger.info("Running %s simulation replications...", n_replications)
             results_df = multiple_replication(
                 experiment,
                 n_reps=n_replications,
@@ -387,15 +392,15 @@ class ICUSimulationEngine:
                 "sample_result": sample_result,
                 "statistics": statistics,
                 "n_replications": n_replications,
-                "all_results": results_df.head(10).to_dict(orient="records")  # First 10 for display
+                "all_results": results_df.head(10).to_dict(orient="records")
             }
 
         except ValueError as e:
-            logger.error(f"Validation error in ICU simulation: {e}")
-            raise HTTPException(status_code=400, detail=f"Invalid patient parameters: {str(e)}")
+            logger.error("Validation error in ICU simulation: %s", e)
+            raise HTTPException(status_code=400, detail=f"Invalid patient parameters: {str(e)}") from e
         except Exception as e:
-            logger.error(f"Error running ICU simulation: {e}")
-            raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}")
+            logger.error("Error running ICU simulation: %s", e)
+            raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}") from e
 
 
 @app.post("/simulations/icu", response_model=ICUPatientSimulationResponse)
@@ -426,12 +431,12 @@ async def create_icu_simulation(
             detail="SimUCI simulation engine is not available. Please install simuci package."
         )
 
-    logger.info(f"Running ICU simulation for patient {request.patient_id}")
+    logger.info("Running ICU simulation for patient %s", request.patient_id)
 
     # Run ICU simulation
     try:
-        engine = ICUSimulationEngine()
-        results = engine.run_icu_simulation(
+        icu_engine = ICUSimulationEngine()
+        results = icu_engine.run_icu_simulation(
             age=request.age,
             diagnosis_admission1=request.diagnosis_admission1,
             diagnosis_admission2=request.diagnosis_admission2,
@@ -449,8 +454,8 @@ async def create_icu_simulation(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error running ICU simulation: {e}")
-        raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}")
+        logger.error("Error running ICU simulation: %s", e)
+        raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}") from e
 
     # Save simulation to database
     db_simulation = SimulationRecord(

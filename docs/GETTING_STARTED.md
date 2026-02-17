@@ -16,8 +16,8 @@ Before you begin, ensure you have the following installed on your system:
    - Usually included with Docker Desktop
    - Verify installation: `docker compose version`
 
-3. **Python 3.12+** (for local development only)
-   - **Important**: Python 3.12+ is required for SimUCI integration
+3. **Python 3.13+** (for local development only)
+  - **Important**: Python 3.13+ is required for SimUCI integration
    - Download from [python.org](https://www.python.org/downloads/)
    - Verify installation: `python3 --version`
 
@@ -256,7 +256,7 @@ docker compose exec patient /bin/sh
 **Problem**: SimUCI or other dependencies fail to install
 
 **Solution**:
-- Ensure you're using Python 3.12+
+- Ensure you're using Python 3.13+
 - Verify: `python3 --version`
 - Update Python if necessary
 
