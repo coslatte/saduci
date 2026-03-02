@@ -9,8 +9,11 @@ from .simulation import (
     SimulationRequest,
     SimulationResponse,
     ICUPatientSimulationRequest,
-    ICUPatientSimulationResponse
+    ICUPatientSimulationResponse,
+    TimeStats,
+    PlatformSimulationRequest,
 )
+from .statistics import WilcoxonRequest, FriedmanRequest, StatisticalTestResult
 
 __all__ = [
     "HealthCheck",
@@ -27,4 +30,9 @@ __all__ = [
     "SimulationResponse",
     "ICUPatientSimulationRequest",
     "ICUPatientSimulationResponse",
+    "TimeStats",
+    "PlatformSimulationRequest",
+    "WilcoxonRequest",
+    "FriedmanRequest",
+    "StatisticalTestResult",
 ]

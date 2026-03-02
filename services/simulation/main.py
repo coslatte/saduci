@@ -1,6 +1,7 @@
 """Simulation service - clinical scenario simulations."""
 import os
 import sys
+import math
 import random
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,9 +20,21 @@ from shared.schemas import (
     SimulationRequest,
     SimulationResponse,
     ICUPatientSimulationRequest,
-    ICUPatientSimulationResponse
+    ICUPatientSimulationResponse,
+    PlatformSimulationRequest,
+    TimeStats,
+    WilcoxonRequest,
+    FriedmanRequest,
+    StatisticalTestResult,
 )
 from shared.utils import get_logger
+
+# Import scipy for statistical tests
+try:
+    from scipy import stats as scipy_stats
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
 
 # Import SimUCI for real patient simulation
 try:
@@ -487,6 +500,188 @@ async def create_icu_simulation(
         statistics=results.get("statistics"),
         timestamp=db_simulation.created_at.isoformat()
     )
+
+
+# ============================================================================
+# Platform-compatible simulation endpoint (saduci-platform format)
+# ============================================================================
+
+_PLATFORM_SIM_VARS = ["pre_vam", "vam", "post_vam", "uci", "post_uci"]
+
+
+def _make_time_stats(mean: float, std: float, n: int) -> TimeStats:
+    """Build a TimeStats with 95% confidence interval."""
+    margin = 1.96 * std / math.sqrt(max(n, 1))
+    return TimeStats(
+        mean=round(mean, 4),
+        std=round(std, 4),
+        ci_lower=round(mean - margin, 4),
+        ci_upper=round(mean + margin, 4),
+    )
+
+
+def _mortality_prediction(apache: int, age: int) -> Dict[str, Any]:
+    """
+    Compute a simple binary mortality prediction from APACHE II score and age.
+
+    APACHE II contributes 80 % of the weight (max score 36) and age 10 %
+    (max 100 years), giving a probability in the range [0.05, 0.95].
+    A probability >= 0.5 maps to class 1 (mortality predicted).
+    """
+    prob = min(0.95, max(0.05, apache / 36.0 * 0.8 + age / 100.0 * 0.1))
+    return {"class": 1 if prob >= 0.5 else 0, "probability": round(prob, 4)}
+
+
+def _fallback_platform_simulation(request: PlatformSimulationRequest) -> Dict[str, Any]:
+    """
+    Fallback simulation when SimUCI is not available.
+    Generates plausible values based on patient parameters.
+    Uses a deterministic seed derived from the key clinical parameters so that
+    identical inputs always produce identical outputs.
+    """
+    rng = random.Random(hash((request.age, request.apache, request.vam_time)))
+    n = request.n_runs
+
+    base_vam = request.vam_time * (1.0 + request.apache / 36.0 * 0.5)
+    base_uti = request.uti_stay * (1.0 + request.apache / 36.0 * 0.3)
+    pre_vam_mean = max(1.0, request.preuti_stay * 0.8 + rng.gauss(0, 1))
+
+    simulation: Dict[str, TimeStats] = {}
+    for var, mean_val, std_frac in [
+        ("pre_vam", pre_vam_mean, 0.25),
+        ("vam", base_vam, 0.30),
+        ("post_vam", base_vam * 0.4, 0.35),
+        ("uci", base_uti, 0.20),
+        ("post_uci", base_uti * 0.5, 0.40),
+    ]:
+        std_val = max(0.1, mean_val * std_frac)
+        simulation[var] = _make_time_stats(abs(mean_val), std_val, n)
+
+    return {
+        "simulation": {k: v.model_dump() for k, v in simulation.items()},
+        "prediction": _mortality_prediction(request.apache, request.age),
+    }
+
+
+@app.post("/simulation")
+async def run_platform_simulation(request: PlatformSimulationRequest):
+    """
+    Run a clinical ICU simulation in saduci-platform format.
+
+    Accepts the compact parameter set used by the saduci-platform frontend and
+    returns time-phase statistics (pre_vam, vam, post_vam, uci, post_uci) with
+    95% confidence intervals plus a binary mortality prediction.
+
+    When SimUCI is installed the endpoint uses the full discrete-event engine;
+    otherwise a statistical fallback is applied.
+    """
+    logger.info("Running platform simulation (age=%s, apache=%s)", request.age, request.apache)
+
+    if not SIMUCI_AVAILABLE:
+        logger.warning("SimUCI not available – using statistical fallback")
+        return _fallback_platform_simulation(request)
+
+    try:
+        centroids_path = Path(__file__).parent / "data" / "centroids.csv"
+        experiment = Experiment(
+            age=request.age,
+            diagnosis_admission1=request.d1,
+            diagnosis_admission2=request.d2,
+            diagnosis_admission3=request.d3,
+            diagnosis_admission4=request.d4,
+            apache=request.apache,
+            respiratory_insufficiency=request.resp_insuf,
+            artificial_ventilation=request.artif_vent,
+            uti_stay=request.uti_stay,
+            vam_time=request.vam_time,
+            preuti_stay_time=request.preuti_stay,
+            percent=request.percent,
+            validate=True,
+        )
+
+        results_df = multiple_replication(
+            experiment,
+            n_reps=request.n_runs,
+            centroids_path=str(centroids_path),
+        )
+
+        simulation: Dict[str, TimeStats] = {}
+        for var in _PLATFORM_SIM_VARS:
+            col = results_df[var] if var in results_df.columns else None
+            if col is not None:
+                simulation[var] = _make_time_stats(
+                    float(col.mean()), float(col.std()), len(col)
+                )
+            else:
+                simulation[var] = TimeStats(mean=0.0, std=0.0, ci_lower=0.0, ci_upper=0.0)
+
+        return {
+            "simulation": {k: v.model_dump() for k, v in simulation.items()},
+            "prediction": _mortality_prediction(request.apache, request.age),
+        }
+
+    except ValueError as exc:
+        logger.error("Validation error in platform simulation: %s", exc)
+        raise HTTPException(status_code=400, detail=f"Invalid parameters: {exc}") from exc
+    except Exception as exc:
+        logger.error("Error running platform simulation: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}") from exc
+
+
+# ============================================================================
+# Statistical tests (Wilcoxon signed-rank, Friedman)
+# ============================================================================
+
+@app.post("/statistics/wilcoxon", response_model=StatisticalTestResult)
+async def run_wilcoxon_test(request: WilcoxonRequest):
+    """
+    Run a Wilcoxon signed-rank test on two paired samples.
+
+    Returns the test statistic and two-tailed p-value.
+    Requires scipy.
+    """
+    if not SCIPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="scipy is not installed; cannot run statistical tests.")
+
+    if len(request.x) != len(request.y):
+        raise HTTPException(status_code=400, detail="Samples x and y must have the same length.")
+    if len(request.x) < 2:
+        raise HTTPException(status_code=400, detail="Each sample must contain at least 2 observations.")
+
+    try:
+        result = scipy_stats.wilcoxon(request.x, request.y)
+        return StatisticalTestResult(statistic=float(result.statistic), p_value=float(result.pvalue))
+    except Exception as exc:
+        logger.error("Wilcoxon test error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Statistical test failed: {exc}") from exc
+
+
+@app.post("/statistics/friedman", response_model=StatisticalTestResult)
+async def run_friedman_test(request: FriedmanRequest):
+    """
+    Run a Friedman chi-square test across multiple related samples.
+
+    Returns the test statistic and p-value.
+    Requires scipy.
+    """
+    if not SCIPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="scipy is not installed; cannot run statistical tests.")
+
+    if len(request.samples) < 3:
+        raise HTTPException(status_code=400, detail="Friedman test requires at least 3 sample groups.")
+
+    lengths = [len(s) for s in request.samples]
+    if len(set(lengths)) != 1:
+        raise HTTPException(status_code=400, detail="All sample groups must have the same length.")
+    if lengths[0] < 2:
+        raise HTTPException(status_code=400, detail="Each sample group must contain at least 2 observations.")
+
+    try:
+        result = scipy_stats.friedmanchisquare(*request.samples)
+        return StatisticalTestResult(statistic=float(result.statistic), p_value=float(result.pvalue))
+    except Exception as exc:
+        logger.error("Friedman test error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Statistical test failed: {exc}") from exc
 
 
 if __name__ == "__main__":
