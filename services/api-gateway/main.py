@@ -11,7 +11,7 @@ from pydantic import BaseModel
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from shared.schemas import HealthCheck
+from shared.schemas import HealthCheck, PlatformSimulationRequest, WilcoxonRequest, FriedmanRequest
 from shared.utils import get_logger, create_access_token, verify_token, ServiceClient
 
 
@@ -176,6 +176,41 @@ async def create_icu_simulation(simulation_data: dict, _current_user: dict = Dep
     except Exception as e:
         logger.error("Error forwarding ICU simulation to simulation service: %s", e)
         raise HTTPException(status_code=500, detail="ICU simulation service unavailable") from e
+
+
+@app.post("/simulation")
+async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
+    """
+    Forward saduci-platform simulation request to simulation service.
+
+    This endpoint is unauthenticated to match the saduci-platform client
+    which does not attach a JWT token to simulation calls.
+    """
+    try:
+        return await simulation_client.post("/simulation", simulation_data.model_dump())
+    except Exception as e:
+        logger.error("Error forwarding platform simulation to simulation service: %s", e)
+        raise HTTPException(status_code=500, detail="Simulation service unavailable") from e
+
+
+@app.post("/statistics/wilcoxon")
+async def run_wilcoxon_test(test_data: WilcoxonRequest):
+    """Forward Wilcoxon signed-rank test request to simulation service."""
+    try:
+        return await simulation_client.post("/statistics/wilcoxon", test_data.model_dump())
+    except Exception as e:
+        logger.error("Error forwarding Wilcoxon test to simulation service: %s", e)
+        raise HTTPException(status_code=500, detail="Statistics service unavailable") from e
+
+
+@app.post("/statistics/friedman")
+async def run_friedman_test(test_data: FriedmanRequest):
+    """Forward Friedman chi-square test request to simulation service."""
+    try:
+        return await simulation_client.post("/statistics/friedman", test_data.model_dump())
+    except Exception as e:
+        logger.error("Error forwarding Friedman test to simulation service: %s", e)
+        raise HTTPException(status_code=500, detail="Statistics service unavailable") from e
 
 
 if __name__ == "__main__":

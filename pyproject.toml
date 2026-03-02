@@ -17,6 +17,8 @@ dependencies = [
     "sqlalchemy>=2.0.37",
     "uvicorn>=0.41.0",
     "simuci>=1.0.1",
+    "scipy>=1.11",
+    "numpy>=1.26",
 ]
 
 [tool.pytest.ini_options]
