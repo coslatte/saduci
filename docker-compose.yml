@@ -19,9 +19,12 @@ services:
       - PREDICTION_SERVICE_URL=http://prediction:8002
       - SIMULATION_SERVICE_URL=http://simulation:8003
     depends_on:
-      - patient
-      - prediction
-      - simulation
+      patient:
+        condition: service_healthy
+      prediction:
+        condition: service_healthy
+      simulation:
+        condition: service_healthy
     networks:
       - sadeci-network
     restart: unless-stopped
@@ -44,7 +47,8 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=postgresql://patient_user:${PATIENT_DB_PASSWORD:?PATIENT_DB_PASSWORD is required}@patient-db:5432/patient_db
     depends_on:
-      - patient-db
+      patient-db:
+        condition: service_healthy
     networks:
       - sadeci-network
     restart: unless-stopped
@@ -86,7 +90,8 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=postgresql://prediction_user:${PREDICTION_DB_PASSWORD:?PREDICTION_DB_PASSWORD is required}@prediction-db:5432/prediction_db
     depends_on:
-      - prediction-db
+      prediction-db:
+        condition: service_healthy
     networks:
       - sadeci-network
     restart: unless-stopped
@@ -128,7 +133,8 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=postgresql://simulation_user:${SIMULATION_DB_PASSWORD:?SIMULATION_DB_PASSWORD is required}@simulation-db:5432/simulation_db
     depends_on:
-      - simulation-db
+      simulation-db:
+        condition: service_healthy
     networks:
       - sadeci-network
     restart: unless-stopped

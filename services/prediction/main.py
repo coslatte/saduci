@@ -5,8 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -23,7 +22,10 @@ if not DATABASE_URL:
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class PredictionRecord(Base):
@@ -145,7 +147,7 @@ async def create_prediction(
         prediction, confidence = model.predict(request.features)
     except Exception as e:
         logger.error("Error running model: %s", e)
-        raise HTTPException(status_code=500, detail=f"Model prediction failed: {str(e)}") from e
+        raise HTTPException(status_code=500, detail="Model prediction failed") from e
 
     # Save prediction to database
     db_prediction = PredictionRecord(

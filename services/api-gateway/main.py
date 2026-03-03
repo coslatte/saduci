@@ -1,9 +1,12 @@
 """API Gateway service - routing and JWT authentication."""
 import os
 import sys
+import time
+from collections import defaultdict
+from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -11,12 +14,43 @@ from pydantic import BaseModel
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from shared.schemas import HealthCheck, PlatformSimulationRequest, WilcoxonRequest, FriedmanRequest
+from shared.schemas import (
+    HealthCheck,
+    PatientCreate,
+    PredictionRequest,
+    SimulationRequest,
+    ICUPatientSimulationRequest,
+    PlatformSimulationRequest,
+    WilcoxonRequest,
+    FriedmanRequest,
+)
 from shared.utils import get_logger, create_access_token, verify_token, ServiceClient
 
 
 logger = get_logger(__name__)
 security = HTTPBearer()
+
+# ---------------------------------------------------------------------------
+# Rate limiter (in-memory, per-process)
+# ---------------------------------------------------------------------------
+LOGIN_RATE_LIMIT_MAX = int(os.getenv("LOGIN_RATE_LIMIT_MAX", "5"))
+LOGIN_RATE_LIMIT_WINDOW = int(os.getenv("LOGIN_RATE_LIMIT_WINDOW", "60"))
+
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(client_ip: str) -> None:
+    now = time.monotonic()
+    window_start = now - LOGIN_RATE_LIMIT_WINDOW
+    attempts = _login_attempts[client_ip]
+    # Prune old entries
+    _login_attempts[client_ip] = [t for t in attempts if t > window_start]
+    if len(_login_attempts[client_ip]) >= LOGIN_RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+        )
+    _login_attempts[client_ip].append(now)
 
 
 def _parse_cors_origins(raw_origins: str) -> list[str]:
@@ -36,10 +70,30 @@ CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == 
 if "*" in CORS_ALLOW_ORIGINS:
     CORS_ALLOW_CREDENTIALS = False
 
+# Service URLs from environment
+PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://patient:8001")
+PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://prediction:8002")
+SIMULATION_SERVICE_URL = os.getenv("SIMULATION_SERVICE_URL", "http://simulation:8003")
+
+# Service clients (initialised early, cleaned up via lifespan)
+patient_client = ServiceClient(PATIENT_SERVICE_URL)
+prediction_client = ServiceClient(PREDICTION_SERVICE_URL)
+simulation_client = ServiceClient(SIMULATION_SERVICE_URL)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    await patient_client.close()
+    await prediction_client.close()
+    await simulation_client.close()
+
+
 app = FastAPI(
     title="API Gateway",
     description="API Gateway for sadeci-core - handles routing and JWT authentication",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration
@@ -47,19 +101,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGINS,
     allow_credentials=CORS_ALLOW_CREDENTIALS,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
-
-# Service URLs from environment
-PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://patient:8001")
-PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://prediction:8002")
-SIMULATION_SERVICE_URL = os.getenv("SIMULATION_SERVICE_URL", "http://simulation:8003")
-
-# Service clients
-patient_client = ServiceClient(PATIENT_SERVICE_URL)
-prediction_client = ServiceClient(PREDICTION_SERVICE_URL)
-simulation_client = ServiceClient(SIMULATION_SERVICE_URL)
 
 
 class LoginRequest(BaseModel):
@@ -96,12 +140,10 @@ async def health_check():
 
 
 @app.post("/auth/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
-    """
-    Authenticate user and return JWT token.
+async def login(request: LoginRequest, req: Request):
+    """Authenticate user and return JWT token."""
+    _check_rate_limit(req.client.host if req.client else "unknown")
 
-    In production, this should verify against a user database.
-    """
     if request.username == AUTH_USERNAME and request.password == AUTH_PASSWORD:
         access_token = create_access_token(
             data={"sub": request.username},
@@ -123,17 +165,17 @@ async def list_patients(_current_user: dict = Depends(get_current_user)):
         return await patient_client.get("/patients")
     except Exception as e:
         logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
 
 
 @app.post("/api/patients")
-async def create_patient(patient_data: dict, _current_user: dict = Depends(get_current_user)):
+async def create_patient(patient_data: PatientCreate, _current_user: dict = Depends(get_current_user)):
     """Forward request to patient service."""
     try:
-        return await patient_client.post("/patients", patient_data)
+        return await patient_client.post("/patients", patient_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
 
 
 @app.get("/api/patients/{patient_id}")
@@ -143,39 +185,39 @@ async def get_patient(patient_id: str, _current_user: dict = Depends(get_current
         return await patient_client.get(f"/patients/{patient_id}")
     except Exception as e:
         logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=500, detail="Patient service unavailable") from e
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
 
 
 # Prediction service endpoints
 @app.post("/api/predictions")
-async def create_prediction(prediction_data: dict, _current_user: dict = Depends(get_current_user)):
+async def create_prediction(prediction_data: PredictionRequest, _current_user: dict = Depends(get_current_user)):
     """Forward request to prediction service."""
     try:
-        return await prediction_client.post("/predictions", prediction_data)
+        return await prediction_client.post("/predictions", prediction_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to prediction service: %s", e)
-        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
 
 
 # Simulation service endpoints
 @app.post("/api/simulations")
-async def create_simulation(simulation_data: dict, _current_user: dict = Depends(get_current_user)):
+async def create_simulation(simulation_data: SimulationRequest, _current_user: dict = Depends(get_current_user)):
     """Forward request to simulation service."""
     try:
-        return await simulation_client.post("/simulations", simulation_data)
+        return await simulation_client.post("/simulations", simulation_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to simulation service: %s", e)
-        raise HTTPException(status_code=500, detail="Simulation service unavailable") from e
+        raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
 
 
 @app.post("/api/simulations/icu")
-async def create_icu_simulation(simulation_data: dict, _current_user: dict = Depends(get_current_user)):
+async def create_icu_simulation(simulation_data: ICUPatientSimulationRequest, _current_user: dict = Depends(get_current_user)):
     """Forward ICU patient simulation request to simulation service."""
     try:
-        return await simulation_client.post("/simulations/icu", simulation_data)
+        return await simulation_client.post("/simulations/icu", simulation_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding ICU simulation to simulation service: %s", e)
-        raise HTTPException(status_code=500, detail="ICU simulation service unavailable") from e
+        raise HTTPException(status_code=502, detail="ICU simulation service unavailable") from e
 
 
 @app.post("/simulation")
@@ -187,30 +229,30 @@ async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
     which does not attach a JWT token to simulation calls.
     """
     try:
-        return await simulation_client.post("/simulation", simulation_data.model_dump())
+        return await simulation_client.post("/simulation", simulation_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding platform simulation to simulation service: %s", e)
-        raise HTTPException(status_code=500, detail="Simulation service unavailable") from e
+        raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
 
 
 @app.post("/statistics/wilcoxon")
 async def run_wilcoxon_test(test_data: WilcoxonRequest):
     """Forward Wilcoxon signed-rank test request to simulation service."""
     try:
-        return await simulation_client.post("/statistics/wilcoxon", test_data.model_dump())
+        return await simulation_client.post("/statistics/wilcoxon", test_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding Wilcoxon test to simulation service: %s", e)
-        raise HTTPException(status_code=500, detail="Statistics service unavailable") from e
+        raise HTTPException(status_code=502, detail="Statistics service unavailable") from e
 
 
 @app.post("/statistics/friedman")
 async def run_friedman_test(test_data: FriedmanRequest):
     """Forward Friedman chi-square test request to simulation service."""
     try:
-        return await simulation_client.post("/statistics/friedman", test_data.model_dump())
+        return await simulation_client.post("/statistics/friedman", test_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding Friedman test to simulation service: %s", e)
-        raise HTTPException(status_code=500, detail="Statistics service unavailable") from e
+        raise HTTPException(status_code=502, detail="Statistics service unavailable") from e
 
 
 if __name__ == "__main__":

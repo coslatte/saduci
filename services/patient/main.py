@@ -10,8 +10,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -21,6 +20,8 @@ from shared.utils import get_logger
 
 logger = get_logger(__name__)
 
+MAX_CSV_SIZE_BYTES = int(os.getenv("MAX_CSV_SIZE_BYTES", str(5 * 1024 * 1024)))  # 5 MB
+
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -28,7 +29,10 @@ if not DATABASE_URL:
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Patient(Base):
@@ -157,10 +161,15 @@ async def import_clinical_data(
     Expected CSV format:
     patient_id,first_name,last_name,date_of_birth,gender,clinical_data
     """
-    if not file.filename.endswith('.csv'):
+    if not file.filename or not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV")
 
     content = await file.read()
+    if len(content) > MAX_CSV_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_CSV_SIZE_BYTES // (1024 * 1024)} MB",
+        )
     csv_file = io.StringIO(content.decode('utf-8'))
     csv_reader = csv.DictReader(csv_file)
 
@@ -196,7 +205,8 @@ async def import_clinical_data(
         logger.info("Imported %s patients", imported_count)
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to import data: {str(e)}") from e
+        logger.error("Failed to import patient data: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to import data") from e
 
     return {
         "message": f"Successfully imported {imported_count} patients",

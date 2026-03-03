@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PatientBase(BaseModel):
@@ -32,9 +32,8 @@ class PatientUpdate(BaseModel):
 class PatientResponse(PatientBase):
     """Schema for patient response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True

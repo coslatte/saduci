@@ -9,8 +9,7 @@ from typing import List, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -52,7 +51,10 @@ if not DATABASE_URL:
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class SimulationRecord(Base):
@@ -224,7 +226,7 @@ async def create_simulation(
         results = simulation_engine.run_simulation(request.scenario, request.parameters)
     except Exception as e:
         logger.error("Error running simulation: %s", e)
-        raise HTTPException(status_code=500, detail=f"Simulation failed: {str(e)}") from e
+        raise HTTPException(status_code=500, detail="Simulation failed") from e
 
     # Save simulation to database
     db_simulation = SimulationRecord(
@@ -409,10 +411,10 @@ class ICUSimulationEngine:
 
         except ValueError as e:
             logger.error("Validation error in ICU simulation: %s", e)
-            raise HTTPException(status_code=400, detail=f"Invalid patient parameters: {str(e)}") from e
+            raise HTTPException(status_code=400, detail="Invalid patient parameters") from e
         except Exception as e:
             logger.error("Error running ICU simulation: %s", e)
-            raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}") from e
+            raise HTTPException(status_code=500, detail="ICU simulation failed") from e
 
 
 @app.post("/simulations/icu", response_model=ICUPatientSimulationResponse)
@@ -467,7 +469,7 @@ async def create_icu_simulation(
         raise
     except Exception as e:
         logger.error("Error running ICU simulation: %s", e)
-        raise HTTPException(status_code=500, detail=f"ICU simulation failed: {str(e)}") from e
+        raise HTTPException(status_code=500, detail="ICU simulation failed") from e
 
     # Save simulation to database
     db_simulation = SimulationRecord(
