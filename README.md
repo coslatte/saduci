@@ -43,4 +43,3 @@ docker-compose down
 pytest
 ```
 
-Want a more minimal README (only commands) or a Spanish version? Tell me which and I'll update it.
