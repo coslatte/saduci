@@ -95,7 +95,24 @@ Successfully implemented a complete Python microservices backend using FastAPI f
 4. **sample_patients.csv**: Sample data for testing
 5. **.env.example**: Environment configuration templates
 
-### Key Features Implemented
+### Test Suite
+
+137 pytest tests across 8 files covering all services end-to-end.
+
+| File | Scope |
+|---|---|
+| `test_api_gateway.py` | Health, login, JWT-protected routes |
+| `test_api_gateway_auth_and_routing.py` | Rate limiting, token expiry/tampering, route parametrization |
+| `test_patient_service_crud.py` | CRUD lifecycle, pagination, CSV import |
+| `test_prediction_service_endpoints.py` | All three ML models, risk boundaries, prediction history |
+| `test_simulation_service_endpoints.py` | Scenarios, simulations, history, helper functions, stats endpoints |
+| `test_auth_utils.py` | Password hashing, JWT create/verify |
+| `test_schemas.py` | Pydantic schema validation |
+| `test_prediction_engine.py` | `DummyMLModel` unit tests |
+| `test_simulation_engine.py` | `SimulationEngine` unit tests |
+| `test_statistics_and_platform_simulation.py` | Wilcoxon, Friedman, platform simulation |
+
+**Test infrastructure pattern**: each service client factory loads the service module dynamically via `conftest.load_module_from_path`, then overrides the SQLAlchemy `get_db` dependency with a `StaticPool`-backed in-memory SQLite engine to ensure all threads (including Starlette's ASGI worker) share a single connection.
 
 **Microservices Architecture**
 - Independent, scalable services

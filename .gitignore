@@ -59,3 +59,8 @@ htmlcov/
 
 # Alembic
 *.pyc
+
+# Test outputs
+test-results/
+test-results/**
+test_results*.txt

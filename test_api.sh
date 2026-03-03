@@ -15,6 +15,11 @@ if [ -z "$AUTH_USERNAME" ] || [ -z "$AUTH_PASSWORD" ]; then
     exit 1
 fi
 
+# Ensure test results directory exists and capture script output
+mkdir -p test-results
+LOGFILE="test-results/test_api_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
 echo "🧪 Testing SADECI-Core API Endpoints"
 echo "===================================="
 echo ""

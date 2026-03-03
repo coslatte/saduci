@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-03
+
+### Added
+
+#### Test Suite Expansion
+- `tests/test_api_gateway_auth_and_routing.py`: login validation, rate limiting, JWT expiry and tamper detection, parametrized protected/unprotected routes, 404 handling.
+- `tests/test_patient_service_crud.py`: full CRUD lifecycle, pagination, CSV import (valid, invalid headers, oversized file, partial success).
+- `tests/test_prediction_service_endpoints.py`: models catalogue, all three prediction models, risk level boundary checks, prediction history isolation.
+- `tests/test_simulation_service_endpoints.py`: scenario catalogue, treatment/vital-signs/intervention simulations, patient history, `_make_time_stats` and `_mortality_prediction` unit tests, platform simulation validation, Wilcoxon and Friedman statistical endpoints.
+
+Total tests increased from **31 to 137**.
+
+#### Simulation Data
+- `services/simulation/data/centroids.csv`: minimal centroid data (3 clusters × 11 features) required by SimUCI `CentroidLoader`. Without this file the platform simulation endpoint and related tests raised `FileNotFoundError`.
+
+### Fixed
+
+- **SQLite cross-thread failure in tests**: `TestClient` runs the ASGI app in a background thread; SQLite's default `SingletonThreadPool` issued a new connection per thread, causing `no such table` errors and `ProgrammingError: SQLite objects created in a thread can only be used in that same thread`. Fixed by overriding the SQLAlchemy engine with `StaticPool` + `check_same_thread=False` and injecting it via `app.dependency_overrides[get_db]` in all three service test factories (`_patient_client`, `_prediction_client`, `_sim_client`).
+- **Friedman test NaN serialisation**: test used identical sample groups, causing SciPy to emit `NaN` from a division-by-zero in the tied-ranks correction, which `json.dumps` rejected with `ValueError: Out of range float values`. Fixed by using distinct per-group offsets so ranks are never fully tied.
+
 ## [1.0.1] - 2024-01-15
 
 ### Security

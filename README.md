@@ -1,4 +1,4 @@
-# saduci
+# SADUCI-CORE
 
 Microservices core for clinical intelligence (ICU). This README is intentionally short — for full guides, examples, and references see the `docs/` folder.
 

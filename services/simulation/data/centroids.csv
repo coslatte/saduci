@@ -1,0 +1,4 @@
+cluster,Edad,Diag.Ing1,Diag.Ing2,Diag.Ing3,Diag.Ing4,APACHE,InsufResp,VA,Est.UCI,TiempoVAM,Est.PreUCI
+0,65,1,0,0,0,20,2,1,120,48,10
+1,45,0,0,0,0,12,1,0,96,24,8
+2,78,2,1,0,0,28,3,1,200,72,15
