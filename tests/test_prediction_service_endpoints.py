@@ -325,3 +325,75 @@ def test_risk_level_boundaries(age, severity, expected_level) -> None:
     prediction, _ = model.predict({"age": age, "severity_score": severity})
 
     assert prediction["risk_level"] == expected_level
+
+
+# ─── Platform-compatible prediction endpoints ────────────────────────────────
+
+
+_PLATFORM_PAYLOAD = {
+    "edad": 40,
+    "diag_ing1": 8,
+    "diag_ing2": 90,
+    "diag_egr2": 27,
+    "apache": 28,
+    "tiempo_vam": 26,
+}
+
+
+def test_platform_prediccion_returns_probability_between_0_and_1() -> None:
+    response = _prediction_client().post("/prediccion", json=_PLATFORM_PAYLOAD)
+
+    assert response.status_code == 200
+    probability = response.json()["probability"]
+    assert 0.0 <= probability <= 1.0
+
+
+def test_platform_prediccion_is_deterministic_for_same_input() -> None:
+    client = _prediction_client()
+
+    p1 = client.post("/prediccion", json=_PLATFORM_PAYLOAD).json()["probability"]
+    p2 = client.post("/prediccion", json=_PLATFORM_PAYLOAD).json()["probability"]
+
+    assert p1 == p2
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("edad", 10),
+        ("diag_ing1", 0),
+        ("diag_ing2", 200),
+        ("diag_egr2", 10),
+        ("apache", 45),
+        ("tiempo_vam", 10),
+    ],
+)
+def test_platform_prediccion_rejects_out_of_range_fields(field, bad_value) -> None:
+    payload = {**_PLATFORM_PAYLOAD, field: bad_value}
+    response = _prediction_client().post("/prediccion", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_platform_prediccion_explain_returns_feature_names_and_importances() -> None:
+    payload = {**_PLATFORM_PAYLOAD, "method": "SHAP"}
+    response = _prediction_client().post("/prediccion/explain", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["feature_names"] == [
+        "Edad",
+        "Diag.Ing1",
+        "Diag.Ing2",
+        "Diag.Egr2",
+        "APACHE",
+        "TiempoVAM",
+    ]
+    assert len(body["importances"]) == 6
+
+
+def test_platform_prediccion_explain_rejects_unknown_method() -> None:
+    payload = {**_PLATFORM_PAYLOAD, "method": "UNKNOWN"}
+    response = _prediction_client().post("/prediccion/explain", json=payload)
+
+    assert response.status_code == 422

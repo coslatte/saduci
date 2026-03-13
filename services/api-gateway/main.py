@@ -18,6 +18,8 @@ from shared.schemas import (
     HealthCheck,
     PatientCreate,
     PredictionRequest,
+    PlatformPredictionRequest,
+    PlatformExplanationRequest,
     SimulationRequest,
     ICUPatientSimulationRequest,
     PlatformSimulationRequest,
@@ -196,6 +198,36 @@ async def create_prediction(prediction_data: PredictionRequest, _current_user: d
         return await prediction_client.post("/predictions", prediction_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to prediction service: %s", e)
+        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+
+
+@app.post("/prediccion")
+async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
+    """
+    Forward saduci-platform prediction request to prediction service.
+
+    This endpoint is unauthenticated to match the saduci-platform client
+    which does not attach a JWT token to prediction calls.
+    """
+    try:
+        return await prediction_client.post("/prediccion", prediction_data.model_dump(mode="json"))
+    except Exception as e:
+        logger.error("Error forwarding platform prediction to prediction service: %s", e)
+        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+
+
+@app.post("/prediccion/explain")
+async def run_platform_prediction_explain(explain_data: PlatformExplanationRequest):
+    """
+    Forward saduci-platform explainability request to prediction service.
+
+    This endpoint is unauthenticated to match the saduci-platform client
+    which does not attach a JWT token to prediction explainability calls.
+    """
+    try:
+        return await prediction_client.post("/prediccion/explain", explain_data.model_dump(mode="json"))
+    except Exception as e:
+        logger.error("Error forwarding platform explainability to prediction service: %s", e)
         raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
 
 

@@ -1,6 +1,7 @@
 """Prediction service - ML model integration."""
 import os
 import sys
+import math
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -10,7 +11,15 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from shared.schemas import HealthCheck, PredictionRequest, PredictionResponse
+from shared.schemas import (
+    HealthCheck,
+    PredictionRequest,
+    PredictionResponse,
+    PlatformPredictionRequest,
+    PlatformPredictionResponse,
+    PlatformExplanationRequest,
+    PlatformExplanationResponse,
+)
 from shared.utils import get_logger
 
 logger = get_logger(__name__)
@@ -50,6 +59,40 @@ app = FastAPI(
     version="1.0.0"
 )
 
+_PLATFORM_FEATURE_NAMES = [
+    "Edad",
+    "Diag.Ing1",
+    "Diag.Ing2",
+    "Diag.Egr2",
+    "APACHE",
+    "TiempoVAM",
+]
+
+_PLATFORM_LIMITS = {
+    "edad": (14, 61),
+    "diag_ing1": (1, 20),
+    "diag_ing2": (39, 173),
+    "diag_egr2": (18, 40),
+    "apache": (18, 40),
+    "tiempo_vam": (18, 40),
+}
+
+_PLATFORM_WEIGHTS = {
+    "edad": 0.10,
+    "diag_ing1": 0.12,
+    "diag_ing2": 0.18,
+    "diag_egr2": 0.20,
+    "apache": 0.25,
+    "tiempo_vam": 0.15,
+}
+
+_EXPLANATION_METHOD_SCALE = {
+    "LIME": 1.00,
+    "SHAP": 1.10,
+    "Gradientes Integrados": 0.90,
+    "Mapas de Saliencia": 1.05,
+}
+
 
 def get_db():
     """Get database session."""
@@ -58,6 +101,44 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _normalize_feature(name: str, value: int) -> float:
+    """Normalize feature to [0, 1] using platform bounds."""
+    low, high = _PLATFORM_LIMITS[name]
+    return (float(value) - float(low)) / float(high - low)
+
+
+def _platform_prediction_probability(request: PlatformPredictionRequest) -> float:
+    """Compute deterministic mortality probability for saduci-platform."""
+    normalized = {
+        key: _normalize_feature(key, int(getattr(request, key)))
+        for key in _PLATFORM_WEIGHTS
+    }
+
+    logit = -1.2
+    for key, weight in _PLATFORM_WEIGHTS.items():
+        logit += (normalized[key] - 0.5) * weight * 4.0
+
+    probability = 1.0 / (1.0 + math.exp(-logit))
+    return round(min(0.99, max(0.01, probability)), 4)
+
+
+def _platform_feature_importances(
+    request: PlatformPredictionRequest,
+    method: str,
+) -> list[float]:
+    """Compute deterministic feature-attribution values for saduci-platform."""
+    scale = _EXPLANATION_METHOD_SCALE[method]
+    importances: list[float] = []
+    ordered_keys = ["edad", "diag_ing1", "diag_ing2", "diag_egr2", "apache", "tiempo_vam"]
+
+    for key in ordered_keys:
+        normalized = _normalize_feature(key, int(getattr(request, key)))
+        centered = normalized - 0.5
+        importances.append(round(centered * _PLATFORM_WEIGHTS[key] * scale, 4))
+
+    return importances
 
 
 class DummyMLModel:
@@ -167,6 +248,23 @@ async def create_prediction(
         prediction=prediction,
         confidence=confidence,
         timestamp=db_prediction.created_at.isoformat()
+    )
+
+
+@app.post("/prediccion", response_model=PlatformPredictionResponse)
+async def create_platform_prediction(request: PlatformPredictionRequest):
+    """Prediction endpoint compatible with saduci-platform frontend."""
+    probability = _platform_prediction_probability(request)
+    return PlatformPredictionResponse(probability=probability)
+
+
+@app.post("/prediccion/explain", response_model=PlatformExplanationResponse)
+async def explain_platform_prediction(request: PlatformExplanationRequest):
+    """Explainability endpoint compatible with saduci-platform frontend."""
+    importances = _platform_feature_importances(request, request.method)
+    return PlatformExplanationResponse(
+        feature_names=_PLATFORM_FEATURE_NAMES,
+        importances=importances,
     )
 
 

@@ -182,7 +182,13 @@ def test_protected_routes_reject_unauthenticated_requests(method, path, body) ->
 
 @pytest.mark.parametrize(
     "path",
-    ["/simulation", "/statistics/wilcoxon", "/statistics/friedman"],
+    [
+        "/simulation",
+        "/statistics/wilcoxon",
+        "/statistics/friedman",
+        "/prediccion",
+        "/prediccion/explain",
+    ],
 )
 def test_unprotected_routes_return_validation_not_auth_error(path) -> None:
     """/simulation and /statistics/* are public; an empty body yields 422, not 401/403."""

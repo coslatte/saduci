@@ -4,7 +4,14 @@ Shared Pydantic schemas for sadeci-core microservices.
 from .health import HealthCheck
 from .patient import PatientBase, PatientCreate, PatientUpdate, PatientResponse
 from .user import UserBase, UserCreate, UserResponse
-from .prediction import PredictionRequest, PredictionResponse
+from .prediction import (
+    PredictionRequest,
+    PredictionResponse,
+    PlatformPredictionRequest,
+    PlatformPredictionResponse,
+    PlatformExplanationRequest,
+    PlatformExplanationResponse,
+)
 from .simulation import (
     SimulationRequest,
     SimulationResponse,
@@ -26,6 +33,10 @@ __all__ = [
     "UserResponse",
     "PredictionRequest",
     "PredictionResponse",
+    "PlatformPredictionRequest",
+    "PlatformPredictionResponse",
+    "PlatformExplanationRequest",
+    "PlatformExplanationResponse",
     "SimulationRequest",
     "SimulationResponse",
     "ICUPatientSimulationRequest",
