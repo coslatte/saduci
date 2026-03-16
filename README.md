@@ -26,7 +26,7 @@ Local development (optional)
 python -m venv .venv
 .venv\Scripts\activate
 uv pip install -r services/api-gateway/requirements.txt
-python services/api-gateway/main.py
+uv run services/api-gateway/main.py
 ```
 
 Detailed documentation in `docs/`
@@ -40,6 +40,6 @@ Useful commands
 ```bash
 docker-compose up -d --build
 docker-compose down
-pytest
+# Run tests using `uv` (recommended)
+uv run -m pytest -q
 ```
-

@@ -22,11 +22,23 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 
 ### Development Workflow
 1. Work in feature branches
-2. Update documentation in `docs/` folder
+2. Update documentation incrementally:
+	 - For now, only maintain `docs/CHANGELOG.md` and `docs/ARCHITECTURE.md`
+	 - Record all meaningful technical progress in `docs/CHANGELOG.md`
+	 - Keep `docs/ARCHITECTURE.md` aligned with real code behavior
+	 - Do not recreate deleted docs unless explicitly requested in a future documentation iteration
 3. Add tests for new functionality
 4. Use Docker Compose for local development
 5. Follow security best practices (change defaults, use strong secrets)
 6. Keep dependencies updated and patched
+
+### Documentation Policy (Current Project Phase)
+- Documentation is intentionally centralized in two files only:
+	- `docs/CHANGELOG.md`
+	- `docs/ARCHITECTURE.md`
+- Treat this as Iteration 1 of a 3-iteration documentation rebuild.
+- Prefer adding high-value development details to `docs/CHANGELOG.md` until broader documentation is re-enabled.
+- If implementation changes architecture, update both files in the same task whenever feasible.
 
 ### Environment & versioning (for AI agents)
 - Use `uv` as the Python version manager and command runner for development and CI. AI agents must invoke Python and pip through `uv` (for example `uv run -m pytest`, `uv pip install ...`) instead of calling the system Python directly.
@@ -63,6 +75,7 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 - Validate JWT authentication
 - Test CRUD operations
 - Verify SimUCI integration
+- For testing, make sure you are using `uv`
 
 ### Deployment
 - Use Docker Compose for orchestration

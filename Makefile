@@ -69,3 +69,6 @@ db-prediction: ## Connect to prediction database
 
 db-simulation: ## Connect to simulation database
 	docker-compose exec simulation-db psql -U simulation_user -d simulation_db
+
+test: ## Run test suite using `uv`
+	uv run -m pytest -q
