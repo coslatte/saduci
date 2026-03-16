@@ -72,3 +72,6 @@ db-simulation: ## Connect to simulation database
 
 test: ## Run test suite using `uv`
 	uv run -m pytest -q
+
+update-deps: ## Upgrade service requirements to latest installed versions and rewrite files
+	uv run scripts/update_deps.py

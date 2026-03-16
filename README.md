@@ -15,10 +15,10 @@ docker-compose up -d --build
 
 Main endpoints
 
-- API Gateway: http://localhost:8000
-- Patient Service: http://localhost:8001
-- Prediction Service: http://localhost:8002
-- Simulation Service: http://localhost:8003
+- API Gateway: <http://localhost:8000>
+- Patient Service: <http://localhost:8001>
+- Prediction Service: <http://localhost:8002>
+- Simulation Service: <http://localhost:8003>
 
 Local development (optional)
 
