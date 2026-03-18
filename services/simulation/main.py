@@ -1,6 +1,7 @@
 """Simulation service - clinical scenario simulations."""
 import os
 import sys
+import hashlib
 import math
 import random
 from datetime import datetime, timezone
@@ -511,6 +512,31 @@ async def create_icu_simulation(
 _PLATFORM_SIM_VARS = ["pre_vam", "vam", "post_vam", "uci", "post_uci"]
 
 
+def _platform_fallback_seed(request: PlatformSimulationRequest) -> int:
+    """Build a stable seed for the platform fallback simulation."""
+    seed_source = "|".join(
+        str(value)
+        for value in (
+            request.age,
+            request.apache,
+            request.d1,
+            request.d2,
+            request.d3,
+            request.d4,
+            request.diag_egreso2,
+            request.artif_vent,
+            request.vam_time,
+            request.uti_stay,
+            request.preuti_stay,
+            request.resp_insuf,
+            request.percent,
+            request.n_runs,
+        )
+    )
+    digest = hashlib.sha256(seed_source.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big", signed=False)
+
+
 def _make_time_stats(mean: float, std: float, n: int) -> TimeStats:
     """Build a TimeStats with 95% confidence interval."""
     margin = 1.96 * std / math.sqrt(max(n, 1))
@@ -541,7 +567,7 @@ def _fallback_platform_simulation(request: PlatformSimulationRequest) -> Dict[st
     Uses a deterministic seed derived from the key clinical parameters so that
     identical inputs always produce identical outputs.
     """
-    rng = random.Random(hash((request.age, request.apache, request.vam_time)))
+    rng = random.Random(_platform_fallback_seed(request))
     n = request.n_runs
 
     base_vam = request.vam_time * (1.0 + request.apache / 36.0 * 0.5)

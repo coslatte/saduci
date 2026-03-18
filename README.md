@@ -9,7 +9,6 @@ Prerequisites: Docker and Docker Compose
 ```bash
 git clone https://github.com/coslatte/saduci-core.git
 cd saduci-core
-cp .env.example .env
 docker-compose up -d --build
 ```
 
@@ -31,9 +30,8 @@ uv run services/api-gateway/main.py
 
 Detailed documentation in `docs/`
 
-- Getting started: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 - Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- SimUCI integration: [docs/SIMUCI_INTEGRATION.md](docs/SIMUCI_INTEGRATION.md)
+- Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 Useful commands
 

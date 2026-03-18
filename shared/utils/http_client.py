@@ -47,6 +47,21 @@ class ServiceClient:
         response.raise_for_status()
         return response.json()
 
+    async def post_files(
+        self,
+        endpoint: str,
+        files: Any,
+        data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """Make a multipart/form-data POST request."""
+        url = f"{self.base_url}{endpoint}"
+        logger.info("POST multipart request to %s", url)
+
+        response = await self.client.post(url, files=files, data=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
     async def put(
         self,
         endpoint: str,

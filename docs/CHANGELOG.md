@@ -13,6 +13,12 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- Stabilized the Simulation Service fallback path by replacing process-local Python hash seeding with a deterministic SHA-256-based seed.
+- Expanded the API Gateway proxy surface so it now matches the implemented patient, prediction, and simulation endpoints more closely.
+- Cleaned the README so it only references documentation that still exists in the repository.
+
 ### Planned (Documentation Iterations)
 
 - Iteration 2/3: add runbooks, operational procedures, and troubleshooting matrix.

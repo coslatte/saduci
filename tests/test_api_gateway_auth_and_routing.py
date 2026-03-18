@@ -154,6 +154,32 @@ def test_valid_token_is_accepted_by_auth_layer() -> None:
     assert response.status_code not in {401, 403}
 
 
+@pytest.mark.parametrize(
+    "method,path,kwargs",
+    [
+        ("PUT", "/api/patients/P001", {"json": {"first_name": "Ana"}}),
+        ("DELETE", "/api/patients/P001", {}),
+        (
+            "POST",
+            "/api/patients/import",
+            {"files": {"file": ("patients.csv", b"patient_id,first_name,last_name,date_of_birth,gender\nP1,Ana,Lopez,1980-01-01,female\n", "text/csv")}},
+        ),
+        ("GET", "/api/predictions/models", {}),
+        ("GET", "/api/predictions/P001", {}),
+        ("GET", "/api/simulations/scenarios", {}),
+        ("GET", "/api/simulations/P001", {}),
+    ],
+)
+def test_gateway_exposes_additional_service_routes(method, path, kwargs) -> None:
+    client = _create_client()
+    token = _get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.request(method, path, headers=headers, **kwargs)
+
+    assert response.status_code != 404
+
+
 # ─── Protected routes ─────────────────────────────────────────────────────────
 
 

@@ -314,6 +314,32 @@ def test_mortality_prediction_probability_is_clamped_to_005_095() -> None:
     assert p_max <= 0.95
 
 
+def test_platform_fallback_seed_is_deterministic_for_same_input() -> None:
+    module = load_module_from_path("sim_seed_test", "services/simulation/main.py", env=_DB_ENV)
+
+    request = module.PlatformSimulationRequest(  # pyright: ignore[reportPrivateUsage]
+        age=55,
+        apache=20,
+        d1=5,
+        d2=0,
+        d3=0,
+        d4=0,
+        diag_egreso2=0,
+        artif_vent=1,
+        vam_time=48,
+        uti_stay=96,
+        preuti_stay=12,
+        resp_insuf=2,
+        percent=3,
+        n_runs=50,
+    )
+
+    seed_1 = getattr(module, "_platform_fallback_seed")(request)  # pyright: ignore[reportPrivateUsage]
+    seed_2 = getattr(module, "_platform_fallback_seed")(request)  # pyright: ignore[reportPrivateUsage]
+
+    assert seed_1 == seed_2
+
+
 # ─── Platform simulation endpoint (POST /simulation) ─────────────────────────
 
 

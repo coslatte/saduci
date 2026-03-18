@@ -6,7 +6,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, Request, status
+from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 from shared.schemas import (
     HealthCheck,
     PatientCreate,
+    PatientUpdate,
     PredictionRequest,
     PlatformPredictionRequest,
     PlatformExplanationRequest,
@@ -173,6 +174,48 @@ async def list_patients(_current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=502, detail="Patient service unavailable") from e
 
 
+@app.put("/api/patients/{patient_id}")
+async def update_patient(
+    patient_id: str,
+    patient_data: PatientUpdate,
+    _current_user: dict = Depends(get_current_user),
+):
+    """Forward patient update request to patient service."""
+    try:
+        payload = patient_data.model_dump(mode="json", exclude_unset=True)
+        return await patient_client.put(f"/patients/{patient_id}", payload)
+    except Exception as e:
+        logger.error("Error forwarding patient update to patient service: %s", e)
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
+
+
+@app.delete("/api/patients/{patient_id}")
+async def delete_patient(patient_id: str, _current_user: dict = Depends(get_current_user)):
+    """Forward patient delete request to patient service."""
+    try:
+        return await patient_client.delete(f"/patients/{patient_id}")
+    except Exception as e:
+        logger.error("Error forwarding patient delete to patient service: %s", e)
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
+
+
+@app.post("/api/patients/import")
+async def import_patients(
+    file: UploadFile = File(...),
+    _current_user: dict = Depends(get_current_user),
+):
+    """Forward CSV import request to patient service."""
+    try:
+        content = await file.read()
+        return await patient_client.post_files(
+            "/patients/import",
+            files={"file": (file.filename or "patients.csv", content, file.content_type or "text/csv")},
+        )
+    except Exception as e:
+        logger.error("Error forwarding patient import to patient service: %s", e)
+        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
+
+
 @app.post("/api/patients")
 async def create_patient(patient_data: PatientCreate, _current_user: dict = Depends(get_current_user)):
     """Forward request to patient service."""
@@ -201,6 +244,26 @@ async def create_prediction(prediction_data: PredictionRequest, _current_user: d
         return await prediction_client.post("/predictions", prediction_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to prediction service: %s", e)
+        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+
+
+@app.get("/api/predictions/models")
+async def list_prediction_models(_current_user: dict = Depends(get_current_user)):
+    """Forward model catalogue request to prediction service."""
+    try:
+        return await prediction_client.get("/models")
+    except Exception as e:
+        logger.error("Error forwarding model list to prediction service: %s", e)
+        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+
+
+@app.get("/api/predictions/{patient_id}")
+async def get_prediction_history(patient_id: str, _current_user: dict = Depends(get_current_user)):
+    """Forward prediction history request to prediction service."""
+    try:
+        return await prediction_client.get(f"/predictions/{patient_id}")
+    except Exception as e:
+        logger.error("Error forwarding prediction history to prediction service: %s", e)
         raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
 
 
@@ -242,6 +305,26 @@ async def create_simulation(simulation_data: SimulationRequest, _current_user: d
         return await simulation_client.post("/simulations", simulation_data.model_dump(mode="json"))
     except Exception as e:
         logger.error("Error forwarding to simulation service: %s", e)
+        raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
+
+
+@app.get("/api/simulations/scenarios")
+async def list_simulation_scenarios(_current_user: dict = Depends(get_current_user)):
+    """Forward scenario catalogue request to simulation service."""
+    try:
+        return await simulation_client.get("/scenarios")
+    except Exception as e:
+        logger.error("Error forwarding scenario list to simulation service: %s", e)
+        raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
+
+
+@app.get("/api/simulations/{patient_id}")
+async def get_simulation_history(patient_id: str, _current_user: dict = Depends(get_current_user)):
+    """Forward simulation history request to simulation service."""
+    try:
+        return await simulation_client.get(f"/simulations/{patient_id}")
+    except Exception as e:
+        logger.error("Error forwarding simulation history to simulation service: %s", e)
         raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
 
 

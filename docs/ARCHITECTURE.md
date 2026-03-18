@@ -37,31 +37,17 @@ Archivo principal: `services/api-gateway/main.py`
 
 Responsabilidades:
 
-- Login con JWT en `POST /auth/login`
-- Validacion de token para rutas protegidas
-- Rate limiting en login (en memoria, por IP)
-- CORS configurable por variables de entorno
-- Proxy HTTP asincrono a servicios internos usando `ServiceClient`
 
 Rutas principales:
 
-- `GET /health`
-- `POST /auth/login`
-- `GET|POST|PUT|DELETE /api/patients...`
-- `POST /api/predictions`
-- `POST /api/simulations`
-- `POST /api/simulations/icu`
-- `POST /prediccion`
-- `POST /prediccion/explain`
-- `POST /simulation`
-- `POST /statistics/wilcoxon`
-- `POST /statistics/friedman`
-
+ `GET /api/predictions/models`
+ `GET /api/predictions/{patient_id}`
+ `GET /api/simulations/scenarios`
+ `GET /api/simulations/{patient_id}`
 Notas:
 
 - Credenciales de login se toman de `AUTH_USERNAME` y `AUTH_PASSWORD`.
-- El gateway falla al iniciar si faltan esas variables.
-
+ El gateway ahora reexpone la superficie implementada por los servicios de pacientes, prediccion y simulacion.
 ### 3.2 Patient Service
 
 Archivo principal: `services/patient/main.py`
@@ -69,30 +55,16 @@ Archivo principal: `services/patient/main.py`
 Responsabilidades:
 
 - CRUD de pacientes
-- Importacion de pacientes por CSV
-- Persistencia de datos clinicos JSON
-
 Modelo principal:
 
 - Tabla `patients`
-- Campos clave: `patient_id`, `first_name`, `last_name`, `date_of_birth`, `gender`, `clinical_data`
-
 Rutas principales:
 
 - `GET /health`
-- `GET /patients`
-- `POST /patients`
-- `GET /patients/{patient_id}`
-- `PUT /patients/{patient_id}`
-- `DELETE /patients/{patient_id}`
-- `POST /patients/import`
-
 Comportamiento relevante:
 
 - valida extensiones `.csv`
-- limite de tamano configurable con `MAX_CSV_SIZE_BYTES`
-- intenta importar fila por fila y devuelve resumen + errores
-
+ el gateway permite el mismo import via multipart/form-data para mantener una sola entrada
 ### 3.3 Prediction Service
 
 Archivo principal: `services/prediction/main.py`
@@ -100,21 +72,9 @@ Archivo principal: `services/prediction/main.py`
 Responsabilidades:
 
 - Predicciones clinicas de ejemplo (dummy model)
-- Persistencia de historial de predicciones
-- Compatibilidad con saduci-platform (`/prediccion`, `/prediccion/explain`)
-
-Modelos disponibles (`GET /models`):
 
 1. `mortality_risk`
 2. `length_of_stay`
-3. `readmission_risk`
-
-Rutas principales:
-
-- `GET /health`
-- `GET /models`
-- `POST /predictions`
-- `GET /predictions/{patient_id}`
 - `POST /prediccion`
 - `POST /prediccion/explain`
 
@@ -124,9 +84,7 @@ Notas:
 - Explainability soporta metodos: `LIME`, `SHAP`, `Gradientes Integrados`, `Mapas de Saliencia`.
 
 ### 3.4 Simulation Service
-
-Archivo principal: `services/simulation/main.py`
-
+ cuando SimUCI no esta disponible, el fallback usa una semilla deterministica basada en los parametros clinicos para que los resultados sean reproducibles
 Responsabilidades:
 
 - Simulaciones clinicas de escenarios
