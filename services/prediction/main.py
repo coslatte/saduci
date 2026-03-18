@@ -25,11 +25,14 @@ from shared.utils import get_logger
 logger = get_logger(__name__)
 
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL must be configured")
+# Default to local sqlite for development convenience when DATABASE_URL is not provided.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./prediction_service.db")
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -50,8 +53,13 @@ class PredictionRecord(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+DB_AVAILABLE = True
+try:
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+except Exception as exc:
+    DB_AVAILABLE = False
+    logger.exception("Prediction DB initialization failed: %s", exc)
 
 app = FastAPI(
     title="Prediction Service",
@@ -96,6 +104,9 @@ _EXPLANATION_METHOD_SCALE = {
 
 def get_db():
     """Get database session."""
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Prediction database unavailable")
+
     db = SessionLocal()
     try:
         yield db

@@ -73,9 +73,12 @@ if "*" in CORS_ALLOW_ORIGINS:
     CORS_ALLOW_CREDENTIALS = False
 
 # Service URLs from environment
-PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://patient:8001")
-PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://prediction:8002")
-SIMULATION_SERVICE_URL = os.getenv("SIMULATION_SERVICE_URL", "http://simulation:8003")
+# NOTE:
+# - In Docker Compose, these are injected as container DNS names (patient/prediction/simulation)
+# - For local development without Docker, localhost defaults avoid 502 from unresolved hosts
+PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://localhost:8001")
+PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://localhost:8002")
+SIMULATION_SERVICE_URL = os.getenv("SIMULATION_SERVICE_URL", "http://localhost:8003")
 
 # Service clients (initialised early, cleaned up via lifespan)
 patient_client = ServiceClient(PATIENT_SERVICE_URL)
