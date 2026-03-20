@@ -62,3 +62,6 @@ htmlcov/
 
 # Test outputs
 test_results*.txt
+
+# Dumpings...
+research_files/*

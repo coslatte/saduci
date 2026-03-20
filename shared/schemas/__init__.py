@@ -10,6 +10,7 @@ from .prediction import (
     PlatformPredictionResponse,
     PlatformExplanationRequest,
     PlatformExplanationResponse,
+    PlatformFeatureExplanationRow,
 )
 from .simulation import (
     SimulationRequest,
@@ -32,6 +33,7 @@ __all__ = [
     "PlatformPredictionResponse",
     "PlatformExplanationRequest",
     "PlatformExplanationResponse",
+    "PlatformFeatureExplanationRow",
     "SimulationRequest",
     "SimulationResponse",
     "ICUPatientSimulationRequest",

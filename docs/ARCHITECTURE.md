@@ -66,6 +66,9 @@ Responsabilidades:
 - ejecutar modelos deterministas de ejemplo
 - persistir historial de predicciones en PostgreSQL
 - servir el formato compatible con la plataforma externa
+- ejecutar inferencia real para saduci-platform con el modelo entrenado `new_workflow.joblib`
+- entregar datos estructurados para tabla/grafico (importancias por variable, valor observado, baseline y direccion)
+- generar narrativa clinica opcional mediante proveedor configurable (stub o endpoint Hugging Face)
 
 Modelos soportados:
 
@@ -75,8 +78,11 @@ Modelos soportados:
 
 Notas:
 
-- `POST /prediccion` usa una probabilidad determinista.
-- `POST /prediccion/explain` devuelve importancias por metodo compatible.
+- `POST /prediccion` usa el pipeline entrenado (`imblearn.pipeline.Pipeline`) y devuelve probabilidad + clase binaria (`vive`/`muere`).
+- `POST /prediccion/explain` mantiene `feature_names`/`importances` y agrega `rows` con estructura lista para frontend.
+- `POST /prediccion/explain` puede incluir `narrative` si `include_narrative=true`.
+- El proveedor de narrativa se configura con `PREDICTION_NARRATIVE_PROVIDER` (`stub` o `huggingface`).
+- Para `huggingface`, usar `HUGGINGFACE_API_URL` y opcionalmente `HUGGINGFACE_API_TOKEN`.
 
 ### 3.3 Simulation Service
 
@@ -173,6 +179,13 @@ Variables operativas:
 - `CORS_ALLOW_CREDENTIALS`
 - `PORT`
 - `DATABASE_URL`
+- `PREDICTION_MODEL_PATH` (opcional)
+- `PREDICTION_THRESHOLD`
+- `PREDICTION_NARRATIVE_PROVIDER`
+- `PREDICTION_NARRATIVE_MODEL`
+- `HUGGINGFACE_API_URL`
+- `HUGGINGFACE_API_TOKEN`
+- `HUGGINGFACE_TIMEOUT_SECONDS`
 
 ## 6) Flujo de Datos
 
@@ -186,8 +199,9 @@ Variables operativas:
 
 1. Cliente llama `POST /api/predictions` o `POST /prediccion`.
 2. Gateway reenvia la solicitud al Prediction Service.
-3. Prediction Service ejecuta la logica de modelo y persiste el resultado.
-4. Se devuelve la prediccion y sus metadatos.
+3. Prediction Service ejecuta inferencia con el pipeline entrenado para la ruta de plataforma.
+4. Se devuelve probabilidad de no sobrevida, salida binaria y metadatos para renderizar UI.
+5. Si el cliente llama `POST /prediccion/explain`, el servicio calcula contribuciones por variable y puede anexar narrativa clinica.
 
 ### 6.3 Simulacion clinica y estadistica
 

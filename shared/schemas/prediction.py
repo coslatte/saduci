@@ -37,16 +37,44 @@ class PlatformPredictionResponse(BaseModel):
     """Prediction response expected by saduci-platform."""
 
     probability: float
+    probability_percent: float
+    predicted_class: int
+    predicted_label: Literal["vive", "muere"]
+    threshold: float
+
+
+class PlatformFeatureExplanationRow(BaseModel):
+    """Feature-level explanation data for chart/table rendering."""
+
+    feature_key: str
+    feature_name: str
+    patient_value: float
+    patient_value_display: str
+    baseline_value: float
+    contribution: float
+    direction: Literal["increase_risk", "decrease_risk", "neutral"]
 
 
 class PlatformExplanationRequest(PlatformPredictionRequest):
     """Explanation request schema used by saduci-platform prediction UI."""
 
     method: Literal["LIME", "SHAP", "Gradientes Integrados", "Mapas de Saliencia"]
+    include_narrative: bool = False
+    ai_provider: Optional[Literal["stub", "huggingface"]] = None
+    ai_model: Optional[str] = None
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
 
 class PlatformExplanationResponse(BaseModel):
     """Explanation response expected by saduci-platform."""
 
+    method: str
+    probability: float
+    predicted_class: int
+    predicted_label: Literal["vive", "muere"]
     feature_names: List[str]
     importances: List[float]
+    rows: List[PlatformFeatureExplanationRow]
+    narrative: Optional[str] = None
+    narrative_provider: Optional[str] = None
+    narrative_model: Optional[str] = None

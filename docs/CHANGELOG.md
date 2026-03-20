@@ -13,7 +13,19 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## [Unreleased]
 
-### Fixed
+### Added (Unreleased)
+
+- Prediction platform inference now loads the trained artifact `research_files/new_workflow.joblib` and returns enriched output for frontend consumption:
+  - probability and probability percent
+  - binary class (`vive`/`muere`) with configurable threshold
+  - explainability `rows` payload including feature value, baseline, signed contribution, and risk direction
+- Optional narrative generation in `POST /prediccion/explain` controlled by request flag `include_narrative`.
+- Configurable narrative provider layer:
+  - `stub` deterministic clinical summary (default)
+  - `huggingface` HTTP provider via `HUGGINGFACE_API_URL` (with optional bearer token)
+- Prediction service runtime dependencies for trained model compatibility: `joblib`, `pandas`, `scikit-learn==1.6.1`, `imbalanced-learn`.
+
+### Fixed (Unreleased)
 
 - Removed the Patient Service, the legacy `scripts/` helper, the archived `test-results/` artifacts, and the `tests/` suite so the repository now focuses on the gateway, prediction, and simulation services.
 - Aligned the gateway, Compose stack, startup helpers, and documentation with the reduced service topology.
@@ -41,7 +53,7 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
   - `SECURITY.md`
   - `SIMUCI_INTEGRATION.md`
 
-### Added
+### Added (1.2.0)
 
 - Expanded architecture baseline to reflect current code-level behavior:
   - API Gateway route surface including platform-compatible non-JWT routes.
@@ -57,12 +69,12 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## [1.1.0] - 2026-03-03
 
-### Added
+### Added (1.1.0)
 
 - Test suite expansion from 31 to 137 tests was previously recorded and is now being retired as the suite is rebuilt around the reduced architecture.
 - `services/simulation/data/centroids.csv` added to satisfy SimUCI centroid loading.
 
-### Fixed
+### Fixed (1.1.0)
 
 - SQLite cross-thread test failures resolved by using `StaticPool` and `check_same_thread=False` in service test DB overrides.
 - Friedman NaN serialization issue fixed by avoiding fully tied sample groups in tests.
@@ -76,7 +88,7 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## [1.0.0] - 2024-01-15
 
-### Added
+### Added (1.0.0)
 
 - Initial microservices backend release with:
   - API Gateway (JWT auth + service proxy)

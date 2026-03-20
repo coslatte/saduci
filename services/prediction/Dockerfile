@@ -16,6 +16,9 @@ COPY shared/ /app/shared/
 # Copy service files
 COPY services/prediction/ /app/services/prediction/
 
+# Copy trained platform model artifact
+COPY research_files/new_workflow.joblib /app/research_files/new_workflow.joblib
+
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
