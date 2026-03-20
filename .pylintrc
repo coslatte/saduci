@@ -1,6 +1,5 @@
 [MASTER]
 ignore=.venv,.venv-1,__pycache__
-ignore-paths=^services/patient/alembic/.*$
 
 [MESSAGES CONTROL]
 disable=

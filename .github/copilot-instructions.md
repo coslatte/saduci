@@ -7,7 +7,6 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 
 ### Microservices Structure
 - **API Gateway** (Port 8000): Central entry point with JWT auth and routing
-- **Patient Service** (Port 8001): Patient CRUD with PostgreSQL
 - **Prediction Service** (Port 8002): ML predictions with PostgreSQL
 - **Simulation Service** (Port 8003): Clinical simulations with SimUCI integration
 
@@ -70,7 +69,6 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 - Use HTTPS in production
 
 ### Testing
-- Use the provided `test_api.sh` for integration testing
 - Test health endpoints
 - Validate JWT authentication
 - Test CRUD operations
@@ -91,7 +89,7 @@ SADECI-Core is a Python microservices backend for clinical intelligence in ICU s
 - Use meaningful variable names
 
 ## Common Tasks
-- Adding new endpoints: Update API Gateway routing and implement in respective service
+- Adding new endpoints: Update API Gateway routing and implement in the target service
 - Database changes: Create Alembic migrations
 - New ML models: Add to Prediction Service
 - Simulations: Integrate with SimUCI in Simulation Service

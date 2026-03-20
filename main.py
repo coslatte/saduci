@@ -3,12 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import shutil
 import subprocess
 import time
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -39,7 +36,6 @@ STEP_ERRORS = (
     ValueError,
     OSError,
     subprocess.SubprocessError,
-    urllib.error.URLError,
     json.JSONDecodeError,
 )
 
@@ -132,8 +128,8 @@ class DockerComposeRunner:
 
 
 class SadeciInitializer:
-    APP_SERVICES = ["api-gateway", "patient", "prediction", "simulation"]
-    DB_SERVICES = ["patient-db", "prediction-db", "simulation-db"]
+    APP_SERVICES = ["api-gateway", "prediction", "simulation"]
+    DB_SERVICES = ["prediction-db", "simulation-db"]
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = root or Path(__file__).resolve().parent
@@ -191,39 +187,6 @@ class SadeciInitializer:
             if name == "Levantar stack" and wait_seconds > 0:
                 logger.info("Esperando %ss para estabilización de contenedores...", wait_seconds)
                 time.sleep(wait_seconds)
-
-        self.tracker.print_report()
-        return True
-
-    def run_tests(self) -> bool:
-        self.tracker = StepTracker()
-        steps = [
-            ("Estado de servicios antes de test", self.verify_services_status),
-            ("Ejecución de test de integración", self.execute_integration_tests),
-        ]
-        for name, action in steps:
-            if not self.tracker.run_step(name, action):
-                self.tracker.print_report()
-                return False
-        self.tracker.print_report()
-        return True
-
-    def run_full_flow(self) -> bool:
-        self.tracker = StepTracker()
-        flow = [
-            ("Integridad de contenedores", self._require_integrity),
-            ("Inicialización de stack", partial(self.compose_up, with_build=True)),
-            ("Verificación de estado", self.verify_services_status),
-            ("Testing", self.execute_integration_tests),
-        ]
-
-        for index, (name, action) in enumerate(flow):
-            if not self.tracker.run_step(name, action):
-                self.tracker.print_report()
-                return False
-            if index == 1:
-                logger.info("Esperando 8s para que los servicios estén listos...")
-                time.sleep(8)
 
         self.tracker.print_report()
         return True
@@ -315,77 +278,6 @@ class SadeciInitializer:
         summary = ", ".join(f"{name}:{info['state']}" for name, info in sorted(by_service.items()))
         return f"Servicios operativos. Estado detectado -> {summary}"
 
-    def execute_integration_tests(self) -> str:
-        script_path = self.root / "test_api.sh"
-        if script_path.exists() and shutil.which("bash"):
-            process = subprocess.run(
-                ["bash", str(script_path)],
-                cwd=self.root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if process.returncode != 0:
-                raise RuntimeError(process.stderr.strip() or process.stdout.strip() or "test_api.sh falló")
-            return "test_api.sh ejecutado correctamente."
-
-        self._smoke_test_via_http()
-        return "Tests smoke HTTP completados (fallback sin bash)."
-
-    def _smoke_test_via_http(self) -> None:
-        health_urls = [
-            "http://localhost:8000/health",
-            "http://localhost:8001/health",
-            "http://localhost:8002/health",
-            "http://localhost:8003/health",
-        ]
-        for url in health_urls:
-            self._http_get_json(url)
-
-        token = self._authenticate()
-        self._http_get_json("http://localhost:8000/api/patients", token=token)
-
-    def _authenticate(self) -> str:
-        username = os.getenv("AUTH_USERNAME")
-        password = os.getenv("AUTH_PASSWORD")
-        if not username or not password:
-            raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD are required for authentication smoke tests")
-
-        payload = json.dumps({"username": username, "password": password}).encode("utf-8")
-        request = urllib.request.Request(
-            url="http://localhost:8000/auth/login",
-            method="POST",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=12) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"No se pudo autenticar contra API Gateway: {exc}") from exc
-
-        token = body.get("access_token")
-        if not token:
-            raise RuntimeError("Respuesta de autenticación sin access_token")
-        return token
-
-    def _http_get_json(self, url: str, token: Optional[str] = None) -> Any:
-        headers = {}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        request = urllib.request.Request(url=url, method="GET", headers=headers)
-
-        try:
-            with urllib.request.urlopen(request, timeout=12) as response:
-                if response.status < 200 or response.status >= 300:
-                    raise RuntimeError(f"{url} respondió {response.status}")
-                content = response.read().decode("utf-8")
-                if content:
-                    return json.loads(content)
-                return None
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Error HTTP en {url}: {exc}") from exc
-
     def _require_integrity(self) -> str:
         self.check_docker_installed()
         self.check_docker_daemon()
@@ -402,9 +294,7 @@ SADECI-Core :: CLI de Inicialización
 1) Verificación de integridad de contenedores
 2) Inicializar stack (up -d --build)
 3) Verificar estado actual de servicios
-4) Ejecutar testing
-5) Flujo completo (integridad + init + test)
-6) Detener stack (down)
+4) Detener stack (down)
 0) Salir
 """
 
@@ -421,10 +311,6 @@ SADECI-Core :: CLI de Inicialización
             success = app.tracker.run_step("Estado de servicios", app.verify_services_status)
             app.tracker.print_report()
         elif choice == "4":
-            success = app.run_tests()
-        elif choice == "5":
-            success = app.run_full_flow()
-        elif choice == "6":
             app.tracker = StepTracker()
             success = app.tracker.run_step("Detener stack", partial(app.compose_down, with_volumes=False))
             app.tracker.print_report()
@@ -444,7 +330,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "command",
         nargs="?",
         default="interactive",
-        choices=["interactive", "check", "init", "status", "test", "full", "down"],
+        choices=["interactive", "check", "init", "status", "down"],
         help="Comando a ejecutar",
     )
     parser.add_argument(
@@ -480,12 +366,6 @@ def main() -> None:
         ok = app.tracker.run_step("Estado de servicios", app.verify_services_status)
         app.tracker.print_report()
         raise SystemExit(0 if ok else 1)
-
-    if args.command == "test":
-        raise SystemExit(0 if app.run_tests() else 1)
-
-    if args.command == "full":
-        raise SystemExit(0 if app.run_full_flow() else 1)
 
     if args.command == "down":
         app.tracker = StepTracker()

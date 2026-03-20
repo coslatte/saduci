@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean test
+.PHONY: help build up down restart logs clean
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -24,9 +24,6 @@ logs: ## Show logs from all services
 logs-gateway: ## Show logs from API gateway
 	docker-compose logs -f api-gateway
 
-logs-patient: ## Show logs from patient service
-	docker-compose logs -f patient
-
 logs-prediction: ## Show logs from prediction service
 	docker-compose logs -f prediction
 
@@ -42,8 +39,6 @@ ps: ## Show running services
 health: ## Check health of all services
 	@echo "Checking API Gateway..."
 	@curl -f http://localhost:8000/health || echo "API Gateway is down"
-	@echo "\nChecking Patient Service..."
-	@curl -f http://localhost:8001/health || echo "Patient Service is down"
 	@echo "\nChecking Prediction Service..."
 	@curl -f http://localhost:8002/health || echo "Prediction Service is down"
 	@echo "\nChecking Simulation Service..."
@@ -52,17 +47,11 @@ health: ## Check health of all services
 shell-gateway: ## Open shell in API gateway container
 	docker-compose exec api-gateway /bin/sh
 
-shell-patient: ## Open shell in patient service container
-	docker-compose exec patient /bin/sh
-
 shell-prediction: ## Open shell in prediction service container
 	docker-compose exec prediction /bin/sh
 
 shell-simulation: ## Open shell in simulation service container
 	docker-compose exec simulation /bin/sh
-
-db-patient: ## Connect to patient database
-	docker-compose exec patient-db psql -U patient_user -d patient_db
 
 db-prediction: ## Connect to prediction database
 	docker-compose exec prediction-db psql -U prediction_user -d prediction_db
@@ -70,8 +59,3 @@ db-prediction: ## Connect to prediction database
 db-simulation: ## Connect to simulation database
 	docker-compose exec simulation-db psql -U simulation_user -d simulation_db
 
-test: ## Run test suite using `uv`
-	uv run -m pytest -q
-
-update-deps: ## Upgrade service requirements to latest installed versions and rewrite files
-	uv run scripts/update_deps.py

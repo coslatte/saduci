@@ -50,14 +50,12 @@ check_health() {
 }
 
 check_health "API Gateway" 8000
-check_health "Patient Service" 8001
 check_health "Prediction Service" 8002
 check_health "Simulation Service" 8003
 
 echo ""
 echo "API Documentation:"
 echo "   - API Gateway: http://localhost:8000/docs"
-echo "   - Patient Service: http://localhost:8001/docs"
 echo "   - Prediction Service: http://localhost:8002/docs"
 echo "   - Simulation Service: http://localhost:8003/docs"
 echo ""

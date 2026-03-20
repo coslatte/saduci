@@ -61,6 +61,4 @@ htmlcov/
 *.pyc
 
 # Test outputs
-test-results/
-test-results/**
 test_results*.txt

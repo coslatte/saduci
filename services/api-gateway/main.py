@@ -6,7 +6,8 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File
+import httpx
+from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -16,8 +17,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from shared.schemas import (
     HealthCheck,
-    PatientCreate,
-    PatientUpdate,
     PredictionRequest,
     PlatformPredictionRequest,
     PlatformExplanationRequest,
@@ -75,22 +74,54 @@ if "*" in CORS_ALLOW_ORIGINS:
 
 # Service URLs from environment
 # NOTE:
-# - In Docker Compose, these are injected as container DNS names (patient/prediction/simulation)
+# - In Docker Compose, these are injected as container DNS names (prediction/simulation)
 # - For local development without Docker, localhost defaults avoid 502 from unresolved hosts
-PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://localhost:8001")
 PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://localhost:8002")
 SIMULATION_SERVICE_URL = os.getenv("SIMULATION_SERVICE_URL", "http://localhost:8003")
 
 # Service clients (initialised early, cleaned up via lifespan)
-patient_client = ServiceClient(PATIENT_SERVICE_URL)
 prediction_client = ServiceClient(PREDICTION_SERVICE_URL)
 simulation_client = ServiceClient(SIMULATION_SERVICE_URL)
+
+
+def _extract_upstream_detail(error: httpx.HTTPStatusError) -> str:
+    """Extract a concise error detail from an upstream HTTP response."""
+    response = error.response
+
+    try:
+        payload = response.json()
+        if isinstance(payload, dict) and "detail" in payload:
+            detail = payload["detail"]
+            return detail if isinstance(detail, str) else str(detail)
+    except ValueError:
+        pass
+
+    response_text = response.text.strip()
+    if response_text:
+        return response_text
+
+    return f"Upstream service returned HTTP {response.status_code}"
+
+
+def _translate_prediction_proxy_error(error: Exception) -> HTTPException:
+    """Map prediction upstream errors to meaningful gateway responses."""
+    if isinstance(error, httpx.TimeoutException):
+        return HTTPException(status_code=504, detail="Prediction service timed out")
+
+    if isinstance(error, httpx.HTTPStatusError):
+        status_code = error.response.status_code
+        detail = _extract_upstream_detail(error)
+        return HTTPException(status_code=status_code, detail=detail)
+
+    if isinstance(error, httpx.RequestError):
+        return HTTPException(status_code=502, detail="Prediction service unavailable")
+
+    return HTTPException(status_code=502, detail="Prediction service unavailable")
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     yield
-    await patient_client.close()
     await prediction_client.close()
     await simulation_client.close()
 
@@ -163,79 +194,6 @@ async def login(request: LoginRequest, req: Request):
     )
 
 
-# Patient service endpoints
-@app.get("/api/patients")
-async def list_patients(_current_user: dict = Depends(get_current_user)):
-    """Forward request to patient service."""
-    try:
-        return await patient_client.get("/patients")
-    except Exception as e:
-        logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
-@app.put("/api/patients/{patient_id}")
-async def update_patient(
-    patient_id: str,
-    patient_data: PatientUpdate,
-    _current_user: dict = Depends(get_current_user),
-):
-    """Forward patient update request to patient service."""
-    try:
-        payload = patient_data.model_dump(mode="json", exclude_unset=True)
-        return await patient_client.put(f"/patients/{patient_id}", payload)
-    except Exception as e:
-        logger.error("Error forwarding patient update to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
-@app.delete("/api/patients/{patient_id}")
-async def delete_patient(patient_id: str, _current_user: dict = Depends(get_current_user)):
-    """Forward patient delete request to patient service."""
-    try:
-        return await patient_client.delete(f"/patients/{patient_id}")
-    except Exception as e:
-        logger.error("Error forwarding patient delete to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
-@app.post("/api/patients/import")
-async def import_patients(
-    file: UploadFile = File(...),
-    _current_user: dict = Depends(get_current_user),
-):
-    """Forward CSV import request to patient service."""
-    try:
-        content = await file.read()
-        return await patient_client.post_files(
-            "/patients/import",
-            files={"file": (file.filename or "patients.csv", content, file.content_type or "text/csv")},
-        )
-    except Exception as e:
-        logger.error("Error forwarding patient import to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
-@app.post("/api/patients")
-async def create_patient(patient_data: PatientCreate, _current_user: dict = Depends(get_current_user)):
-    """Forward request to patient service."""
-    try:
-        return await patient_client.post("/patients", patient_data.model_dump(mode="json"))
-    except Exception as e:
-        logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
-@app.get("/api/patients/{patient_id}")
-async def get_patient(patient_id: str, _current_user: dict = Depends(get_current_user)):
-    """Forward request to patient service."""
-    try:
-        return await patient_client.get(f"/patients/{patient_id}")
-    except Exception as e:
-        logger.error("Error forwarding to patient service: %s", e)
-        raise HTTPException(status_code=502, detail="Patient service unavailable") from e
-
-
 # Prediction service endpoints
 @app.post("/api/predictions")
 async def create_prediction(prediction_data: PredictionRequest, _current_user: dict = Depends(get_current_user)):
@@ -278,8 +236,12 @@ async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
     try:
         return await prediction_client.post("/prediccion", prediction_data.model_dump(mode="json"))
     except Exception as e:
-        logger.error("Error forwarding platform prediction to prediction service: %s", e)
-        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+        logger.error(
+            "Error forwarding platform prediction to prediction service: %s (%s)",
+            e,
+            type(e).__name__,
+        )
+        raise _translate_prediction_proxy_error(e) from e
 
 
 @app.post("/prediccion/explain")
@@ -293,8 +255,12 @@ async def run_platform_prediction_explain(explain_data: PlatformExplanationReque
     try:
         return await prediction_client.post("/prediccion/explain", explain_data.model_dump(mode="json"))
     except Exception as e:
-        logger.error("Error forwarding platform explainability to prediction service: %s", e)
-        raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
+        logger.error(
+            "Error forwarding platform explainability to prediction service: %s (%s)",
+            e,
+            type(e).__name__,
+        )
+        raise _translate_prediction_proxy_error(e) from e
 
 
 # Simulation service endpoints

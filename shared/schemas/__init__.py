@@ -2,7 +2,6 @@
 Shared Pydantic schemas for sadeci-core microservices.
 """
 from .health import HealthCheck
-from .patient import PatientBase, PatientCreate, PatientUpdate, PatientResponse
 from .user import UserBase, UserCreate, UserResponse
 from .prediction import (
     PredictionRequest,
@@ -24,10 +23,6 @@ from .statistics import WilcoxonRequest, FriedmanRequest, StatisticalTestResult
 
 __all__ = [
     "HealthCheck",
-    "PatientBase",
-    "PatientCreate",
-    "PatientUpdate",
-    "PatientResponse",
     "UserBase",
     "UserCreate",
     "UserResponse",

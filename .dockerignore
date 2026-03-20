@@ -7,7 +7,6 @@ __pycache__
 .env
 *.md
 docs/
-tests/
 .pytest_cache
 .mypy_cache
 .ruff_cache

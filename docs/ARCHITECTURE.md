@@ -1,18 +1,17 @@
 # SADECI-Core Architecture (Iteracion 1 de 3)
 
 Este documento describe el estado real del backend en el repositorio actual.
-Por ahora se mantiene documentacion centralizada solo en dos archivos: `ARCHITECTURE.md` y `CHANGELOG.md`.
+La arquitectura activa se concentra en tres piezas: API Gateway, Prediction Service y Simulation Service.
 
 ## 1) Vision General
 
-SADECI-Core es un backend de microservicios para inteligencia clinica en UCI con cuatro APIs FastAPI:
+SADECI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
 
-1. API Gateway (puerta de entrada, autenticacion y proxy)
-2. Patient Service (CRUD + importacion CSV)
-3. Prediction Service (predicciones clinicas + endpoints compatibles con plataforma)
-4. Simulation Service (simulacion clinica, SimUCI y endpoints estadisticos)
+1. API Gateway: autenticacion JWT y proxy hacia los servicios de dominio.
+2. Prediction Service: predicciones clinicas y compatibilidad con la plataforma externa.
+3. Simulation Service: simulacion clinica, SimUCI y endpoints estadisticos.
 
-Cada servicio de dominio tiene su propia base PostgreSQL en Docker Compose.
+Cada servicio de dominio conserva su propia base PostgreSQL en Docker Compose.
 
 ## 2) Diagrama de Alto Nivel
 
@@ -21,7 +20,6 @@ Clientes HTTP
     |
     v
 API Gateway :8000
-    |-- /api/patients* ----------> Patient Service :8001 ---------> patient-db (PostgreSQL)
     |-- /api/predictions --------> Prediction Service :8002 ------> prediction-db (PostgreSQL)
     |-- /api/simulations* -------> Simulation Service :8003 ------> simulation-db (PostgreSQL)
     |
@@ -33,64 +31,63 @@ API Gateway :8000
 
 ### 3.1 API Gateway
 
-Archivo principal: `services/api-gateway/main.py`
+Archivo principal: [services/api-gateway/main.py](../services/api-gateway/main.py)
 
 Responsabilidades:
 
+- autenticar usuarios con JWT
+- proteger rutas internas con `Authorization: Bearer`
+- reenviar llamadas a prediction y simulation
+- exponer endpoints no autenticados para la plataforma externa
 
-Rutas principales:
-
- `GET /api/predictions/models`
- `GET /api/predictions/{patient_id}`
- `GET /api/simulations/scenarios`
- `GET /api/simulations/{patient_id}`
-Notas:
-
-- Credenciales de login se toman de `AUTH_USERNAME` y `AUTH_PASSWORD`.
- El gateway ahora reexpone la superficie implementada por los servicios de pacientes, prediccion y simulacion.
-### 3.2 Patient Service
-
-Archivo principal: `services/patient/main.py`
-
-Responsabilidades:
-
-- CRUD de pacientes
-Modelo principal:
-
-- Tabla `patients`
 Rutas principales:
 
 - `GET /health`
-Comportamiento relevante:
+- `POST /auth/login`
+- `POST /api/predictions`
+- `GET /api/predictions/models`
+- `GET /api/predictions/{patient_id}`
+- `GET /api/simulations/scenarios`
+- `GET /api/simulations/{patient_id}`
+- `POST /api/simulations`
+- `POST /api/simulations/icu`
+- `POST /prediccion`
+- `POST /prediccion/explain`
+- `POST /simulation`
+- `POST /statistics/wilcoxon`
+- `POST /statistics/friedman`
 
-- valida extensiones `.csv`
- el gateway permite el mismo import via multipart/form-data para mantener una sola entrada
-### 3.3 Prediction Service
+### 3.2 Prediction Service
 
-Archivo principal: `services/prediction/main.py`
+Archivo principal: [services/prediction/main.py](../services/prediction/main.py)
 
 Responsabilidades:
 
-- Predicciones clinicas de ejemplo (dummy model)
+- ejecutar modelos deterministas de ejemplo
+- persistir historial de predicciones en PostgreSQL
+- servir el formato compatible con la plataforma externa
+
+Modelos soportados:
 
 1. `mortality_risk`
 2. `length_of_stay`
-- `POST /prediccion`
-- `POST /prediccion/explain`
+3. `readmission_risk`
 
 Notas:
 
-- El endpoint de plataforma usa calculo determinista para probabilidad.
-- Explainability soporta metodos: `LIME`, `SHAP`, `Gradientes Integrados`, `Mapas de Saliencia`.
+- `POST /prediccion` usa una probabilidad determinista.
+- `POST /prediccion/explain` devuelve importancias por metodo compatible.
 
-### 3.4 Simulation Service
- cuando SimUCI no esta disponible, el fallback usa una semilla deterministica basada en los parametros clinicos para que los resultados sean reproducibles
+### 3.3 Simulation Service
+
+Archivo principal: [services/simulation/main.py](../services/simulation/main.py)
+
 Responsabilidades:
 
-- Simulaciones clinicas de escenarios
-- Simulacion UCI con SimUCI cuando esta disponible
-- Fallback estadistico cuando SimUCI no esta disponible
-- Pruebas estadisticas Wilcoxon y Friedman
+- simular escenarios clinicos de referencia
+- ejecutar SimUCI cuando la libreria esta disponible
+- usar fallback estadistico determinista cuando SimUCI no esta disponible
+- exponer pruebas estadisticas Wilcoxon y Friedman
 
 Rutas principales:
 
@@ -111,9 +108,9 @@ Escenarios de simulacion base:
 
 Integracion SimUCI:
 
-- usa `simuci.Experiment`, `single_run`, `multiple_replication`
+- usa `simuci.Experiment`, `single_run` y `multiple_replication`
 - requiere `services/simulation/data/centroids.csv`
-- construye estadisticas de salida (`mean`, `std`, `min`, `max`, `median`)
+- publica estadisticas de salida (`mean`, `std`, `min`, `max`, `median`)
 
 ## 4) Componentes Compartidos
 
@@ -122,7 +119,6 @@ Integracion SimUCI:
 Ubicacion: `shared/schemas/`
 
 - `health.py`
-- `patient.py`
 - `prediction.py`
 - `simulation.py`
 - `statistics.py`
@@ -131,7 +127,7 @@ Ubicacion: `shared/schemas/`
 Uso:
 
 - contratos de request/response
-- validaciones de tipos
+- validacion de tipos
 - consistencia entre gateway y servicios
 
 ### 4.2 Utilidades
@@ -151,7 +147,6 @@ Archivo: `docker-compose.yml`
 Servicios levantados:
 
 - `api-gateway`
-- `patient` + `patient-db`
 - `prediction` + `prediction-db`
 - `simulation` + `simulation-db`
 
@@ -159,8 +154,8 @@ Puntos relevantes:
 
 - `depends_on` con `condition: service_healthy`
 - reinicio `unless-stopped`
-- databases sin exposicion publica directa
-- servicios internos expuestos solo en localhost del host (`127.0.0.1`) excepto gateway
+- bases sin exposicion publica directa
+- servicios internos expuestos solo en `127.0.0.1` del host excepto el gateway
 
 ### 5.2 Entorno
 
@@ -169,7 +164,6 @@ Variables criticas:
 - `SECRET_KEY`
 - `AUTH_USERNAME`
 - `AUTH_PASSWORD`
-- `PATIENT_DB_PASSWORD`
 - `PREDICTION_DB_PASSWORD`
 - `SIMULATION_DB_PASSWORD`
 
@@ -188,49 +182,35 @@ Variables operativas:
 2. Gateway valida usuario/password y genera JWT.
 3. Cliente usa `Authorization: Bearer <token>` en rutas protegidas.
 
-### 6.2 Operaciones de pacientes
-
-1. Cliente llama `GET|POST|PUT|DELETE /api/patients...` en gateway.
-2. Gateway valida JWT.
-3. Gateway reenvia a Patient Service.
-4. Patient Service persiste/consulta en `patient-db`.
-
-### 6.3 Prediccion clinica
+### 6.2 Prediccion clinica
 
 1. Cliente llama `POST /api/predictions` o `POST /prediccion`.
-2. Prediction Service ejecuta logica de modelo.
-3. Se guarda resultado en `prediction-db` (ruta API principal).
-4. Se devuelve prediccion y metadatos.
+2. Gateway reenvia la solicitud al Prediction Service.
+3. Prediction Service ejecuta la logica de modelo y persiste el resultado.
+4. Se devuelve la prediccion y sus metadatos.
 
-### 6.4 Simulacion clinica y estadistica
+### 6.3 Simulacion clinica y estadistica
 
 1. Cliente llama `POST /api/simulations`, `POST /api/simulations/icu` o `POST /simulation`.
-2. Simulation Service ejecuta engine base o SimUCI.
-3. Para estadistica, cliente llama `POST /statistics/wilcoxon` o `POST /statistics/friedman`.
-4. Se retorna estadistico y p-value.
+2. Simulation Service ejecuta el engine base o SimUCI.
+3. Para estadistica, el cliente llama `POST /statistics/wilcoxon` o `POST /statistics/friedman`.
+4. Se retorna el estadistico y el p-value.
 
-## 7) Calidad y Pruebas
+## 7) Calidad y Estado de Verificacion
 
-El repositorio tiene una suite pytest amplia (137 tests reportados) que cubre:
+En esta iteracion se retiro la suite `pytest` del repositorio para reconstruirla despues con el nuevo alcance.
+La validacion disponible ahora se centra en:
 
-- autenticacion y rate limiting en gateway
-- enrutamiento/proxy
-- CRUD de pacientes y CSV import
-- modelos de prediccion y limites
-- escenarios de simulacion
-- endpoints estadisticos
-- utilidades de auth y validacion de esquemas
-
-Patron de test importante:
-
-- para pruebas de servicios FastAPI, se sobreescribe `get_db` con SQLite in-memory + `StaticPool` para evitar errores de threading.
+- health checks por servicio
+- verificacion de rutas del gateway
+- ejecucion de la pila Docker Compose
 
 ## 8) Estado Actual y Direccion
 
 Estado de documentacion (decidido por el proyecto):
 
-- Se conserva documentacion solo en `docs/ARCHITECTURE.md` y `docs/CHANGELOG.md`.
-- El resto de documentos se ira reconstruyendo mas adelante, por iteraciones.
+- se conserva documentacion solo en `docs/ARCHITECTURE.md` y `docs/CHANGELOG.md`
+- el resto de documentos se reconstruira mas adelante, por iteraciones
 
 Plan de iteraciones (documentacion):
 

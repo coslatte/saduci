@@ -29,10 +29,5 @@ dev = [
     "pytest>=9.0.2",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = "-q"
-
 [project.scripts]
 sadeci-init = "main:main"

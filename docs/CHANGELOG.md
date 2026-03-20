@@ -15,9 +15,9 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ### Fixed
 
+- Removed the Patient Service, the legacy `scripts/` helper, the archived `test-results/` artifacts, and the `tests/` suite so the repository now focuses on the gateway, prediction, and simulation services.
+- Aligned the gateway, Compose stack, startup helpers, and documentation with the reduced service topology.
 - Stabilized the Simulation Service fallback path by replacing process-local Python hash seeding with a deterministic SHA-256-based seed.
-- Expanded the API Gateway proxy surface so it now matches the implemented patient, prediction, and simulation endpoints more closely.
-- Cleaned the README so it only references documentation that still exists in the repository.
 
 ### Planned (Documentation Iterations)
 
@@ -45,7 +45,7 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 - Expanded architecture baseline to reflect current code-level behavior:
   - API Gateway route surface including platform-compatible non-JWT routes.
-  - Service boundaries and persistence responsibilities.
+  - Service boundaries and persistence responsibilities for prediction and simulation.
   - SimUCI integration mode and fallback simulation mode.
   - Statistical test endpoints and dependency requirements.
   - Current Docker Compose network and health-check model.
@@ -59,12 +59,7 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ### Added
 
-- Test suite expansion from 31 to 137 tests.
-- Coverage added for:
-  - gateway auth and routing hardening
-  - patient CRUD and CSV import edge cases
-  - prediction model endpoints and boundaries
-  - simulation scenarios, platform endpoints, and statistics endpoints
+- Test suite expansion from 31 to 137 tests was previously recorded and is now being retired as the suite is rebuilt around the reduced architecture.
 - `services/simulation/data/centroids.csv` added to satisfy SimUCI centroid loading.
 
 ### Fixed
@@ -85,14 +80,12 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 - Initial microservices backend release with:
   - API Gateway (JWT auth + service proxy)
-  - Patient Service (CRUD + import)
   - Prediction Service (model execution + history)
   - Simulation Service (scenario simulations)
 - Per-service PostgreSQL topology with Docker Compose orchestration.
 - Shared schema and utility modules under `shared/`.
 - Initial scripts and project entry points:
   - `start.sh`
-  - `test_api.sh`
   - `Makefile`
 
 ### Known Baseline Limitations at 1.0.0

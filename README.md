@@ -1,6 +1,6 @@
 # SADUCI-CORE
 
-Microservices core for clinical intelligence (ICU). This README is intentionally short — for full guides, examples, and references see the `docs/` folder.
+Microservices core for clinical intelligence (ICU). This README is intentionally short - for full guides, examples, and references see the `docs/` folder.
 
 Quick start — bring up the stack with Docker
 
@@ -15,7 +15,6 @@ docker-compose up -d --build
 Main endpoints
 
 - API Gateway: <http://localhost:8000>
-- Patient Service: <http://localhost:8001>
 - Prediction Service: <http://localhost:8002>
 - Simulation Service: <http://localhost:8003>
 
@@ -38,6 +37,4 @@ Useful commands
 ```bash
 docker-compose up -d --build
 docker-compose down
-# Run tests using `uv` (recommended)
-uv run -m pytest -q
 ```
