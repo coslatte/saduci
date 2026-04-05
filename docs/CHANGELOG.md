@@ -22,7 +22,9 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 - Optional narrative generation in `POST /prediccion/explain` controlled by request flag `include_narrative`.
 - Configurable narrative provider layer:
   - `stub` deterministic clinical summary (default)
-  - `huggingface` HTTP provider via `HUGGINGFACE_API_URL` (with optional bearer token)
+  - `local` OpenAI-compatible local LLM endpoint via `PREDICTION_LOCAL_LLM_URL`
+  - `gemini` provider via `PREDICTION_GEMINI_API_KEY` and `PREDICTION_GEMINI_MODEL`
+  - `huggingface` HTTP provider kept for backward compatibility via `HUGGINGFACE_API_URL`
 - Prediction service runtime dependencies for trained model compatibility: `joblib`, `pandas`, `scikit-learn==1.6.1`, `imbalanced-learn`.
 
 ### Fixed (Unreleased)

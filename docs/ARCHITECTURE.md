@@ -81,8 +81,10 @@ Notas:
 - `POST /prediccion` usa el pipeline entrenado (`imblearn.pipeline.Pipeline`) y devuelve probabilidad + clase binaria (`vive`/`muere`).
 - `POST /prediccion/explain` mantiene `feature_names`/`importances` y agrega `rows` con estructura lista para frontend.
 - `POST /prediccion/explain` puede incluir `narrative` si `include_narrative=true`.
-- El proveedor de narrativa se configura con `PREDICTION_NARRATIVE_PROVIDER` (`stub` o `huggingface`).
-- Para `huggingface`, usar `HUGGINGFACE_API_URL` y opcionalmente `HUGGINGFACE_API_TOKEN`.
+- El proveedor de narrativa se configura con `PREDICTION_NARRATIVE_PROVIDER` (`stub`, `local`, `gemini` o `huggingface`).
+- Para `local`, usar `PREDICTION_LOCAL_LLM_URL` apuntando a un endpoint LLM compatible con `chat/completions` y `PREDICTION_LOCAL_LLM_MODEL` para el identificador del modelo.
+- Para `gemini`, usar `PREDICTION_GEMINI_API_KEY` y `PREDICTION_GEMINI_MODEL` (por defecto `gemini-2.5-flash`).
+- `huggingface` se mantiene como opción de compatibilidad con `HUGGINGFACE_API_URL` y opcionalmente `HUGGINGFACE_API_TOKEN`.
 
 ### 3.3 Simulation Service
 
@@ -182,6 +184,13 @@ Variables operativas:
 - `PREDICTION_MODEL_PATH` (opcional)
 - `PREDICTION_THRESHOLD`
 - `PREDICTION_NARRATIVE_PROVIDER`
+- `PREDICTION_LOCAL_LLM_URL`
+- `PREDICTION_LOCAL_LLM_MODEL`
+- `PREDICTION_LOCAL_LLM_TOKEN`
+- `PREDICTION_LOCAL_LLM_TIMEOUT_SECONDS`
+- `PREDICTION_GEMINI_API_KEY`
+- `PREDICTION_GEMINI_MODEL`
+- `PREDICTION_GEMINI_TIMEOUT_SECONDS`
 - `PREDICTION_NARRATIVE_MODEL`
 - `HUGGINGFACE_API_URL`
 - `HUGGINGFACE_API_TOKEN`

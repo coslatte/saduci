@@ -154,9 +154,18 @@ _DIAGNOSIS_CODE_DATA = """
 PREDICTION_THRESHOLD = float(os.getenv("PREDICTION_THRESHOLD", "0.5"))
 DEFAULT_NARRATIVE_PROVIDER = os.getenv("PREDICTION_NARRATIVE_PROVIDER", "stub").strip().lower()
 DEFAULT_NARRATIVE_MODEL = os.getenv("PREDICTION_NARRATIVE_MODEL", "").strip()
+LOCAL_LLM_API_URL = os.getenv("PREDICTION_LOCAL_LLM_URL", "").strip()
+LOCAL_LLM_MODEL = os.getenv("PREDICTION_LOCAL_LLM_MODEL", "").strip()
+LOCAL_LLM_API_TOKEN = os.getenv("PREDICTION_LOCAL_LLM_TOKEN", "").strip()
+LOCAL_LLM_TIMEOUT_SECONDS = float(os.getenv("PREDICTION_LOCAL_LLM_TIMEOUT_SECONDS", "60"))
+GEMINI_API_KEY = os.getenv("PREDICTION_GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("PREDICTION_GEMINI_MODEL", "gemini-2.5-flash").strip()
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("PREDICTION_GEMINI_TIMEOUT_SECONDS", "60"))
 HUGGINGFACE_API_URL = os.getenv("HUGGINGFACE_API_URL", "").strip()
 HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN", "").strip()
 HUGGINGFACE_TIMEOUT_SECONDS = float(os.getenv("HUGGINGFACE_TIMEOUT_SECONDS", "30"))
+
+SUPPORTED_NARRATIVE_PROVIDERS = {"stub", "local", "gemini", "huggingface"}
 
 _PLATFORM_MODEL_STATE: dict[str, Any] = {
     "model": None,
@@ -375,6 +384,36 @@ def _build_narrative_prompt(
     )
 
 
+def _normalize_narrative_provider(provider: str | None) -> str:
+    normalized_provider = (provider or DEFAULT_NARRATIVE_PROVIDER or "stub").strip().lower()
+    if normalized_provider not in SUPPORTED_NARRATIVE_PROVIDERS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported ai_provider. Use one of: stub, local, gemini, huggingface.",
+        )
+
+    return normalized_provider
+
+
+def _resolve_narrative_model(provider: str, request_model: str | None) -> str:
+    candidate = (request_model or DEFAULT_NARRATIVE_MODEL or "").strip()
+    if candidate:
+        return candidate
+
+    if provider == "local":
+        candidate = LOCAL_LLM_MODEL
+    elif provider == "gemini":
+        candidate = GEMINI_MODEL
+
+    if candidate:
+        return candidate
+
+    if provider == "gemini":
+        return "gemini-2.5-flash"
+
+    return ""
+
+
 def _extract_huggingface_text(payload: Any) -> str:
     if isinstance(payload, list) and payload:
         first = payload[0]
@@ -397,6 +436,181 @@ def _extract_huggingface_text(payload: Any) -> str:
                 return first_item.strip()
 
     raise ValueError("No generated text found in Hugging Face response payload")
+
+
+def _extract_openai_compatible_text(payload: Any) -> str:
+    if isinstance(payload, dict):
+        choices = payload.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                message = first_choice.get("message")
+                if isinstance(message, dict):
+                    content = message.get("content")
+                    if isinstance(content, str) and content.strip():
+                        return content.strip()
+
+                text = first_choice.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+
+        content = payload.get("content")
+        if isinstance(content, str) and content.strip():
+            return content.strip()
+
+    raise ValueError("No generated text found in local LLM response payload")
+
+
+def _extract_gemini_text(payload: Any) -> str:
+    if isinstance(payload, dict):
+        candidates = payload.get("candidates")
+        if isinstance(candidates, list):
+            for candidate in candidates:
+                if not isinstance(candidate, dict):
+                    continue
+
+                content = candidate.get("content")
+                if not isinstance(content, dict):
+                    continue
+
+                parts = content.get("parts")
+                if not isinstance(parts, list):
+                    continue
+
+                text_chunks: list[str] = []
+                for part in parts:
+                    if isinstance(part, dict):
+                        text = part.get("text")
+                        if isinstance(text, str) and text.strip():
+                            text_chunks.append(text.strip())
+
+                if text_chunks:
+                    return " ".join(text_chunks).strip()
+
+        text = payload.get("text")
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+
+    raise ValueError("No generated text found in Gemini response payload")
+
+
+async def _call_local_narrative(
+    prompt: str,
+    model_name: str,
+    temperature: float,
+) -> str:
+    if not LOCAL_LLM_API_URL:
+        raise HTTPException(
+            status_code=503,
+            detail="PREDICTION_LOCAL_LLM_URL is required when ai_provider='local'",
+        )
+    if not model_name:
+        raise HTTPException(
+            status_code=400,
+            detail="ai_model or PREDICTION_LOCAL_LLM_MODEL is required when ai_provider='local'",
+        )
+
+    resolved_url = LOCAL_LLM_API_URL
+    if "{model_id}" in resolved_url:
+        resolved_url = resolved_url.format(model_id=model_name)
+
+    headers = {"Content-Type": "application/json"}
+    if LOCAL_LLM_API_TOKEN:
+        headers["Authorization"] = f"Bearer {LOCAL_LLM_API_TOKEN}"
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Eres un especialista en medicina intensiva. Respondes en español clínico, "
+                    "sin bullets y con tono explicativo."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": 280,
+        "stream": False,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=LOCAL_LLM_TIMEOUT_SECONDS) as client:
+            response = await client.post(resolved_url, headers=headers, json=payload)
+            response.raise_for_status()
+            response_payload = response.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Local LLM provider returned HTTP {exc.response.status_code}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Local LLM provider call failed: {exc}",
+        ) from exc
+
+    try:
+        generated_text = _extract_openai_compatible_text(response_payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return generated_text.replace("Narrativa:", "").replace("Narrative:", "").strip()
+
+
+async def _call_gemini_narrative(
+    prompt: str,
+    model_name: str,
+    temperature: float,
+) -> str:
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="PREDICTION_GEMINI_API_KEY is required when ai_provider='gemini'",
+        )
+
+    resolved_model = model_name or GEMINI_MODEL or "gemini-2.5-flash"
+    resolved_url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{resolved_model}:generateContent?key={GEMINI_API_KEY}"
+    )
+
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}],
+            }
+        ],
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": 280,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
+            response = await client.post(resolved_url, json=payload)
+            response.raise_for_status()
+            response_payload = response.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini provider returned HTTP {exc.response.status_code}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini provider call failed: {exc}",
+        ) from exc
+
+    try:
+        generated_text = _extract_gemini_text(response_payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return generated_text.replace("Narrativa:", "").replace("Narrative:", "").strip()
 
 
 async def _call_huggingface_narrative(
@@ -491,8 +705,8 @@ async def _generate_narrative(
     if not request.include_narrative:
         return None, None, None
 
-    provider = (request.ai_provider or DEFAULT_NARRATIVE_PROVIDER or "stub").strip().lower()
-    model_name = (request.ai_model or DEFAULT_NARRATIVE_MODEL or "").strip()
+    provider = _normalize_narrative_provider(request.ai_provider)
+    model_name = _resolve_narrative_model(provider, request.ai_model)
 
     prompt = _build_narrative_prompt(
         probability=probability,
@@ -500,6 +714,22 @@ async def _generate_narrative(
         rows=rows,
         method=request.method,
     )
+
+    if provider == "local":
+        narrative = await _call_local_narrative(
+            prompt=prompt,
+            model_name=model_name,
+            temperature=request.temperature,
+        )
+        return narrative, provider, model_name or None
+
+    if provider == "gemini":
+        narrative = await _call_gemini_narrative(
+            prompt=prompt,
+            model_name=model_name,
+            temperature=request.temperature,
+        )
+        return narrative, provider, model_name or None
 
     if provider == "huggingface":
         narrative = await _call_huggingface_narrative(

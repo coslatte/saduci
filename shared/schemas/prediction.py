@@ -60,7 +60,7 @@ class PlatformExplanationRequest(PlatformPredictionRequest):
 
     method: Literal["LIME", "SHAP", "Gradientes Integrados", "Mapas de Saliencia"]
     include_narrative: bool = False
-    ai_provider: Optional[Literal["stub", "huggingface"]] = None
+    ai_provider: Optional[Literal["stub", "local", "gemini", "huggingface"]] = None
     ai_model: Optional[str] = None
     temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
