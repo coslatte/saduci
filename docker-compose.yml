@@ -13,11 +13,14 @@ services:
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - AUTH_USERNAME=${AUTH_USERNAME:?AUTH_USERNAME is required}
       - AUTH_PASSWORD=${AUTH_PASSWORD:?AUTH_PASSWORD is required}
+      - DATABASE_URL=postgresql://gateway_user:${API_GATEWAY_DB_PASSWORD:?API_GATEWAY_DB_PASSWORD is required}@api-gateway-db:5432/api_gateway_db
       - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://localhost:8000}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
       - PREDICTION_SERVICE_URL=http://prediction:8002
       - SIMULATION_SERVICE_URL=http://simulation:8003
     depends_on:
+      api-gateway-db:
+        condition: service_healthy
       prediction:
         condition: service_healthy
       simulation:
@@ -30,6 +33,25 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # API Gateway Database
+  api-gateway-db:
+    image: postgres:15-alpine
+    container_name: api-gateway-db
+    environment:
+      - POSTGRES_USER=gateway_user
+      - POSTGRES_PASSWORD=${API_GATEWAY_DB_PASSWORD:?API_GATEWAY_DB_PASSWORD is required}
+      - POSTGRES_DB=api_gateway_db
+    volumes:
+      - api-gateway-db-data:/var/lib/postgresql/data
+    networks:
+      - sadeci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway_user -d api_gateway_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Prediction Service
   prediction:
@@ -134,5 +156,6 @@ networks:
     driver: bridge
 
 volumes:
+  api-gateway-db-data:
   prediction-db-data:
   simulation-db-data:

@@ -6,6 +6,13 @@ Quick start — bring up the stack with Docker
 
 Prerequisites: Docker and Docker Compose
 
+Required environment variables for the gateway auth bootstrap:
+
+- `SECRET_KEY`
+- `AUTH_USERNAME`
+- `AUTH_PASSWORD`
+- `API_GATEWAY_DB_PASSWORD`
+
 ```bash
 git clone https://github.com/coslatte/saduci-core.git
 cd saduci-core
@@ -17,6 +24,8 @@ Main endpoints
 - API Gateway: <http://localhost:8000>
 - Prediction Service: <http://localhost:8002>
 - Simulation Service: <http://localhost:8003>
+
+The API Gateway seeds the initial administrator user from `AUTH_USERNAME` / `AUTH_PASSWORD` the first time its database starts. The frontend must authenticate against the gateway before accessing the app.
 
 Local development (optional)
 

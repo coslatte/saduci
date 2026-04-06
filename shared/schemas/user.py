@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     is_active: bool = True
+    is_superuser: bool = False
 
 
 class UserCreate(UserBase):
@@ -25,3 +26,4 @@ class UserResponse(UserBase):
 
     id: int
     created_at: datetime
+    updated_at: datetime

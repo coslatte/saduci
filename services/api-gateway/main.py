@@ -4,16 +4,28 @@ import sys
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import timedelta
 
 import httpx
 from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
-# Add shared modules to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+service_dir = os.path.dirname(__file__)
+sys.path.insert(0, service_dir)
+sys.path.insert(0, os.path.join(service_dir, "../.."))
+
+from crud_users import (
+    authenticate_user,
+    count_users,
+    create_user,
+    get_user_by_id,
+    get_user_by_identifier,
+    update_password,
+)
+from db import Base, SessionLocal, engine, get_db
+from models import User
 
 from shared.schemas import (
     HealthCheck,
@@ -25,12 +37,19 @@ from shared.schemas import (
     PlatformSimulationRequest,
     WilcoxonRequest,
     FriedmanRequest,
+    UserResponse,
 )
-from shared.utils import get_logger, create_access_token, verify_token, ServiceClient
+from shared.utils import (
+    get_logger,
+    create_access_token,
+    verify_password,
+    verify_token,
+    ServiceClient,
+)
 
 
 logger = get_logger(__name__)
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # ---------------------------------------------------------------------------
 # Rate limiter (in-memory, per-process)
@@ -60,10 +79,8 @@ def _parse_cors_origins(raw_origins: str) -> list[str]:
     return origins or ["http://localhost:3000", "http://localhost:8000"]
 
 
-AUTH_USERNAME = os.getenv("AUTH_USERNAME")
-AUTH_PASSWORD = os.getenv("AUTH_PASSWORD")
-if not AUTH_USERNAME or not AUTH_PASSWORD:
-    raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD must be configured")
+AUTH_USERNAME = os.getenv("AUTH_USERNAME", "").strip()
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "").strip()
 
 CORS_ALLOW_ORIGINS = _parse_cors_origins(
     os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:8000")
@@ -119,8 +136,34 @@ def _translate_prediction_proxy_error(error: Exception) -> HTTPException:
     return HTTPException(status_code=502, detail="Prediction service unavailable")
 
 
+def _seed_admin_user(db: Session) -> User:
+    """Create the first admin user from environment credentials."""
+    admin_username = AUTH_USERNAME
+    admin_email = (
+        admin_username
+        if "@" in admin_username
+        else f"{admin_username}@saduci.com"
+    )
+    admin_user = create_user(
+        db,
+        username=admin_username,
+        email=admin_email,
+        password=AUTH_PASSWORD,
+        is_superuser=True,
+    )
+    logger.info("Seeded initial admin user '%s'", admin_user.username)
+    return admin_user
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        if count_users(db) == 0:
+            if not AUTH_USERNAME or not AUTH_PASSWORD:
+                raise RuntimeError(
+                    "AUTH_USERNAME and AUTH_PASSWORD must be configured to seed the initial admin user",
+                )
+            _seed_admin_user(db)
+
     yield
     await prediction_client.close()
     await simulation_client.close()
@@ -149,16 +192,39 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    """Token response schema."""
+class LoginResponse(BaseModel):
+    """Login response schema."""
+
     access_token: str
     token_type: str = "bearer"
+    user: UserResponse
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Verify JWT token and return user info."""
-    token = credentials.credentials
-    payload = verify_token(token)
+TokenResponse = LoginResponse
+
+
+class PasswordChangeRequest(BaseModel):
+    """Password change request schema."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    current_password: str = Field(alias="currentPassword")
+    new_password: str = Field(alias="newPassword")
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    """Verify JWT token and return the current user from the database."""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = verify_token(credentials.credentials)
 
     if payload is None:
         raise HTTPException(
@@ -167,7 +233,24 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return payload
+    user: User | None = None
+    user_id = payload.get("uid")
+    if user_id is not None:
+        user = get_user_by_id(db, user_id)
+
+    if user is None:
+        identifier = payload.get("sub")
+        if isinstance(identifier, str) and identifier.strip():
+            user = get_user_by_identifier(db, identifier)
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
 
 
 @app.get("/health", response_model=HealthCheck)
@@ -176,17 +259,27 @@ async def health_check():
     return HealthCheck(status="healthy", service="api-gateway")
 
 
-@app.post("/auth/login", response_model=TokenResponse)
-async def login(request: LoginRequest, req: Request):
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest, req: Request, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
     _check_rate_limit(req.client.host if req.client else "unknown")
 
-    if request.username == AUTH_USERNAME and request.password == AUTH_PASSWORD:
+    user = authenticate_user(db, request.username, request.password)
+
+    if user is not None:
         access_token = create_access_token(
-            data={"sub": request.username},
-            expires_delta=timedelta(minutes=30)
+            data={
+                "sub": user.username,
+                "uid": user.id,
+                "email": user.email,
+                "is_superuser": user.is_superuser,
+            },
         )
-        return TokenResponse(access_token=access_token)
+        return LoginResponse(
+
+            access_token=access_token,
+            user=UserResponse.model_validate(user),
+        )
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -194,9 +287,38 @@ async def login(request: LoginRequest, req: Request):
     )
 
 
+@app.get("/auth/me", response_model=UserResponse)
+async def read_current_user(current_user: User = Depends(get_current_user)):
+    """Return the authenticated user profile."""
+    return UserResponse.model_validate(current_user)
+
+
+@app.post("/auth/change-password")
+async def change_password(
+    request: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Change the password for the authenticated user."""
+    if len(request.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nueva contraseña debe tener al menos 8 caracteres.",
+        )
+
+    if not verify_password(request.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña actual es incorrecta.",
+        )
+
+    update_password(db, current_user, request.new_password)
+    return {"message": "Contraseña actualizada correctamente."}
+
+
 # Prediction service endpoints
 @app.post("/api/predictions")
-async def create_prediction(prediction_data: PredictionRequest, _current_user: dict = Depends(get_current_user)):
+async def create_prediction(prediction_data: PredictionRequest, _current_user: User = Depends(get_current_user)):
     """Forward request to prediction service."""
     try:
         return await prediction_client.post("/predictions", prediction_data.model_dump(mode="json"))
@@ -206,7 +328,7 @@ async def create_prediction(prediction_data: PredictionRequest, _current_user: d
 
 
 @app.get("/api/predictions/models")
-async def list_prediction_models(_current_user: dict = Depends(get_current_user)):
+async def list_prediction_models(_current_user: User = Depends(get_current_user)):
     """Forward model catalogue request to prediction service."""
     try:
         return await prediction_client.get("/models")
@@ -216,7 +338,7 @@ async def list_prediction_models(_current_user: dict = Depends(get_current_user)
 
 
 @app.get("/api/predictions/{patient_id}")
-async def get_prediction_history(patient_id: str, _current_user: dict = Depends(get_current_user)):
+async def get_prediction_history(patient_id: str, _current_user: User = Depends(get_current_user)):
     """Forward prediction history request to prediction service."""
     try:
         return await prediction_client.get(f"/predictions/{patient_id}")
@@ -265,7 +387,7 @@ async def run_platform_prediction_explain(explain_data: PlatformExplanationReque
 
 # Simulation service endpoints
 @app.post("/api/simulations")
-async def create_simulation(simulation_data: SimulationRequest, _current_user: dict = Depends(get_current_user)):
+async def create_simulation(simulation_data: SimulationRequest, _current_user: User = Depends(get_current_user)):
     """Forward request to simulation service."""
     try:
         return await simulation_client.post("/simulations", simulation_data.model_dump(mode="json"))
@@ -275,7 +397,7 @@ async def create_simulation(simulation_data: SimulationRequest, _current_user: d
 
 
 @app.get("/api/simulations/scenarios")
-async def list_simulation_scenarios(_current_user: dict = Depends(get_current_user)):
+async def list_simulation_scenarios(_current_user: User = Depends(get_current_user)):
     """Forward scenario catalogue request to simulation service."""
     try:
         return await simulation_client.get("/scenarios")
@@ -285,7 +407,7 @@ async def list_simulation_scenarios(_current_user: dict = Depends(get_current_us
 
 
 @app.get("/api/simulations/{patient_id}")
-async def get_simulation_history(patient_id: str, _current_user: dict = Depends(get_current_user)):
+async def get_simulation_history(patient_id: str, _current_user: User = Depends(get_current_user)):
     """Forward simulation history request to simulation service."""
     try:
         return await simulation_client.get(f"/simulations/{patient_id}")
@@ -295,7 +417,7 @@ async def get_simulation_history(patient_id: str, _current_user: dict = Depends(
 
 
 @app.post("/api/simulations/icu")
-async def create_icu_simulation(simulation_data: ICUPatientSimulationRequest, _current_user: dict = Depends(get_current_user)):
+async def create_icu_simulation(simulation_data: ICUPatientSimulationRequest, _current_user: User = Depends(get_current_user)):
     """Forward ICU patient simulation request to simulation service."""
     try:
         return await simulation_client.post("/simulations/icu", simulation_data.model_dump(mode="json"))
