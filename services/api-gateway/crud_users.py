@@ -37,8 +37,35 @@ def get_user_by_identifier(db: Session, identifier: str) -> User | None:
   )
 
 
+def get_user_by_username(db: Session, username: str) -> User | None:
+  normalized = normalize_identifier(username)
+  if not normalized:
+      return None
+  return db.query(User).filter(func.lower(User.username) == normalized.lower()).first()
+
+
+def get_user_by_email(db: Session, email: str) -> User | None:
+  normalized = normalize_identifier(email)
+  if not normalized:
+      return None
+  return db.query(User).filter(func.lower(User.email) == normalized.lower()).first()
+
+
 def count_users(db: Session) -> int:
   return db.query(User).count()
+
+
+def get_all_users(db: Session) -> list[User]:
+  return db.query(User).order_by(User.created_at.desc()).all()
+
+
+def delete_user(db: Session, user_id: int) -> bool:
+  user = db.get(User, user_id)
+  if user is None:
+      return False
+  db.delete(user)
+  db.commit()
+  return True
 
 
 def create_user(

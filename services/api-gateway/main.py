@@ -22,6 +22,10 @@ from crud_users import (
     create_user,
     get_user_by_id,
     get_user_by_identifier,
+    get_user_by_username,
+    get_user_by_email,
+    get_all_users,
+    delete_user,
     update_password,
 )
 from db import Base, SessionLocal, engine, get_db
@@ -38,6 +42,9 @@ from shared.schemas import (
     WilcoxonRequest,
     FriedmanRequest,
     UserResponse,
+    RegisterRequest,
+    RegisterResponse,
+    UserCreateRequest,
 )
 from shared.utils import (
     get_logger,
@@ -153,6 +160,39 @@ def _seed_admin_user(db: Session) -> User:
     )
     logger.info("Seeded initial admin user '%s'", admin_user.username)
     return admin_user
+
+
+def _seed_demo_users(db: Session) -> None:
+    """Create demo users for testing."""
+    demo_users = [
+        {
+            "username": "analista1",
+            "email": "analista1@saduci.com",
+            "password": "password123",
+            "is_superuser": False,
+            "is_active": True,
+        },
+        {
+            "username": "analista2",
+            "email": "analista2@saduci.com",
+            "password": "password123",
+            "is_superuser": False,
+            "is_active": True,
+        },
+        {
+            "username": "doctor",
+            "email": "doctor@saduci.com",
+            "password": "doctor123",
+            "is_superuser": False,
+            "is_active": True,
+        },
+    ]
+
+    for user_data in demo_users:
+        existing = get_user_by_username(db, user_data["username"])
+        if not existing:
+            create_user(db, **user_data)
+            logger.info("Seeded demo user '%s'", user_data["username"])
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
@@ -163,6 +203,7 @@ async def lifespan(_app: FastAPI):
                     "AUTH_USERNAME and AUTH_PASSWORD must be configured to seed the initial admin user",
                 )
             _seed_admin_user(db)
+            _seed_demo_users(db)
 
     yield
     await prediction_client.close()
@@ -276,7 +317,6 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
             },
         )
         return LoginResponse(
-
             access_token=access_token,
             user=UserResponse.model_validate(user),
         )
@@ -284,6 +324,47 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password"
+    )
+
+
+@app.post("/auth/register", response_model=RegisterResponse)
+async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    """Register a new user."""
+    # Check if username already exists
+    existing_user = get_user_by_username(db, request.username)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El nombre de usuario ya está en uso",
+        )
+
+    # Check if email already exists
+    existing_email = get_user_by_email(db, request.email)
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El correo electrónico ya está registrado",
+        )
+
+    # Validate password length
+    if len(request.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos 8 caracteres",
+        )
+
+    # Create the user (not a superuser by default)
+    new_user = create_user(
+        db,
+        username=request.username,
+        email=request.email,
+        password=request.password,
+        is_superuser=False,
+    )
+
+    return RegisterResponse(
+        message="Usuario registrado correctamente",
+        user=UserResponse.model_validate(new_user),
     )
 
 
@@ -347,7 +428,7 @@ async def get_prediction_history(patient_id: str, _current_user: User = Depends(
         raise HTTPException(status_code=502, detail="Prediction service unavailable") from e
 
 
-@app.post("/prediccion")
+@app.post("/prediction")
 async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
     """
     Forward saduci-platform prediction request to prediction service.
@@ -366,7 +447,7 @@ async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
         raise _translate_prediction_proxy_error(e) from e
 
 
-@app.post("/prediccion/explain")
+@app.post("/prediction/explain")
 async def run_platform_prediction_explain(explain_data: PlatformExplanationRequest):
     """
     Forward saduci-platform explainability request to prediction service.
@@ -426,7 +507,7 @@ async def create_icu_simulation(simulation_data: ICUPatientSimulationRequest, _c
         raise HTTPException(status_code=502, detail="ICU simulation service unavailable") from e
 
 
-@app.post("/simulation")
+@app.post("/sim")
 async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
     """
     Forward saduci-platform simulation request to simulation service.
@@ -441,7 +522,7 @@ async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
         raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
 
 
-@app.post("/statistics/wilcoxon")
+@app.post("/stats/wilcoxon")
 async def run_wilcoxon_test(test_data: WilcoxonRequest):
     """Forward Wilcoxon signed-rank test request to simulation service."""
     try:
@@ -451,7 +532,7 @@ async def run_wilcoxon_test(test_data: WilcoxonRequest):
         raise HTTPException(status_code=502, detail="Statistics service unavailable") from e
 
 
-@app.post("/statistics/friedman")
+@app.post("/stats/friedman")
 async def run_friedman_test(test_data: FriedmanRequest):
     """Forward Friedman chi-square test request to simulation service."""
     try:
@@ -459,6 +540,87 @@ async def run_friedman_test(test_data: FriedmanRequest):
     except Exception as e:
         logger.error("Error forwarding Friedman test to simulation service: %s", e)
         raise HTTPException(status_code=502, detail="Statistics service unavailable") from e
+
+
+# User management endpoints (admin only)
+def require_superuser(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be a superuser."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere permisos de administrador",
+        )
+    return current_user
+
+
+@app.get("/admin/users", response_model=list[UserResponse])
+async def list_users(
+    _current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
+    """List all users (admin only)."""
+    users = get_all_users(db)
+    return [UserResponse.model_validate(user) for user in users]
+
+
+@app.post("/admin/users", response_model=UserResponse)
+async def create_user_admin(
+    request: UserCreateRequest,
+    _current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
+    """Create a new user with specified role (admin only)."""
+    existing_user = get_user_by_username(db, request.username)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El nombre de usuario ya está en uso",
+        )
+
+    existing_email = get_user_by_email(db, request.email)
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El correo electrónico ya está registrado",
+        )
+
+    if len(request.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos 8 caracteres",
+        )
+
+    new_user = create_user(
+        db,
+        username=request.username,
+        email=request.email,
+        password=request.password,
+        is_active=request.is_active,
+        is_superuser=request.is_superuser,
+    )
+    return UserResponse.model_validate(new_user)
+
+
+@app.delete("/admin/users/{user_id}")
+async def delete_user_admin(
+    user_id: int,
+    _current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
+    """Delete a user (admin only)."""
+    if _current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar tu propia cuenta",
+        )
+
+    success = delete_user(db, user_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado",
+        )
+    return {"message": "Usuario eliminado correctamente"}
 
 
 if __name__ == "__main__":
