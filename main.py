@@ -289,7 +289,7 @@ class SadeciInitializer:
 
 def interactive_cli(app: SadeciInitializer) -> int:
     menu = """
-SADECI-Core :: CLI de Inicialización
+SADUCI-Core :: CLI de Inicialización
 ====================================
 1) Verificación de integridad de contenedores
 2) Inicializar stack (up -d --build)
@@ -325,7 +325,7 @@ SADECI-Core :: CLI de Inicialización
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="CLI de inicialización para SADECI-Core")
+    parser = argparse.ArgumentParser(description="CLI de inicialización para SADUCI-Core")
     parser.add_argument(
         "command",
         nargs="?",

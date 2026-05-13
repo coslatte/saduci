@@ -1,8 +1,8 @@
-# GitHub Copilot Instructions for SADECI-Core
+# GitHub Copilot Instructions for SADUCI-Core
 
 ## Overview
 
-SADECI-Core is a Python microservices backend for clinical intelligence in ICU settings. It uses FastAPI, Docker Compose, PostgreSQL, and integrates with SimUCI for realistic patient simulations.
+SADUCI-Core is a Python microservices backend for clinical intelligence in ICU settings. It uses FastAPI, Docker Compose, PostgreSQL, and integrates with SimUCI for realistic patient simulations.
 
 ## Architecture Guidelines
 

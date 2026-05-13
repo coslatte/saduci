@@ -437,7 +437,7 @@ async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
     which does not attach a JWT token to prediction calls.
     """
     try:
-        return await prediction_client.post("/prediccion", prediction_data.model_dump(mode="json"))
+        return await prediction_client.post("/prediction", prediction_data.model_dump(mode="json"))
     except Exception as e:
         logger.error(
             "Error forwarding platform prediction to prediction service: %s (%s)",
@@ -456,7 +456,7 @@ async def run_platform_prediction_explain(explain_data: PlatformExplanationReque
     which does not attach a JWT token to prediction explainability calls.
     """
     try:
-        return await prediction_client.post("/prediccion/explain", explain_data.model_dump(mode="json"))
+        return await prediction_client.post("/prediction/explain", explain_data.model_dump(mode="json"))
     except Exception as e:
         logger.error(
             "Error forwarding platform explainability to prediction service: %s (%s)",

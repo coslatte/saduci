@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to SADECI-Core are tracked here.
+All notable changes to SADUCI-Core are tracked here.
 This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## Documentation Policy (Current)

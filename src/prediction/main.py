@@ -853,6 +853,12 @@ async def create_prediction(
     )
 
 
+@app.post("/prediction", response_model=PlatformPredictionResponse)
+async def create_platform_prediction_v2(request: PlatformPredictionRequest):
+    """Alias endpoint for /prediccion - maintains naming consistency with platform."""
+    return await create_platform_prediction(request)
+
+
 @app.post("/prediccion", response_model=PlatformPredictionResponse)
 async def create_platform_prediction(request: PlatformPredictionRequest):
     """Prediction endpoint compatible with saduci-platform frontend."""
@@ -865,6 +871,12 @@ async def create_platform_prediction(request: PlatformPredictionRequest):
         predicted_label=predicted_label,
         threshold=PREDICTION_THRESHOLD,
     )
+
+
+@app.post("/prediction/explain", response_model=PlatformExplanationResponse)
+async def explain_platform_prediction_v2(request: PlatformExplanationRequest):
+    """Alias endpoint for /prediccion/explain - maintains naming consistency with platform."""
+    return await explain_platform_prediction(request)
 
 
 @app.post("/prediccion/explain", response_model=PlatformExplanationResponse)
