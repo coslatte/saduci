@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to SADECI-Core are tracked here.
+All notable changes to SADUCI-Core are tracked here.
 This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## Documentation Policy (Current)
@@ -15,6 +15,12 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ### Added (Unreleased)
 
+- Reorganized the repository into a clearer top-level layout:
+  - `services/` for API Gateway, Prediction, and Simulation
+  - `shared/` for cross-service schemas and utilities
+  - `tools/` for operational CLI helpers
+- Moved the Docker Compose initializer out of the root `main.py` into `tools/compose_init.py`, leaving a thin compatibility wrapper at the repository root.
+- Added a Render blueprint and removed the prediction Dockerfile dependency on a missing `research_files/new_workflow.joblib` build-time artifact.
 - Prediction platform inference now loads the trained artifact `research_files/new_workflow.joblib` and returns enriched output for frontend consumption:
   - probability and probability percent
   - binary class (`vive`/`muere`) with configurable threshold

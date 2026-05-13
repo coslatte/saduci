@@ -40,6 +40,7 @@ Detailed documentation in `docs/`
 
 - Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- Render blueprint: [render.yaml](render.yaml)
 
 Useful commands
 

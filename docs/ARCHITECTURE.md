@@ -1,11 +1,6 @@
-# SADECI-Core Architecture (Iteracion 1 de 3)
+# SADUCI-Core Architecture (Iteracion 1 de 3)
 
-Este documento describe el estado real del backend en el repositorio actual.
-La arquitectura activa se concentra en tres piezas: API Gateway, Prediction Service y Simulation Service.
-
-## 1) Vision General
-
-SADECI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
+SADUCI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
 
 1. API Gateway: autenticacion JWT y proxy hacia los servicios de dominio.
 2. Prediction Service: predicciones clinicas y compatibilidad con la plataforma externa.
@@ -164,6 +159,7 @@ Puntos relevantes:
 - reinicio `unless-stopped`
 - bases sin exposicion publica directa
 - servicios internos expuestos solo en `127.0.0.1` del host excepto el gateway
+- el codigo runtime vive en `services/` y `shared/`; los helpers operativos viven en `tools/`
 
 ### 5.2 Entorno
 
@@ -234,6 +230,7 @@ Estado de documentacion (decidido por el proyecto):
 
 - se conserva documentacion solo en `docs/ARCHITECTURE.md` y `docs/CHANGELOG.md`
 - el resto de documentos se reconstruira mas adelante, por iteraciones
+- la CLI de inicializacion de Docker Compose vive en `tools/compose_init.py`; `main.py` queda como envoltorio minimo por compatibilidad
 
 Plan de iteraciones (documentacion):
 
