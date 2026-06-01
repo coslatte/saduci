@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from shared.schemas import (
     HealthCheck,
@@ -195,9 +195,9 @@ def _platform_model_candidate_paths() -> list[Path]:
 
     candidates.extend(
         [
-            Path(__file__).resolve().parent / "new_workflow.joblib",
-            repo_root / "research_files" / "new_workflow.joblib",
-            Path.cwd() / "research_files" / "new_workflow.joblib",
+            Path(__file__).resolve().parent / "models" / "v1" / "new_workflow.joblib",
+            repo_root / "src" / "prediction" / "models" / "v1" / "new_workflow.joblib",
+            Path.cwd() / "src" / "prediction" / "models" / "v1" / "new_workflow.joblib",
             Path.cwd() / "new_workflow.joblib",
         ]
     )
@@ -244,7 +244,7 @@ def _require_platform_model() -> Any:
             status_code=503,
             detail=(
                 "Prediction model unavailable. Set PREDICTION_MODEL_PATH or provide "
-                "research_files/new_workflow.joblib. "
+                "src/prediction/models/v1/new_workflow.joblib. "
                 f"Details: {_PLATFORM_MODEL_STATE['error']}"
             ),
         )
@@ -743,60 +743,58 @@ async def _generate_narrative(
     return narrative, "stub", "template-clinical-v1"
 
 
-class DummyMLModel:
-    """
-    Dummy ML model for demonstration purposes.
-    In production, this is replaced with actual ML models.
-    """
+def _risk_level(risk: float) -> str:
+    """Convert risk score to a simple categorical level."""
+    if risk < 0.3:
+        return "low"
+    if risk < 0.6:
+        return "medium"
 
-    def __init__(self, model_name: str):
-        self.model_name = model_name
+    return "high"
 
-    def predict(self, features: dict) -> tuple:
-        """
-        Make a prediction based on features.
 
-        Returns:
-            Tuple of (prediction, confidence)
-        """
-        # Simulate different models
-        if self.model_name == "mortality_risk":
-            # Simple mortality risk calculation
-            age = features.get("age", 50)
-            severity_score = features.get("severity_score", 5)
-            risk = min((age / 100 + severity_score / 10) / 2, 1.0)
+def _legacy_prediction_payload(model_name: str, features: dict[str, Any]) -> tuple[dict[str, Any], float]:
+    """Build a compatibility payload for the legacy /predictions endpoint."""
+    if model_name == "mortality_risk":
+        if all(key in features for key in ("edad", "diag_ing1", "diag_ing2", "diag_egr2", "apache", "tiempo_vam")):
+            request = PlatformPredictionRequest(
+                edad=int(features["edad"]),
+                diag_ing1=int(features["diag_ing1"]),
+                diag_ing2=int(features["diag_ing2"]),
+                diag_egr2=int(features["diag_egr2"]),
+                apache=int(features["apache"]),
+                tiempo_vam=int(features["tiempo_vam"]),
+            )
+            probability = _platform_prediction_probability(request)
             return {
-                "risk_score": round(risk, 3),
-                "risk_level": self._get_risk_level(risk),
-            }, round(0.85, 2)
+                "risk_score": probability,
+                "risk_level": _risk_level(probability),
+            }, round(max(0.05, min(0.95, probability)), 2)
 
-        if self.model_name == "length_of_stay":
-            # Simple length of stay prediction
-            severity = features.get("severity_score", 5)
-            age = features.get("age", 50)
-            days = int(severity * 2 + age / 20)
-            return {"predicted_days": days}, round(0.78, 2)
+        age = float(features.get("age", 50))
+        severity_score = float(features.get("severity_score", 5))
+        risk = min((age / 100 + severity_score / 10) / 2, 1.0)
+        return {
+            "risk_score": round(risk, 3),
+            "risk_level": _risk_level(risk),
+        }, round(0.85, 2)
 
-        if self.model_name == "readmission_risk":
-            # Simple readmission risk
-            comorbidities = features.get("comorbidities", 1)
-            age = features.get("age", 50)
-            risk = min((comorbidities * 0.2 + age / 200), 1.0)
-            return {
-                "risk_score": round(risk, 3),
-                "risk_level": self._get_risk_level(risk),
-            }, round(0.82, 2)
+    if model_name == "length_of_stay":
+        severity = float(features.get("severity_score", 5))
+        age = float(features.get("age", 50))
+        days = int(severity * 2 + age / 20)
+        return {"predicted_days": days}, round(0.78, 2)
 
-        return {"result": "unknown_model"}, 0.0
-    
-    def _get_risk_level(self, risk: float) -> str:
-        """Convert risk score to level."""
-        if risk < 0.3:
-            return "low"
-        if risk < 0.6:
-            return "medium"
+    if model_name == "readmission_risk":
+        comorbidities = float(features.get("comorbidities", 1))
+        age = float(features.get("age", 50))
+        risk = min((comorbidities * 0.2 + age / 200), 1.0)
+        return {
+            "risk_score": round(risk, 3),
+            "risk_level": _risk_level(risk),
+        }, round(0.82, 2)
 
-        return "high"
+    raise HTTPException(status_code=400, detail=f"Unsupported model_name: {model_name}")
 
 
 @app.get("/health", response_model=HealthCheck)
@@ -814,7 +812,7 @@ async def create_prediction(
     Create a new prediction.
 
     Supported models:
-    - mortality_risk: Predicts mortality risk based on age and severity score
+    - mortality_risk: Predicts mortality risk based on either canonical platform features or legacy features
     - length_of_stay: Predicts length of stay in ICU
     - readmission_risk: Predicts risk of readmission
     """
@@ -826,8 +824,7 @@ async def create_prediction(
 
     # Load and run model
     try:
-        model = DummyMLModel(request.model_name)
-        prediction, confidence = model.predict(request.features)
+        prediction, confidence = _legacy_prediction_payload(request.model_name, request.features)
     except Exception as e:
         logger.error("Error running model: %s", e)
         raise HTTPException(status_code=500, detail="Model prediction failed") from e
@@ -853,7 +850,7 @@ async def create_prediction(
     )
 
 
-@app.post("/prediccion", response_model=PlatformPredictionResponse)
+@app.post("/prediction", response_model=PlatformPredictionResponse)
 async def create_platform_prediction(request: PlatformPredictionRequest):
     """Prediction endpoint compatible with saduci-platform frontend."""
     probability = _platform_prediction_probability(request)
@@ -867,7 +864,7 @@ async def create_platform_prediction(request: PlatformPredictionRequest):
     )
 
 
-@app.post("/prediccion/explain", response_model=PlatformExplanationResponse)
+@app.post("/prediction/explain", response_model=PlatformExplanationResponse)
 async def explain_platform_prediction(request: PlatformExplanationRequest):
     """Explainability endpoint compatible with saduci-platform frontend."""
     probability = _platform_prediction_probability(request)
@@ -927,19 +924,19 @@ async def list_models():
         "models": [
             {
                 "name": "mortality_risk",
-                "description": "Predicts mortality risk based on clinical features",
-                "required_features": ["age", "severity_score"]
+                "description": "Predicts mortality risk using the trained platform model when canonical features are provided",
+                "required_features": ["edad", "diag_ing1", "diag_ing2", "diag_egr2", "apache", "tiempo_vam"],
             },
             {
                 "name": "length_of_stay",
                 "description": "Predicts expected length of stay in ICU",
-                "required_features": ["age", "severity_score"]
+                "required_features": ["age", "severity_score"],
             },
             {
                 "name": "readmission_risk",
                 "description": "Predicts risk of hospital readmission",
-                "required_features": ["age", "comorbidities"]
-            }
+                "required_features": ["age", "comorbidities"],
+            },
         ]
     }
 

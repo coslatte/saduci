@@ -1,5 +1,5 @@
 """
-Shared utilities for sadeci-core microservices.
+Shared utilities for saduci-core microservices.
 """
 from .logger import get_logger
 from .auth import create_access_token, verify_token, get_password_hash, verify_password

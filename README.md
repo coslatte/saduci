@@ -32,8 +32,8 @@ Local development (optional)
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-uv pip install -r services/api-gateway/requirements.txt
-uv run services/api-gateway/main.py
+uv pip install -r src/api-gateway/requirements.txt
+uv run src/api-gateway/main.py
 ```
 
 Detailed documentation in `docs/`

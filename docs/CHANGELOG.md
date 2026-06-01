@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to SADECI-Core are tracked here.
+All notable changes to SADUCI-Core are tracked here.
 This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ## Documentation Policy (Current)
@@ -15,11 +15,11 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ### Added (Unreleased)
 
-- Prediction platform inference now loads the trained artifact `research_files/new_workflow.joblib` and returns enriched output for frontend consumption:
+- Prediction platform inference now loads the trained artifact `src/prediction/models/v1/new_workflow.joblib` and returns enriched output for frontend consumption:
   - probability and probability percent
   - binary class (`vive`/`muere`) with configurable threshold
   - explainability `rows` payload including feature value, baseline, signed contribution, and risk direction
-- Optional narrative generation in `POST /prediccion/explain` controlled by request flag `include_narrative`.
+- Optional narrative generation in `POST /prediction/explain` controlled by request flag `include_narrative`.
 - Configurable narrative provider layer:
   - `stub` deterministic clinical summary (default)
   - `local` OpenAI-compatible local LLM endpoint via `PREDICTION_LOCAL_LLM_URL`

@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
-SERVICE_DIR = ROOT / "services" / "api-gateway"
+SERVICE_DIR = ROOT / "src" / "api-gateway"
 MODULE_PATH = SERVICE_DIR / "main.py"
 
 

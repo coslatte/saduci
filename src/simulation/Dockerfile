@@ -7,14 +7,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install dependencies first (layer caching)
-COPY services/simulation/requirements.txt /app/services/simulation/requirements.txt
-RUN pip install --no-cache-dir -r services/simulation/requirements.txt
+COPY src/simulation/requirements.txt /app/src/simulation/requirements.txt
+RUN pip install --no-cache-dir -r src/simulation/requirements.txt
 
-# Copy shared modules
-COPY shared/ /app/shared/
-
-# Copy service files
-COPY services/simulation/ /app/services/simulation/
+# Copy application code
+COPY src/ /app/src/
 
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
@@ -24,4 +21,4 @@ USER appuser
 EXPOSE 8003
 
 # Run the application
-CMD ["python", "services/simulation/main.py"]
+CMD ["python", "src/simulation/main.py"]

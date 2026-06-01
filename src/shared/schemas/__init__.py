@@ -1,5 +1,5 @@
 """
-Shared Pydantic schemas for sadeci-core microservices.
+Shared Pydantic schemas for saduci-core microservices.
 """
 from .health import HealthCheck
 from .user import (

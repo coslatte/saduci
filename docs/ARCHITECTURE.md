@@ -1,11 +1,11 @@
-# SADECI-Core Architecture (Iteracion 1 de 3)
+# SADUCI-Core Architecture (Iteracion 1 de 3)
 
 Este documento describe el estado real del backend en el repositorio actual.
 La arquitectura activa se concentra en tres piezas: API Gateway, Prediction Service y Simulation Service.
 
 ## 1) Vision General
 
-SADECI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
+SADUCI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
 
 1. API Gateway: autenticacion JWT y proxy hacia los servicios de dominio.
 2. Prediction Service: predicciones clinicas y compatibilidad con la plataforma externa.
@@ -23,7 +23,7 @@ API Gateway :8000
     |-- /api/predictions --------> Prediction Service :8002 ------> prediction-db (PostgreSQL)
     |-- /api/simulations* -------> Simulation Service :8003 ------> simulation-db (PostgreSQL)
     |
-    |-- /prediccion, /prediccion/explain (proxy sin JWT para saduci-platform)
+    |-- /prediction, /prediction/explain (proxy sin JWT para saduci-platform)
     |-- /simulation, /statistics/*   (proxy sin JWT para saduci-platform)
 ```
 
@@ -31,7 +31,7 @@ API Gateway :8000
 
 ### 3.1 API Gateway
 
-Archivo principal: [services/api-gateway/main.py](../services/api-gateway/main.py)
+Archivo principal: [src/api-gateway/main.py](../src/api-gateway/main.py)
 
 Responsabilidades:
 
@@ -51,22 +51,22 @@ Rutas principales:
 - `GET /api/simulations/{patient_id}`
 - `POST /api/simulations`
 - `POST /api/simulations/icu`
-- `POST /prediccion`
-- `POST /prediccion/explain`
+- `POST /prediction`
+- `POST /prediction/explain`
 - `POST /simulation`
 - `POST /statistics/wilcoxon`
 - `POST /statistics/friedman`
 
 ### 3.2 Prediction Service
 
-Archivo principal: [services/prediction/main.py](../services/prediction/main.py)
+Archivo principal: [src/prediction/main.py](../src/prediction/main.py)
 
 Responsabilidades:
 
-- ejecutar modelos deterministas de ejemplo
+- ejecutar compatibilidad de legados y el modelo entrenado versionado
 - persistir historial de predicciones en PostgreSQL
 - servir el formato compatible con la plataforma externa
-- ejecutar inferencia real para saduci-platform con el modelo entrenado `new_workflow.joblib`
+- ejecutar inferencia real para saduci-platform con el modelo entrenado `src/prediction/models/v1/new_workflow.joblib`
 - entregar datos estructurados para tabla/grafico (importancias por variable, valor observado, baseline y direccion)
 - generar narrativa clinica opcional mediante proveedor configurable (stub o endpoint Hugging Face)
 
@@ -78,9 +78,9 @@ Modelos soportados:
 
 Notas:
 
-- `POST /prediccion` usa el pipeline entrenado (`imblearn.pipeline.Pipeline`) y devuelve probabilidad + clase binaria (`vive`/`muere`).
-- `POST /prediccion/explain` mantiene `feature_names`/`importances` y agrega `rows` con estructura lista para frontend.
-- `POST /prediccion/explain` puede incluir `narrative` si `include_narrative=true`.
+- `POST /prediction` usa el pipeline entrenado (`imblearn.pipeline.Pipeline`) y devuelve probabilidad + clase binaria (`vive`/`muere`).
+- `POST /prediction/explain` mantiene `feature_names`/`importances` y agrega `rows` con estructura lista para frontend.
+- `POST /prediction/explain` puede incluir `narrative` si `include_narrative=true`.
 - El proveedor de narrativa se configura con `PREDICTION_NARRATIVE_PROVIDER` (`stub`, `local`, `gemini` o `huggingface`).
 - Para `local`, usar `PREDICTION_LOCAL_LLM_URL` apuntando a un endpoint LLM compatible con `chat/completions` y `PREDICTION_LOCAL_LLM_MODEL` para el identificador del modelo.
 - Para `gemini`, usar `PREDICTION_GEMINI_API_KEY` y `PREDICTION_GEMINI_MODEL` (por defecto `gemini-2.5-flash`).
@@ -88,7 +88,7 @@ Notas:
 
 ### 3.3 Simulation Service
 
-Archivo principal: [services/simulation/main.py](../services/simulation/main.py)
+Archivo principal: [src/simulation/main.py](../src/simulation/main.py)
 
 Responsabilidades:
 
@@ -117,7 +117,7 @@ Escenarios de simulacion base:
 Integracion SimUCI:
 
 - usa `simuci.Experiment`, `single_run` y `multiple_replication`
-- requiere `services/simulation/data/centroids.csv`
+- requiere `src/simulation/data/centroids.csv`
 - publica estadisticas de salida (`mean`, `std`, `min`, `max`, `median`)
 
 ## 4) Componentes Compartidos
@@ -206,11 +206,11 @@ Variables operativas:
 
 ### 6.2 Prediccion clinica
 
-1. Cliente llama `POST /api/predictions` o `POST /prediccion`.
+1. Cliente llama `POST /api/predictions` o `POST /prediction`.
 2. Gateway reenvia la solicitud al Prediction Service.
 3. Prediction Service ejecuta inferencia con el pipeline entrenado para la ruta de plataforma.
 4. Se devuelve probabilidad de no sobrevida, salida binaria y metadatos para renderizar UI.
-5. Si el cliente llama `POST /prediccion/explain`, el servicio calcula contribuciones por variable y puede anexar narrativa clinica.
+5. Si el cliente llama `POST /prediction/explain`, el servicio calcula contribuciones por variable y puede anexar narrativa clinica.
 
 ### 6.3 Simulacion clinica y estadistica
 

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 service_dir = os.path.dirname(__file__)
 sys.path.insert(0, service_dir)
-sys.path.insert(0, os.path.join(service_dir, "../.."))
+sys.path.insert(0, os.path.join(service_dir, ".."))
 
 from crud_users import (
     authenticate_user,
@@ -212,7 +212,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="API Gateway",
-    description="API Gateway for sadeci-core - handles routing and JWT authentication",
+    description="API Gateway for saduci-core - handles routing and JWT authentication",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -437,7 +437,7 @@ async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
     which does not attach a JWT token to prediction calls.
     """
     try:
-        return await prediction_client.post("/prediccion", prediction_data.model_dump(mode="json"))
+        return await prediction_client.post("/prediction", prediction_data.model_dump(mode="json"))
     except Exception as e:
         logger.error(
             "Error forwarding platform prediction to prediction service: %s (%s)",
@@ -456,7 +456,7 @@ async def run_platform_prediction_explain(explain_data: PlatformExplanationReque
     which does not attach a JWT token to prediction explainability calls.
     """
     try:
-        return await prediction_client.post("/prediccion/explain", explain_data.model_dump(mode="json"))
+        return await prediction_client.post("/prediction/explain", explain_data.model_dump(mode="json"))
     except Exception as e:
         logger.error(
             "Error forwarding platform explainability to prediction service: %s (%s)",
@@ -507,7 +507,7 @@ async def create_icu_simulation(simulation_data: ICUPatientSimulationRequest, _c
         raise HTTPException(status_code=502, detail="ICU simulation service unavailable") from e
 
 
-@app.post("/sim")
+@app.post("/simulation")
 async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
     """
     Forward saduci-platform simulation request to simulation service.
@@ -522,7 +522,7 @@ async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
         raise HTTPException(status_code=502, detail="Simulation service unavailable") from e
 
 
-@app.post("/stats/wilcoxon")
+@app.post("/statistics/wilcoxon")
 async def run_wilcoxon_test(test_data: WilcoxonRequest):
     """Forward Wilcoxon signed-rank test request to simulation service."""
     try:
@@ -532,7 +532,7 @@ async def run_wilcoxon_test(test_data: WilcoxonRequest):
         raise HTTPException(status_code=502, detail="Statistics service unavailable") from e
 
 
-@app.post("/stats/friedman")
+@app.post("/statistics/friedman")
 async def run_friedman_test(test_data: FriedmanRequest):
     """Forward Friedman chi-square test request to simulation service."""
     try:

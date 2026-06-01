@@ -3,7 +3,7 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: services/api-gateway/Dockerfile
+      dockerfile: src/api-gateway/Dockerfile
     container_name: api-gateway
     ports:
       - "${API_GATEWAY_HOST_PORT:-8000}:8000"
@@ -26,7 +26,7 @@ services:
       simulation:
         condition: service_healthy
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -45,7 +45,7 @@ services:
     volumes:
       - api-gateway-db-data:/var/lib/postgresql/data
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gateway_user -d api_gateway_db"]
@@ -57,7 +57,7 @@ services:
   prediction:
     build:
       context: .
-      dockerfile: services/prediction/Dockerfile
+      dockerfile: src/prediction/Dockerfile
     container_name: prediction-service
     ports:
       - "127.0.0.1:${PREDICTION_HOST_PORT:-8002}:8002"
@@ -81,7 +81,7 @@ services:
       prediction-db:
         condition: service_healthy
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
@@ -100,7 +100,7 @@ services:
     volumes:
       - prediction-db-data:/var/lib/postgresql/data
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U prediction_user -d prediction_db"]
@@ -112,7 +112,7 @@ services:
   simulation:
     build:
       context: .
-      dockerfile: services/simulation/Dockerfile
+      dockerfile: src/simulation/Dockerfile
     container_name: simulation-service
     ports:
       - "127.0.0.1:${SIMULATION_HOST_PORT:-8003}:8003"
@@ -124,7 +124,7 @@ services:
       simulation-db:
         condition: service_healthy
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
@@ -143,7 +143,7 @@ services:
     volumes:
       - simulation-db-data:/var/lib/postgresql/data
     networks:
-      - sadeci-network
+      - saduci-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U simulation_user -d simulation_db"]
@@ -152,7 +152,7 @@ services:
       retries: 5
 
 networks:
-  sadeci-network:
+  saduci-network:
     driver: bridge
 
 volumes:

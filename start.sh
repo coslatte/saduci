@@ -1,7 +1,7 @@
 #!/bin/bash
-# Quick start script for sadeci-core
+# Quick start script for saduci-core
 
-echo "Starting SADECI-Core Microservices..."
+echo "Starting SADUCI-Core Microservices..."
 echo ""
 
 # Check if Docker is running
@@ -59,7 +59,7 @@ echo "   - API Gateway: http://localhost:8000/docs"
 echo "   - Prediction Service: http://localhost:8002/docs"
 echo "   - Simulation Service: http://localhost:8003/docs"
 echo ""
-echo "Success: SADECI-Core is running!"
+echo "Success: SADUCI-Core is running!"
 echo ""
 echo "To view logs: docker-compose logs -f"
 echo "To stop: docker-compose down"

@@ -13,7 +13,7 @@ from typing import Any, Callable, Iterable, Optional
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("sadeci-init")
+logger = logging.getLogger("saduci-init")
 
 
 @dataclass
@@ -289,7 +289,7 @@ class SadeciInitializer:
 
 def interactive_cli(app: SadeciInitializer) -> int:
     menu = """
-SADECI-Core :: CLI de Inicialización
+SADUCI-Core :: CLI de Inicialización
 ====================================
 1) Verificación de integridad de contenedores
 2) Inicializar stack (up -d --build)
@@ -325,7 +325,7 @@ SADECI-Core :: CLI de Inicialización
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="CLI de inicialización para SADECI-Core")
+    parser = argparse.ArgumentParser(description="CLI de inicialización para SADUCI-Core")
     parser.add_argument(
         "command",
         nargs="?",

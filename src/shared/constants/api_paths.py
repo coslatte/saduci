@@ -1,0 +1,31 @@
+"""Canonical API path constants."""
+
+HEALTH = "/health"
+AUTH_LOGIN = "/auth/login"
+AUTH_REGISTER = "/auth/register"
+AUTH_ME = "/auth/me"
+AUTH_CHANGE_PASSWORD = "/auth/change-password"
+
+PREDICTIONS = "/api/predictions"
+PREDICTIONS_MODELS = "/api/predictions/models"
+PREDICTIONS_BY_PATIENT = "/api/predictions/{patient_id}"
+PREDICTION = "/prediction"
+PREDICTION_EXPLAIN = "/prediction/explain"
+PREDICTION_SERVICE_PREDICTIONS = "/predictions"
+PREDICTION_SERVICE_PREDICTIONS_BY_PATIENT = "/predictions/{patient_id}"
+
+SIMULATIONS = "/api/simulations"
+SIMULATIONS_SCENARIOS = "/api/simulations/scenarios"
+SIMULATIONS_BY_PATIENT = "/api/simulations/{patient_id}"
+SIMULATIONS_ICU = "/api/simulations/icu"
+SIMULATION = "/simulation"
+SIMULATION_SERVICE_SIMULATIONS = "/simulations"
+SIMULATION_SERVICE_SIMULATIONS_BY_PATIENT = "/simulations/{patient_id}"
+SIMULATION_SERVICE_SCENARIOS = "/scenarios"
+SIMULATION_SERVICE_SIMULATIONS_ICU = "/simulations/icu"
+
+STATISTICS_WILCOXON = "/statistics/wilcoxon"
+STATISTICS_FRIEDMAN = "/statistics/friedman"
+
+ADMIN_USERS = "/admin/users"
+ADMIN_USERS_BY_ID = "/admin/users/{user_id}"

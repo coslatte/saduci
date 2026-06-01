@@ -3,7 +3,7 @@ name: documentation-policy
 description: Project documentation governance for the current phase. Use when creating, editing, or reviewing docs to keep architecture and changelog aligned while broader docs are intentionally deferred.
 ---
 
-# Documentation Policy (SADECI-Core)
+# Documentation Policy (SADUCI-Core)
 
 ## Purpose
 

@@ -10,14 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install dependencies first (layer caching)
-COPY services/api-gateway/requirements.txt /app/services/api-gateway/requirements.txt
-RUN pip install --no-cache-dir -r services/api-gateway/requirements.txt
+COPY src/api-gateway/requirements.txt /app/src/api-gateway/requirements.txt
+RUN pip install --no-cache-dir -r src/api-gateway/requirements.txt
 
-# Copy shared modules
-COPY shared/ /app/shared/
-
-# Copy service files
-COPY services/api-gateway/ /app/services/api-gateway/
+# Copy application code
+COPY src/ /app/src/
 
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
@@ -27,4 +24,4 @@ USER appuser
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "services/api-gateway/main.py"]
+CMD ["python", "src/api-gateway/main.py"]

@@ -13,7 +13,7 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from shared.schemas import (
     HealthCheck,
@@ -46,11 +46,14 @@ except ImportError:
 logger = get_logger(__name__)
 
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL must be configured")
+# Default to local sqlite for development convenience when DATABASE_URL is not provided.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./simulation_service.db")
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
