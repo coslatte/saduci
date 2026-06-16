@@ -1,10 +1,5 @@
 # SADUCI-Core Architecture (Iteracion 1 de 3)
 
-Este documento describe el estado real del backend en el repositorio actual.
-La arquitectura activa se concentra en tres piezas: API Gateway, Prediction Service y Simulation Service.
-
-## 1) Vision General
-
 SADUCI-Core es un backend de microservicios para inteligencia clinica en UCI con FastAPI.
 
 1. API Gateway: autenticacion JWT y proxy hacia los servicios de dominio.

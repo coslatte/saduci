@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r src/prediction/requirements.txt
 # Copy application code
 COPY src/ /app/src/
 
+# Copy trained platform model artifact
+COPY research_files/new_workflow.joblib /app/research_files/new_workflow.joblib
+
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
