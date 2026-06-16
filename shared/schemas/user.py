@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     username: str
+    role: str = "MEDICO"  # Default role
     is_active: bool = True
     is_superuser: bool = False
 
@@ -19,6 +20,16 @@ class UserCreate(UserBase):
     password: str
 
 
+class UserUpdate(BaseModel):
+    """Schema for updating a user."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    email: EmailStr | None = None
+    role: str | None = None
+    is_active: bool | None = None
+
+
 class UserResponse(UserBase):
     """Schema for user response."""
 
@@ -27,3 +38,4 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     updated_at: datetime
+

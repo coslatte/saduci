@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from models import User
+from models import User, UserRole
 from shared.utils import get_password_hash, verify_password
 
 
@@ -47,6 +47,7 @@ def create_user(
   username: str,
   email: str,
   password: str,
+  role: str = "MEDICO",
   is_active: bool = True,
   is_superuser: bool = False,
 ) -> User:
@@ -54,6 +55,7 @@ def create_user(
       username=normalize_identifier(username),
       email=normalize_identifier(email).lower(),
       hashed_password=get_password_hash(password),
+      role=UserRole(role) if isinstance(role, str) else role,
       is_active=is_active,
       is_superuser=is_superuser,
   )
@@ -61,6 +63,32 @@ def create_user(
   db.commit()
   db.refresh(user)
   return user
+
+
+def update_user(
+  db: Session,
+  user: User,
+  *,
+  email: str | None = None,
+  role: str | None = None,
+  is_active: bool | None = None,
+) -> User:
+  if email is not None:
+      user.email = normalize_identifier(email).lower()
+  if role is not None:
+      user.role = UserRole(role) if isinstance(role, str) else role
+  if is_active is not None:
+      user.is_active = is_active
+  
+  db.add(user)
+  db.commit()
+  db.refresh(user)
+  return user
+
+
+def delete_user(db: Session, user: User) -> None:
+  db.delete(user)
+  db.commit()
 
 
 def update_password(db: Session, user: User, new_password: str) -> User:
@@ -80,3 +108,18 @@ def authenticate_user(db: Session, identifier: str, password: str) -> User | Non
       return None
 
   return user
+
+
+def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> list[User]:
+  return db.query(User).offset(skip).limit(limit).all()
+
+
+def get_users_by_role(db: Session, role: str, skip: int = 0, limit: int = 100) -> list[User]:
+  return (
+      db.query(User)
+      .filter(User.role == UserRole(role) if isinstance(role, str) else role)
+      .offset(skip)
+      .limit(limit)
+      .all()
+  )
+
