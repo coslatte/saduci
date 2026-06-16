@@ -27,13 +27,17 @@ from crud_users import (  # noqa: E402
     authenticate_user,
     count_users,
     create_user,
+    delete_user,
+    get_all_users,
     get_user_by_id,
     get_user_by_identifier,
     get_user_by_username,
     get_user_by_email,
+    get_users_by_role,
     get_all_users,
     delete_user,
     update_password,
+    update_user,
 )
 from db import Base, SessionLocal, engine, get_db  # noqa: E402
 from models import User  # noqa: E402
@@ -52,6 +56,8 @@ from shared.schemas import (  # noqa: E402
     RegisterRequest,
     RegisterResponse,
     UserCreateRequest,
+    UserCreate,
+    UserUpdate,
 )
 from shared.utils import (  # noqa: E402
     get_logger,
@@ -305,6 +311,16 @@ def get_current_user(
     return user
 
 
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency to ensure user is an admin."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can perform this action"
+        )
+    return current_user
+
+
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
     """Health check endpoint."""
@@ -406,6 +422,114 @@ async def change_password(
 
     update_password(db, current_user, request.new_password)
     return {"message": "Contraseña actualizada correctamente."}
+
+
+# User management endpoints (CRUD)
+@app.post("/api/users", response_model=UserResponse)
+async def create_new_user(
+    user_data: UserCreate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Create a new user (admin only)."""
+    existing_user = get_user_by_identifier(db, user_data.username)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario ya existe."
+        )
+    
+    if len(user_data.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos 8 caracteres."
+        )
+    
+    new_user = create_user(
+        db,
+        username=user_data.username,
+        email=user_data.email,
+        password=user_data.password,
+        role=user_data.role,
+        is_active=user_data.is_active,
+    )
+    return UserResponse.model_validate(new_user)
+
+
+@app.get("/api/users/{user_id}", response_model=UserResponse)
+async def read_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a specific user by ID."""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado."
+        )
+    return UserResponse.model_validate(user)
+
+
+@app.get("/api/users", response_model=list[UserResponse])
+async def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    role: str | None = None,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List all users (admin only). Optionally filter by role."""
+    if role:
+        users = get_users_by_role(db, role, skip=skip, limit=limit)
+    else:
+        users = get_all_users(db, skip=skip, limit=limit)
+    return [UserResponse.model_validate(u) for u in users]
+
+
+@app.put("/api/users/{user_id}", response_model=UserResponse)
+async def update_user_endpoint(
+    user_id: int,
+    user_data: UserUpdate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Update a user (admin only)."""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado."
+        )
+    
+    updated_user = update_user(
+        db,
+        user,
+        email=user_data.email,
+        role=user_data.role,
+        is_active=user_data.is_active,
+    )
+    return UserResponse.model_validate(updated_user)
+
+
+@app.delete("/api/users/{user_id}")
+async def delete_user_endpoint(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete a user (admin only)."""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado."
+        )
+    
+    delete_user(db, user)
+    return {"message": "Usuario eliminado correctamente."}
+
 
 
 # Prediction service endpoints

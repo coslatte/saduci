@@ -31,26 +31,52 @@ Archivo principal: [src/api-gateway/main.py](../src/api-gateway/main.py)
 Responsabilidades:
 
 - autenticar usuarios con JWT
+- gestionar usuarios (CRUD) con roles (ADMIN, MEDICO)
 - proteger rutas internas con `Authorization: Bearer`
 - reenviar llamadas a prediction y simulation
 - exponer endpoints no autenticados para la plataforma externa
 
 Rutas principales:
 
+#### Autenticación
 - `GET /health`
 - `POST /auth/login`
+- `GET /auth/me`
+- `POST /auth/change-password`
+
+#### Gestión de Usuarios (Admin-only CRUD)
+- `POST /api/users` – Crear usuario
+- `GET /api/users` – Listar usuarios (con filtro opcional por role)
+- `GET /api/users/{id}` – Obtener usuario por ID
+- `PUT /api/users/{id}` – Actualizar usuario
+- `DELETE /api/users/{id}` – Eliminar usuario
+
+#### Predicciones
 - `POST /api/predictions`
 - `GET /api/predictions/models`
 - `GET /api/predictions/{patient_id}`
+
+#### Simulaciones
 - `GET /api/simulations/scenarios`
 - `GET /api/simulations/{patient_id}`
 - `POST /api/simulations`
 - `POST /api/simulations/icu`
 - `POST /prediction`
 - `POST /prediction/explain`
+
+#### Plataforma Externa (sin autenticación JWT)
+- `POST /prediccion`
+- `POST /prediccion/explain`
 - `POST /simulation`
 - `POST /statistics/wilcoxon`
 - `POST /statistics/friedman`
+
+#### Modelo de Usuarios
+- Campos: id, username, email, hashed_password, role (ADMIN|MEDICO), is_active, is_superuser, created_at, updated_at
+- Roles: ADMIN (acceso total, puede gestionar usuarios), MEDICO (acceso a predicciones y simulaciones)
+- Autorización: solo usuarios con is_superuser=true pueden crear/modificar/eliminar usuarios
+- Validación: contraseña mínimo 8 caracteres, emails únicos, usernames únicos
+
 
 ### 3.2 Prediction Service
 

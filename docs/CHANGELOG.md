@@ -16,7 +16,21 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 ### Added (Unreleased)
 
 - Reorganized the repository into a clearer top-level layout with `src/` for services
+- **User Management CRUD with Roles**: Complete user management system in API Gateway with role-based access control:
+  - Extended User model with `role` field (enum: ADMIN, MEDICO)
+  - Five new REST endpoints for user CRUD operations:
+    - `POST /api/users` – Create new user (admin-only)
+    - `GET /api/users` – List all users with optional role filtering (admin-only)
+    - `GET /api/users/{id}` – Fetch user by ID (authenticated)
+    - `PUT /api/users/{id}` – Update user email, role, or status (admin-only)
+    - `DELETE /api/users/{id}` – Delete user (admin-only)
+  - Role-based authorization: only admin users (is_superuser=true) can create, update, or delete users
+  - Password validation: minimum 8 characters enforced on creation and change
 - Prediction platform inference now loads the trained artifact `src/prediction/models/v1/new_workflow.joblib` and returns enriched output for frontend consumption:
+  - Comprehensive test suite covering CRUD operations, authorization, and edge cases (9 new tests, all passing)
+  - Alembic migration script to add `role` column to users table with MEDICO as default
+- Prediction platform inference now loads the trained artifact `research_files/new_workflow.joblib` and returns enriched output for frontend consumption:
+>>>>>>> agents/crud-usuarios-medicos-admins-postgres
   - probability and probability percent
   - binary class (`vive`/`muere`) with configurable threshold
   - explainability `rows` payload including feature value, baseline, signed contribution, and risk direction

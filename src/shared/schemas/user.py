@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     username: str
+    role: str = "MEDICO"  # Default role
     is_active: bool = True
     is_superuser: bool = False
 
@@ -37,6 +38,16 @@ class UserCreateRequest(BaseModel):
     is_active: bool = True
 
 
+class UserUpdate(BaseModel):
+    """Schema for updating a user."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    email: EmailStr | None = None
+    role: str | None = None
+    is_active: bool | None = None
+
+
 class UserResponse(UserBase):
     """Schema for user response."""
 
@@ -46,9 +57,12 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
+<<<<<<< HEAD:src/shared/schemas/user.py
 
 class RegisterResponse(BaseModel):
     """Schema for registration response."""
 
     message: str
     user: UserResponse
+=======
+>>>>>>> agents/crud-usuarios-medicos-admins-postgres:shared/schemas/user.py
