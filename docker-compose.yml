@@ -18,8 +18,11 @@ services:
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
       - PREDICTION_SERVICE_URL=http://prediction:8002
       - SIMULATION_SERVICE_URL=http://simulation:8003
+      - PATIENT_SERVICE_URL=http://patient:8001
     depends_on:
       api-gateway-db:
+        condition: service_healthy
+      patient:
         condition: service_healthy
       prediction:
         condition: service_healthy
@@ -157,5 +160,48 @@ networks:
 
 volumes:
   api-gateway-db-data:
+  patient-db-data:
   prediction-db-data:
   simulation-db-data:
+  # Patient Service
+  patient:
+    build:
+      context: .
+      dockerfile: src/patient/Dockerfile
+    container_name: patient-service
+    ports:
+      - "127.0.0.1:${PATIENT_HOST_PORT:-8001}:8001"
+    environment:
+      - PORT=8001
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://patient_user:${PATIENT_DB_PASSWORD:?PATIENT_DB_PASSWORD is required}@patient-db:5432/patient_db
+    depends_on:
+      patient-db:
+        condition: service_healthy
+    networks:
+      - saduci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Patient Database
+  patient-db:
+    image: postgres:16.3-alpine
+    container_name: patient-db
+    environment:
+      - POSTGRES_USER=patient_user
+      - POSTGRES_PASSWORD=${PATIENT_DB_PASSWORD:?PATIENT_DB_PASSWORD is required}
+      - POSTGRES_DB=patient_db
+    volumes:
+      - patient-db-data:/var/lib/postgresql/data
+    networks:
+      - saduci-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patient_user -d patient_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

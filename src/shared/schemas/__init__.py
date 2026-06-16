@@ -19,6 +19,13 @@ from .prediction import (
     PlatformExplanationResponse,
     PlatformFeatureExplanationRow,
 )
+from .patient import (
+    PatientBase,
+    PatientCreate,
+    PatientUpdate,
+    PatientResponse,
+    PatientLinkRequest,
+)
 from .simulation import (
     SimulationRequest,
     SimulationResponse,
@@ -44,6 +51,11 @@ __all__ = [
     "PlatformExplanationRequest",
     "PlatformExplanationResponse",
     "PlatformFeatureExplanationRow",
+    "PatientBase",
+    "PatientCreate",
+    "PatientUpdate",
+    "PatientResponse",
+    "PatientLinkRequest",
     "SimulationRequest",
     "SimulationResponse",
     "ICUPatientSimulationRequest",
