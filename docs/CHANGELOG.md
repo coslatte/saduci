@@ -15,6 +15,7 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
 
 ### Added (Unreleased)
 
+- Reorganized the repository into a clearer top-level layout with `src/` for services
 - Prediction platform inference now loads the trained artifact `src/prediction/models/v1/new_workflow.joblib` and returns enriched output for frontend consumption:
   - probability and probability percent
   - binary class (`vive`/`muere`) with configurable threshold

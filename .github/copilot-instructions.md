@@ -55,6 +55,7 @@ SADUCI-Core is a Python microservices backend for clinical intelligence in ICU s
 
 - Services in `src/` directory
 - Shared code in `src/shared/` directory
+- Operational helpers in `tools/` directory
 - Documentation in `docs/` folder
 - Environment configs in `.env` files
 - Database migrations with Alembic

@@ -372,6 +372,9 @@ def main() -> None:
         ok = app.tracker.run_step("Detener stack", partial(app.compose_down, with_volumes=args.down_volumes))
         app.tracker.print_report()
         raise SystemExit(0 if ok else 1)
+=======
+from tools.compose_init import main
+>>>>>>> copilot/refactor-project-structure-for-render
 
 
 if __name__ == "__main__":
