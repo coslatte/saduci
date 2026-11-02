@@ -149,10 +149,10 @@ class SimulationEngine:
         results = []
         for hour in range(0, duration_hours + 1, 2):
             # Simple variation model
-            random.seed(hour)  # For consistency
-            
-            hr_variation = random.randint(-5, 5)
-            bp_variation = random.randint(-10, 10)
+            rng = random.Random(hour)  # Stable output without changing process-wide state
+
+            hr_variation = rng.randint(-5, 5)
+            bp_variation = rng.randint(-10, 10)
             
             results.append({
                 "hour": hour,
@@ -191,10 +191,18 @@ class SimulationEngine:
                 {"outcome": "complications", "probability": 0.1, "days_to_discharge": 24}
             ]
         
-        # Adjust probabilities based on patient risk
-        for outcome in outcomes:
-            if outcome["outcome"] == "complications":
-                outcome["probability"] = min(outcome["probability"] + patient_risk * 0.2, 1.0)
+        # Shift probability mass to complications while preserving a distribution.
+        risk = min(max(patient_risk, 0.0), 1.0)
+        complication = next(item for item in outcomes if item["outcome"] == "complications")
+        original_complication_probability = complication["probability"]
+        complication["probability"] = min(original_complication_probability + risk * 0.2, 1.0)
+        remaining_probability = 1.0 - complication["probability"]
+        recovery_outcomes = [item for item in outcomes if item is not complication]
+        original_recovery_probability = sum(item["probability"] for item in recovery_outcomes)
+        for outcome in recovery_outcomes:
+            outcome["probability"] = (
+                outcome["probability"] / original_recovery_probability * remaining_probability
+            )
         
         return outcomes
 

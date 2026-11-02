@@ -154,15 +154,7 @@ services:
       timeout: 5s
       retries: 5
 
-networks:
-  saduci-network:
-    driver: bridge
 
-volumes:
-  api-gateway-db-data:
-  patient-db-data:
-  prediction-db-data:
-  simulation-db-data:
   # Patient Service
   patient:
     build:
@@ -205,3 +197,12 @@ volumes:
       interval: 10s
       timeout: 5s
       retries: 5
+networks:
+  saduci-network:
+    driver: bridge
+
+volumes:
+  api-gateway-db-data:
+  patient-db-data:
+  prediction-db-data:
+  simulation-db-data:

@@ -1,15 +1,10 @@
-# Changelog
+# Backend changelog
 
-All notable changes to SADUCI-Core are tracked here.
-This project follows Keep a Changelog and Semantic Versioning as a reference.
+Este archivo registra cambios históricos del backend que antes vivía como SADUCI-Core.
 
-## Documentation Policy (Current)
+## Documentación actual
 
-- Active project docs are intentionally reduced to:
-  - `docs/ARCHITECTURE.md`
-  - `docs/CHANGELOG.md`
-- Additional docs will be rebuilt progressively in 3 iterations.
-- During this transition, architecture details and development history must be recorded in this file.
+La arquitectura compartida está en [`../ARCHITECTURE.md`](../ARCHITECTURE.md). La guía para ejecutar el backend está en [`README.md`](README.md).
 
 ## [Unreleased]
 
@@ -30,7 +25,6 @@ This project follows Keep a Changelog and Semantic Versioning as a reference.
   - Comprehensive test suite covering CRUD operations, authorization, and edge cases (9 new tests, all passing)
   - Alembic migration script to add `role` column to users table with MEDICO as default
 - Prediction platform inference now loads the trained artifact `research_files/new_workflow.joblib` and returns enriched output for frontend consumption:
->>>>>>> agents/crud-usuarios-medicos-admins-postgres
   - probability and probability percent
   - binary class (`vive`/`muere`) with configurable threshold
   - explainability `rows` payload including feature value, baseline, signed contribution, and risk direction
