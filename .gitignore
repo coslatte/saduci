@@ -1,55 +1,25 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-package-lock.json
-yarn.lock
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
+# Secrets and local configuration
+.env
+.env.*
 !.env.example
+**/.env
+**/.env.local
 
-# vercel
-.vercel
+# JavaScript
+**/node_modules/
+**/.next/
+**/coverage/
+**/*.tsbuildinfo
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/.pytest_cache/
+**/.coverage
+**/*.egg-info/
 
-# agents
-.ami
-
-# page config data (managed at runtime, not committed)
-/data/*.json
-
-# reference config files
-reference-to-adapt
-
-# docs
-writings/*
-text/*
+# Tooling and OS
+.DS_Store
+.vscode/
+.idea/

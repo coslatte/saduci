@@ -1,36 +1,43 @@
-# SADUCI
+# SADUCI-T
 
-Web client for SADUCI — clinical decision support in the ICU, Hospital Arnaldo Milián Castro.
+SADUCI-T reúne la aplicación web y los servicios de backend en un solo proyecto.
 
-Name: Saduci (Sistema de Apoyo en la Decisión en la Unidad de Cuidado Intensivo)
+- `frontend/`: aplicación web Next.js.
+- `backend/`: API Gateway y microservicios FastAPI, con su configuración Docker Compose.
 
-This repository contains the frontend application (Saduci Platform). The backend service remains named `sadeci-core` where applicable.
+## Requisitos
 
-## Getting Started
+- Bun para el frontend.
+- Docker Compose para el backend.
 
-### 1. Configure the backend URL
+## Configuración
 
-Copy `.env.example` to `.env.local` and set the URL of the [sadeci-core](https://github.com/coslatte/sadeci-core) backend:
+Copia `backend/.env.example` a `.env` en esta raíz y configura las credenciales requeridas (`SECRET_KEY`, `AUTH_USERNAME`, `AUTH_PASSWORD` y contraseñas de bases de datos). La configuración de Compose se lee desde la raíz al invocar el archivo ubicado en `backend/`.
 
-```bash
-cp .env.example .env.local
+En `frontend/.env.local`, configura la URL del gateway: `API_URL=http://localhost:8000`.
+
+## Ejecución
+
+Desde la raíz del proyecto, inicia los servicios backend:
+
+```sh
+docker compose -f backend/docker-compose.yml up -d --build
 ```
 
-```env
-# .env.local
-API_URL=http://localhost:8000
-```
+En otra terminal, inicia el frontend:
 
-The frontend routes all simulation requests through `/api/simulation` (a Next.js Route Handler), so `API_URL` stays server-side and is never exposed to the browser.
-
-The same backend is now also required for authentication. The login screen uses the admin user seeded by `saduci-core` on first startup, so the gateway must be running before entering the app.
-
-### 2. Run the development server
-
-```bash
+```sh
+cd frontend
+bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre <http://localhost:3000>. El API Gateway queda en <http://localhost:8000>.
 
-> **Note:** sadeci-core must be running (default: `http://localhost:8000`) for the patient simulation to return results.
+Para detener el backend:
+
+```sh
+docker compose -f backend/docker-compose.yml down
+```
+
+Consulta `frontend/README.md` y `backend/README.md` para las instrucciones específicas de cada parte.

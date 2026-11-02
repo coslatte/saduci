@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.venv
+.env
+*.md
+docs/
+.pytest_cache
+.mypy_cache
+.ruff_cache
+Makefile
+pyproject.toml
+uv.lock
