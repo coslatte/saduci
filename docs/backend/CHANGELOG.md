@@ -42,6 +42,13 @@ La arquitectura compartida está en [`../ARCHITECTURE.md`](../ARCHITECTURE.md). 
 - Aligned the gateway, Compose stack, startup helpers, and documentation with the reduced service topology.
 - Stabilized the Simulation Service fallback path by replacing process-local Python hash seeding with a deterministic SHA-256-based seed.
 
+### Changed (Unreleased)
+
+- Refactored the backend from a monolithic service into per-service entrypoints (`api-gateway`, `patient`, `prediction`, `simulation`):
+  - Removed the monolithic `SadeciInitializer`; each service now runs its own database initialization through Alembic (`initialize_database`) with per-service migrations.
+  - API Gateway: added `/ready` health endpoint, upstream error translation, and kept the legacy `/prediccion` alias.
+  - Prediction and Simulation services: healthchecks now include the database and expose `/records` endpoints consumed by the API Gateway.
+
 ### Planned (Documentation Iterations)
 
 - Iteration 2/3: add runbooks, operational procedures, and troubleshooting matrix.

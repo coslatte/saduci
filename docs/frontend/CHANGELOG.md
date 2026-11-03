@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-03
+
+### Fixed — 2026-11-03
+
+- Fixed frontend authentication flow: session versioning, request timeouts, and `401`/`403` handling in the auth-related pages and API routes.
+
 ## 2026-04-05
 
 ### Added — 2026-04-05
