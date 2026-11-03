@@ -138,6 +138,10 @@ function isPredictionResponse(value: unknown): value is PredictionResponse {
     typeof value === "object" &&
     "probability" in value &&
     typeof value.probability === "number" &&
+    Number.isFinite(value.probability) &&
+    "threshold" in value &&
+    typeof value.threshold === "number" &&
+    Number.isFinite(value.threshold) &&
     "predicted_label" in value &&
     typeof value.predicted_label === "string"
   );

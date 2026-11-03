@@ -1,6 +1,7 @@
 """Prediction service - ML model integration."""
 import os
 import sys
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,7 @@ import httpx
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Depends
 from joblib import load as joblib_load
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, JSON
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, JSON, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
@@ -25,7 +26,7 @@ from shared.schemas import (
     PlatformExplanationRequest,
     PlatformExplanationResponse,
 )
-from shared.utils import get_logger
+from shared.utils import get_logger, initialize_database
 
 logger = get_logger(__name__)
 
@@ -58,18 +59,16 @@ class PredictionRecord(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-DB_AVAILABLE = True
-try:
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-except SQLAlchemyError as exc:
-    DB_AVAILABLE = False
-    logger.exception("Prediction DB initialization failed: %s", exc)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    initialize_database(Base, engine, logger, os.path.join(os.path.dirname(__file__), "migrations"))
+    yield
 
 app = FastAPI(
     title="Prediction Service",
     description="ML model integration service for clinical predictions",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 _PLATFORM_FEATURE_ORDER = [
@@ -254,9 +253,6 @@ def _require_platform_model() -> Any:
 
 def get_db():
     """Get database session."""
-    if not DB_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Prediction database unavailable")
-
     db = SessionLocal()
     try:
         yield db
@@ -799,7 +795,12 @@ def _legacy_prediction_payload(model_name: str, features: dict[str, Any]) -> tup
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
-    """Health check endpoint."""
+    """Check that the service and its database are available."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Prediction database unavailable") from exc
     return HealthCheck(status="healthy", service="prediction")
 
 
@@ -846,8 +847,58 @@ async def create_prediction(
         model_name=request.model_name,
         prediction=prediction,
         confidence=confidence,
-        timestamp=db_prediction.created_at.isoformat()
+        timestamp=db_prediction.created_at.isoformat(),
+        id=db_prediction.id,
+        created_at=db_prediction.created_at,
     )
+
+
+@app.get("/records")
+async def list_prediction_records(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    """List persisted predictions for the gateway's administrative API."""
+    records = (
+        db.query(PredictionRecord)
+        .order_by(PredictionRecord.created_at.desc(), PredictionRecord.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": record.id,
+            "patient_id": record.patient_id,
+            "model_name": record.model_name,
+            "features": record.features,
+            "prediction": record.prediction,
+            "confidence": record.confidence,
+            "created_at": record.created_at.isoformat(),
+        }
+        for record in records
+    ]
+
+
+@app.get("/records/{prediction_id}")
+async def get_prediction_record(
+    prediction_id: int,
+    db: Session = Depends(get_db),
+):
+    """Get one persisted prediction by its record ID."""
+    record = db.get(PredictionRecord, prediction_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Predicción no encontrada")
+    return {
+        "id": record.id,
+        "patient_id": record.patient_id,
+        "model_name": record.model_name,
+        "features": record.features,
+        "prediction": record.prediction,
+        "confidence": record.confidence,
+        "created_at": record.created_at.isoformat(),
+    }
 
 
 @app.post("/prediction", response_model=PlatformPredictionResponse)

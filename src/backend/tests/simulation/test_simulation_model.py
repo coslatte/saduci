@@ -106,6 +106,17 @@ def test_platform_endpoint_uses_fallback_when_simuci_is_unavailable(monkeypatch,
     assert result == simulation._fallback_platform_simulation(platform_request)
 
 
+def test_platform_endpoint_uses_fallback_when_centroids_are_missing(
+    monkeypatch, platform_request, tmp_path
+):
+    monkeypatch.setattr(simulation, "SIMUCI_AVAILABLE", True)
+    monkeypatch.setattr(simulation, "SIMUCI_CENTROIDS_PATH", tmp_path / "centroids.csv")
+
+    result = asyncio.run(simulation.run_platform_simulation(platform_request))
+
+    assert result == simulation._fallback_platform_simulation(platform_request)
+
+
 @pytest.mark.parametrize(
     "field,value",
     [("age", 13), ("apache", 37), ("n_runs", 49), ("vam_time", 23)],

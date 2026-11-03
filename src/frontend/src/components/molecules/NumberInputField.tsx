@@ -61,7 +61,7 @@ export function NumberInputField({
   inputClassName,
   fullWidth = true,
   disabled,
-  associateLabelWithInput = false,
+  associateLabelWithInput = true,
 }: NumberInputFieldProps) {
   const labelId = `${id}-label`;
 
@@ -85,10 +85,11 @@ export function NumberInputField({
         min={min}
         max={max}
         step={step}
-        value={value}
+        required
+        value={Number.isNaN(value) ? "" : value}
         aria-labelledby={associateLabelWithInput ? undefined : labelId}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-          onChange(Number(event.target.value))
+          onChange(event.target.valueAsNumber)
         }
         help={help}
         fullWidth={fullWidth}

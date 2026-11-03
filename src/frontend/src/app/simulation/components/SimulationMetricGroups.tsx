@@ -57,7 +57,7 @@ export function SimulationMetricGroups({
 }: SimulationMetricGroupsProps) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-slate-200/80">
-      <MetricSection title={"Demográficos & Tiempos"}>
+      <MetricSection title={"Datos y estancia previa"}>
         <NumberInputField
           id="age"
           label={"Edad"}
@@ -82,7 +82,7 @@ export function SimulationMetricGroups({
         />
       </MetricSection>
 
-      <MetricSection title={"Puntajes Clínicos"}>
+      <MetricSection title={"Gravedad y parámetros"}>
         <NumberInputField
           id="apache"
           label={"APACHE"}
@@ -96,21 +96,19 @@ export function SimulationMetricGroups({
         />
         <NumberInputField
           id="sim-percent"
-          label={"Porciento Tiempo UCI"}
+          label={"Parámetro porcentual (%)"}
           min={SIMULATION_LIMITS.simPercent.min}
           max={SIMULATION_LIMITS.simPercent.max}
           value={simPercent}
           onChange={setSimPercent}
-          help={
-            "Proporción de tiempo dentro de la estancia UCI que se espera antes de entrar en Ventilación."
-          }
+          help={"Parámetro porcentual del motor de simulación, entre 0 y 10."}
         />
       </MetricSection>
 
       <MetricSection title={"Ventilación Mecánica"}>
         <NumberInputField
           id="vam-time"
-          label={"Tiempo en VA (h)"}
+          label={"Ventilación mecánica (h)"}
           min={SIMULATION_LIMITS.vamTime.min}
           max={SIMULATION_LIMITS.vamTime.max}
           value={vamTime}

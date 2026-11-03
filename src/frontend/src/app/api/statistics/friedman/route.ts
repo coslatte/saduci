@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    const upstream = await fetch(`${CORE_API_URL}/stats/friedman`, {
+    const upstream = await fetch(`${CORE_API_URL}/statistics/friedman`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

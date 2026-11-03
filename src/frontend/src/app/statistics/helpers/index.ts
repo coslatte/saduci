@@ -5,10 +5,7 @@ export function parseCSV(text: string): Record<string, string[]> {
   const normalizedText = text.replace(/^\uFEFF/, "").trim();
   if (!normalizedText) return {};
 
-  const lines = normalizedText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  const lines = normalizedText.split(/\r?\n/).map((line) => line.trim());
 
   if (lines.length < 2) return {};
 
@@ -30,14 +27,27 @@ export function parseCSV(text: string): Record<string, string[]> {
   const headers = parseCSVRow(lines[startIndex], delimiter).map((h) =>
     h.trim(),
   );
-  const result: Record<string, string[]> = {};
+  const result: Record<string, string[]> = Object.create(null);
+  const normalizedHeaders = new Set<string>();
 
   for (const header of headers) {
+    const normalized = normalizeColumnLabel(header);
+    if (!normalized || normalizedHeaders.has(normalized)) {
+      throw new Error(
+        "Los encabezados del CSV deben tener nombres únicos y no vacíos.",
+      );
+    }
+    normalizedHeaders.add(normalized);
     result[header] = [];
   }
 
   for (let i = startIndex + 1; i < lines.length; i++) {
     const cells = parseCSVRow(lines[i], delimiter);
+    if (cells.length !== headers.length) {
+      throw new Error(
+        `La fila ${i + 1} tiene una cantidad de columnas distinta del encabezado.`,
+      );
+    }
     headers.forEach((header, idx) => {
       result[header].push((cells[idx] ?? "").trim());
     });
@@ -74,6 +84,10 @@ function parseCSVRow(row: string, delimiter: string): string[] {
     current += char;
   }
 
+  if (insideQuotes)
+    throw new Error(
+      "El CSV contiene comillas sin cerrar o campos de varias líneas no admitidos.",
+    );
   cells.push(current);
   return cells;
 }
@@ -97,9 +111,10 @@ function parseNumericValue(value: string): number {
 
   if (hasComma && !hasDot) {
     normalized = trimmed.replace(/,/g, ".");
-  } else if (hasComma && hasDot) {
-    normalized = trimmed.replace(/,/g, "");
-  }
+  } else if (hasComma && hasDot) return Number.NaN;
+
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(normalized))
+    return Number.NaN;
 
   return Number(normalized);
 }
@@ -117,7 +132,13 @@ export async function readCSVFile(
     throw new Error(`El archivo "${file.name}" supera el límite de 5 MB.`);
   }
   const text = await file.text();
-  return parseCSV(text);
+  try {
+    return parseCSV(text);
+  } catch (error) {
+    throw new Error(
+      `Error en "${file.name}": ${error instanceof Error ? error.message : "CSV inválido."}`,
+    );
+  }
 }
 
 /**
@@ -139,22 +160,13 @@ export function extractNumericColumn(
     ];
 
   if (!rawValues) return [];
-  return rawValues
-    .map((v) => parseNumericValue(v))
-    .filter((n) => Number.isFinite(n));
-}
-
-/**
- * Adjusts multiple arrays to have the same length (the minimum).
- * Returns the adjusted arrays and the minimum size.
- */
-export function adjustArraySizes(arrays: number[][]): {
-  adjusted: number[][];
-  minSize: number;
-} {
-  const minSize = Math.min(...arrays.map((a) => a.length));
-  return {
-    adjusted: arrays.map((a) => a.slice(0, minSize)),
-    minSize,
-  };
+  return rawValues.map((value, index) => {
+    const number = parseNumericValue(value);
+    if (!Number.isFinite(number)) {
+      throw new Error(
+        `La columna "${columnLabel}" contiene un valor no numérico o vacío en la fila de datos ${index + 1}.`,
+      );
+    }
+    return number;
+  });
 }

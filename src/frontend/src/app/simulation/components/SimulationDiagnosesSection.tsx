@@ -1,4 +1,3 @@
-import AccessibleSelect from "@/components/atoms/AccessibleSelect";
 import { Label } from "@/components/atoms/Label";
 
 import { diagData, respInsufData, ventTypeData } from "../helpers";
@@ -40,14 +39,22 @@ function SelectField({
       <Label htmlFor={id} className="text-zinc-800">
         {label}
       </Label>
-      <AccessibleSelect
+      <select
         id={id}
-        value={String(value)}
-        onChange={(nextValue) => onChange(Number(nextValue))}
-        options={options}
-        help={help}
-        fullWidth
-      />
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        aria-describedby={`${id}-help`}
+        className="h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-primary-500"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <p id={`${id}-help`} className="text-xs text-slate-500">
+        {help}
+      </p>
     </div>
   );
 }
@@ -78,45 +85,45 @@ export function SimulationDiagnosesSection({
         {"Diagnósticos de Ingreso y Egreso"}
       </p>
 
-      <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2 lg:grid-cols-2">
         <SelectField
           id="diag-ing-1"
-          label={`Diag. Ingreso ${1}`}
+          label="Diagnóstico principal de ingreso"
           value={diagIng1}
           onChange={setDiagIng1}
           options={diagData()}
           help={
-            "Diagnóstico principal de ingreso del paciente a la unidad. Seleccione la categoría clínica que mejor describe el estado inicial."
+            "Seleccione la categoría clínica correspondiente. Los diagnósticos adicionales son opcionales."
           }
         />
         <SelectField
           id="diag-ing-2"
-          label={`Diag. Ingreso ${2}`}
+          label="Diagnóstico adicional 1 (opcional)"
           value={diagIng2}
           onChange={setDiagIng2}
           options={diagData()}
           help={
-            "Diagnóstico principal de ingreso del paciente a la unidad. Seleccione la categoría clínica que mejor describe el estado inicial."
+            "Seleccione la categoría clínica correspondiente. Los diagnósticos adicionales son opcionales."
           }
         />
         <SelectField
           id="diag-ing-3"
-          label={`Diag. Ingreso ${3}`}
+          label="Diagnóstico adicional 2 (opcional)"
           value={diagIng3}
           onChange={setDiagIng3}
           options={diagData()}
           help={
-            "Diagnóstico principal de ingreso del paciente a la unidad. Seleccione la categoría clínica que mejor describe el estado inicial."
+            "Seleccione la categoría clínica correspondiente. Los diagnósticos adicionales son opcionales."
           }
         />
         <SelectField
           id="diag-ing-4"
-          label={`Diag. Ingreso ${4}`}
+          label="Diagnóstico adicional 3 (opcional)"
           value={diagIng4}
           onChange={setDiagIng4}
           options={diagData()}
           help={
-            "Diagnóstico principal de ingreso del paciente a la unidad. Seleccione la categoría clínica que mejor describe el estado inicial."
+            "Seleccione la categoría clínica correspondiente. Los diagnósticos adicionales son opcionales."
           }
         />
       </div>
@@ -124,7 +131,7 @@ export function SimulationDiagnosesSection({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <SelectField
           id="resp-insuf"
-          label={"Insuf. Respiratoria"}
+          label={"Causa de insuficiencia respiratoria"}
           value={respInsuf}
           onChange={setRespInsuf}
           options={respInsufData()}
@@ -144,7 +151,7 @@ export function SimulationDiagnosesSection({
         />
         <SelectField
           id="diag-egreso-2"
-          label={"Diagnóstico Egreso 2"}
+          label={"Diagnóstico de egreso"}
           value={diagEgreso2}
           onChange={setDiagEgreso2}
           options={diagData()}

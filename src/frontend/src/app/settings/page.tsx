@@ -91,7 +91,12 @@ export function UserSettingsPageContent({
         setConfirmPassword("");
       } else {
         setIsSuccess(false);
-        setMessage(data.message || "Error al actualizar la contraseña.");
+        setMessage(
+          data.detail ||
+            data.message ||
+            data.error ||
+            "Error al actualizar la contraseña.",
+        );
       }
     } catch {
       setIsSuccess(false);
@@ -154,7 +159,9 @@ export function UserSettingsPageContent({
               <Text as="p" size="sm" muted className="">
                 {user.email}
               </Text>
-              <Badge status="info" className="mt-1">{user.role}</Badge>
+              <Badge status="info" className="mt-1">
+                {user.role}
+              </Badge>
             </div>
           </div>
         </div>

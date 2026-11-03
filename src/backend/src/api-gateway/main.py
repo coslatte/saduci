@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
@@ -12,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 
 def _setup_import_paths() -> None:
@@ -65,6 +67,7 @@ from shared.utils import (  # noqa: E402
     verify_password,
     verify_token,
     ServiceClient,
+    initialize_database,
 )
 
 
@@ -96,14 +99,14 @@ def _check_rate_limit(client_ip: str) -> None:
 
 def _parse_cors_origins(raw_origins: str) -> list[str]:
     origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
-    return origins or ["http://localhost:3000", "http://localhost:8000"]
+    return origins or ["http://localhost:3030"]
 
 
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "").strip()
 AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "").strip()
 
 CORS_ALLOW_ORIGINS = _parse_cors_origins(
-    os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://localhost:8000")
+    os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3030")
 )
 CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
 if "*" in CORS_ALLOW_ORIGINS:
@@ -119,7 +122,7 @@ PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL", "http://localhost:8001")
 
 # Service clients (initialised early, cleaned up via lifespan)
 prediction_client = ServiceClient(PREDICTION_SERVICE_URL)
-simulation_client = ServiceClient(SIMULATION_SERVICE_URL)
+simulation_client = ServiceClient(SIMULATION_SERVICE_URL, timeout=360.0)
 patient_client = ServiceClient(PATIENT_SERVICE_URL)
 
 
@@ -156,6 +159,18 @@ def _translate_prediction_proxy_error(error: Exception) -> HTTPException:
         return HTTPException(status_code=502, detail="Prediction service unavailable")
 
     return HTTPException(status_code=502, detail="Prediction service unavailable")
+
+
+def _translate_service_error(error: Exception, service: str) -> HTTPException:
+    if isinstance(error, httpx.TimeoutException):
+        return HTTPException(status_code=504, detail=f"{service} service timed out")
+    if isinstance(error, httpx.HTTPStatusError):
+        return HTTPException(
+            status_code=error.response.status_code,
+            detail=_extract_upstream_detail(error),
+        )
+    logger.error("%s service request failed: %s", service, error)
+    return HTTPException(status_code=502, detail=f"{service} service unavailable")
 
 
 def _seed_admin_user(db: Session) -> User:
@@ -210,7 +225,10 @@ def _seed_demo_users(db: Session) -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    initialize_database(
+        Base, engine, logger,
+        os.path.join(os.path.dirname(__file__), "..", "..", "services", "api-gateway", "alembic"),
+    )
     with SessionLocal() as db:
         if count_users(db) == 0:
             if not AUTH_USERNAME or not AUTH_PASSWORD:
@@ -325,6 +343,35 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 async def health_check():
     """Health check endpoint."""
     return HealthCheck(status="healthy", service="api-gateway")
+
+
+@app.get("/ready")
+async def readiness_check():
+    checks = {"database": False, "patient": False, "prediction": False, "simulation": False}
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        checks["database"] = True
+    except Exception:
+        logger.exception("Gateway database readiness check failed")
+
+    async def service_is_ready(url: str) -> bool:
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                response = await client.get(f"{url.rstrip('/')}/health")
+                return response.is_success
+        except httpx.RequestError:
+            return False
+
+    services = await asyncio.gather(
+        service_is_ready(PATIENT_SERVICE_URL),
+        service_is_ready(PREDICTION_SERVICE_URL),
+        service_is_ready(SIMULATION_SERVICE_URL),
+    )
+    checks.update(dict(zip(("patient", "prediction", "simulation"), services)))
+    if not all(checks.values()):
+        raise HTTPException(status_code=503, detail={"status": "not_ready", "checks": checks})
+    return {"status": "ready", "checks": checks}
 
 
 @app.post("/auth/login", response_model=LoginResponse)
@@ -527,7 +574,7 @@ async def delete_user_endpoint(
             detail="Usuario no encontrado."
         )
     
-    delete_user(db, user)
+    delete_user(db, user.id)
     return {"message": "Usuario eliminado correctamente."}
 
 
@@ -543,10 +590,7 @@ async def create_prediction(
             "/predictions", prediction_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error("Error forwarding to prediction service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Prediction service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Prediction") from e
 
 
 @app.get("/api/predictions/models")
@@ -555,10 +599,7 @@ async def list_prediction_models(_current_user: User = Depends(get_current_user)
     try:
         return await prediction_client.get("/models")
     except Exception as e:
-        logger.error("Error forwarding model list to prediction service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Prediction service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Prediction") from e
 
 
 @app.get("/api/predictions/{patient_id}")
@@ -569,10 +610,7 @@ async def get_prediction_history(
     try:
         return await prediction_client.get(f"/predictions/{patient_id}")
     except Exception as e:
-        logger.error("Error forwarding prediction history to prediction service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Prediction service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Prediction") from e
 
 
 @app.post("/prediction")
@@ -596,6 +634,11 @@ async def run_platform_prediction(prediction_data: PlatformPredictionRequest):
         raise _translate_prediction_proxy_error(e) from e
 
 
+@app.post("/prediccion")
+async def run_platform_prediction_legacy(prediction_data: PlatformPredictionRequest):
+    return await run_platform_prediction(prediction_data)
+
+
 @app.post("/prediction/explain")
 async def run_platform_prediction_explain(explain_data: PlatformExplanationRequest):
     """
@@ -617,6 +660,11 @@ async def run_platform_prediction_explain(explain_data: PlatformExplanationReque
         raise _translate_prediction_proxy_error(e) from e
 
 
+@app.post("/prediccion/explain")
+async def run_platform_prediction_explain_legacy(explain_data: PlatformExplanationRequest):
+    return await run_platform_prediction_explain(explain_data)
+
+
 # Simulation service endpoints
 @app.post("/api/simulations")
 async def create_simulation(
@@ -628,10 +676,7 @@ async def create_simulation(
             "/simulations", simulation_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error("Error forwarding to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Simulation service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Simulation") from e
 
 
 @app.get("/api/simulations/scenarios")
@@ -640,10 +685,7 @@ async def list_simulation_scenarios(_current_user: User = Depends(get_current_us
     try:
         return await simulation_client.get("/scenarios")
     except Exception as e:
-        logger.error("Error forwarding scenario list to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Simulation service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Simulation") from e
 
 
 @app.get("/api/simulations/{patient_id}")
@@ -654,10 +696,7 @@ async def get_simulation_history(
     try:
         return await simulation_client.get(f"/simulations/{patient_id}")
     except Exception as e:
-        logger.error("Error forwarding simulation history to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Simulation service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Simulation") from e
 
 
 @app.post("/api/simulations/icu")
@@ -671,10 +710,7 @@ async def create_icu_simulation(
             "/simulations/icu", simulation_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error("Error forwarding ICU simulation to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="ICU simulation service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Simulation") from e
 
 
 @app.post("/api/patients")
@@ -685,10 +721,7 @@ async def create_patient(
     try:
         return await patient_client.post("/patients", patient_data)
     except Exception as e:
-        logger.error("Error forwarding patient creation to patient service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Patient service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Patient") from e
 
 
 @app.get("/api/patients/{mrn}")
@@ -697,10 +730,7 @@ async def get_patient(mrn: str, _current_user: User = Depends(get_current_user))
     try:
         return await patient_client.get(f"/patients/{mrn}")
     except Exception as e:
-        logger.error("Error forwarding patient lookup to patient service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Patient service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Patient") from e
 
 
 @app.put("/api/patients/{mrn}")
@@ -711,10 +741,7 @@ async def update_patient(
     try:
         return await patient_client.put(f"/patients/{mrn}", patient_data)
     except Exception as e:
-        logger.error("Error forwarding patient update to patient service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Patient service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Patient") from e
 
 
 @app.post("/simulation")
@@ -730,12 +757,7 @@ async def run_platform_simulation(simulation_data: PlatformSimulationRequest):
             "/simulation", simulation_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error(
-            "Error forwarding platform simulation to simulation service: %s", e
-        )
-        raise HTTPException(
-            status_code=502, detail="Simulation service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Simulation") from e
 
 
 @app.post("/statistics/wilcoxon")
@@ -746,10 +768,7 @@ async def run_wilcoxon_test(test_data: WilcoxonRequest):
             "/statistics/wilcoxon", test_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error("Error forwarding Wilcoxon test to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Statistics service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Statistics") from e
 
 
 @app.post("/statistics/friedman")
@@ -760,10 +779,7 @@ async def run_friedman_test(test_data: FriedmanRequest):
             "/statistics/friedman", test_data.model_dump(mode="json")
         )
     except Exception as e:
-        logger.error("Error forwarding Friedman test to simulation service: %s", e)
-        raise HTTPException(
-            status_code=502, detail="Statistics service unavailable"
-        ) from e
+        raise _translate_service_error(e, "Statistics") from e
 
 
 # User management endpoints (admin only)
@@ -777,6 +793,10 @@ def require_superuser(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def _admin_service_http_error(error: Exception, service_name: str) -> HTTPException:
+    return _translate_service_error(error, service_name)
+
+
 @app.get("/admin/users", response_model=list[UserResponse])
 async def list_users(
     _current_user: User = Depends(require_superuser),
@@ -785,6 +805,19 @@ async def list_users(
     """List all users (admin only)."""
     users = get_all_users(db)
     return [UserResponse.model_validate(user) for user in users]
+
+
+@app.get("/admin/users/{user_id}", response_model=UserResponse)
+async def get_admin_user(
+    user_id: int,
+    _current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
+    """Get one user by ID (admin only)."""
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return UserResponse.model_validate(user)
 
 
 @app.post("/admin/users", response_model=UserResponse)
@@ -823,6 +856,84 @@ async def create_user_admin(
         is_superuser=request.is_superuser,
     )
     return UserResponse.model_validate(new_user)
+
+
+@app.post("/admin/simulations")
+async def create_admin_simulation(
+    request: SimulationRequest,
+    _current_user: User = Depends(require_superuser),
+):
+    """Run and persist a simulation through the simulation service (admin only)."""
+    try:
+        return await simulation_client.post(
+            "/simulations", request.model_dump(mode="json")
+        )
+    except Exception as error:
+        raise _admin_service_http_error(error, "Simulation") from error
+
+
+@app.get("/admin/simulations")
+async def list_admin_simulations(
+    skip: int = 0,
+    limit: int = 100,
+    _current_user: User = Depends(require_superuser),
+):
+    """List persisted simulations (admin only)."""
+    try:
+        return await simulation_client.get(f"/records?skip={skip}&limit={limit}")
+    except Exception as error:
+        raise _admin_service_http_error(error, "Simulation") from error
+
+
+@app.get("/admin/simulations/{simulation_id}")
+async def get_admin_simulation(
+    simulation_id: int,
+    _current_user: User = Depends(require_superuser),
+):
+    """Get one persisted simulation by ID (admin only)."""
+    try:
+        return await simulation_client.get(f"/records/{simulation_id}")
+    except Exception as error:
+        raise _admin_service_http_error(error, "Simulation") from error
+
+
+@app.post("/admin/predictions")
+async def create_admin_prediction(
+    request: PredictionRequest,
+    _current_user: User = Depends(require_superuser),
+):
+    """Run and persist a prediction through the prediction service (admin only)."""
+    try:
+        return await prediction_client.post(
+            "/predictions", request.model_dump(mode="json")
+        )
+    except Exception as error:
+        raise _admin_service_http_error(error, "Prediction") from error
+
+
+@app.get("/admin/predictions")
+async def list_admin_predictions(
+    skip: int = 0,
+    limit: int = 100,
+    _current_user: User = Depends(require_superuser),
+):
+    """List persisted predictions (admin only)."""
+    try:
+        return await prediction_client.get(f"/records?skip={skip}&limit={limit}")
+    except Exception as error:
+        raise _admin_service_http_error(error, "Prediction") from error
+
+
+@app.get("/admin/predictions/{prediction_id}")
+async def get_admin_prediction(
+    prediction_id: int,
+    _current_user: User = Depends(require_superuser),
+):
+    """Get one persisted prediction by ID (admin only)."""
+    try:
+        return await prediction_client.get(f"/records/{prediction_id}")
+    except Exception as error:
+        raise _admin_service_http_error(error, "Prediction") from error
 
 
 @app.delete("/admin/users/{user_id}")

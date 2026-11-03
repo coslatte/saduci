@@ -26,8 +26,7 @@ export interface NavbarProfileProps {
 /**
  * NavbarProfile
  *
- * UI block used in the top navbar to show the current user avatar, name and
- * status badge.
+ * User profile menu with account settings and sign-out actions.
  *
  * @param props - NavbarProfileProps
  *
@@ -51,18 +50,17 @@ export function NavbarProfile({
   return (
     <Popover
       align="right"
-      openOnHover
       closeOnSelect
       trigger={
         <button
           type="button"
           aria-label={ariaLabel}
           className={cn(
-            "group flex h-full pr-2 m-2 items-center border border-transparent bg-transparent transition-all duration-200 hover:border-slate-200 hover:bg-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-200 pl-2 gap-2 rounded-xl",
+            "flex h-full pr-2 m-2 items-center border border-transparent bg-transparent pl-2 gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-200",
             className,
           )}
         >
-          <div className="transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 group-active:scale-95">
+          <div>
             <Avatar
               src={userAvatar}
               name={userName}
@@ -117,7 +115,7 @@ export function NavbarProfile({
             href={href}
             className="w-full px-3 py-2 text-sm font-medium text-center transition-colors rounded-xl text-slate-700 hover:bg-slate-100"
           >
-            {"Ajuste"}
+            Ajustes
           </Link>
 
           <button

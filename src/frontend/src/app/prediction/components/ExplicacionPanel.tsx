@@ -1,170 +1,160 @@
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-  ReferenceLine,
-  ResponsiveContainer,
-} from "recharts";
 import { FiInfo } from "react-icons/fi";
-import { Button } from "@/components/atoms/Buttons";
 import { Alert } from "@/components/molecules/Alert";
-import { Label } from "@/components/atoms/Label";
-import { AccessibleSelect } from "@/components/atoms/AccessibleSelect";
+import { Button } from "@/components/atoms/Buttons";
 import { Spinner } from "@/components/atoms/Spinner";
-import { Text } from "@/components/atoms/Text";
-import type { ExplanationMethod, ExplicacionResponse } from "@/lib/prediction";
-import { EXPLANATION_METHODS } from "@/lib/prediction";
+import type { ExplicacionResponse } from "@/lib/prediction";
 
 interface ExplicacionPanelProps {
-  hasPrediction: boolean;
-  method: ExplanationMethod;
-  setMethod: (m: ExplanationMethod) => void;
   loading: boolean;
   onExplain: () => void;
   result: ExplicacionResponse | null;
   error: string | null;
 }
 
-interface ChartEntry {
-  feature: string;
-  importance: number;
-}
-
-function formatChartValue(
-  value: number | string | readonly (number | string)[] | undefined,
-) {
-  if (typeof value === "number") return value.toFixed(4);
-  if (Array.isArray(value)) return value.join(", ");
-  return value ?? "";
-}
+const labels: Record<string, string> = {
+  edad: "Edad",
+  diag_ing1: "Diagnóstico de ingreso 1",
+  diag_ing2: "Diagnóstico de ingreso 2",
+  diag_egr2: "Diagnóstico de egreso 2",
+  apache: "APACHE",
+  tiempo_vam: "Tiempo de ventilación mecánica",
+};
 
 export function ExplicacionPanel({
-  hasPrediction,
-  method,
-  setMethod,
   loading,
   onExplain,
   result,
   error,
 }: ExplicacionPanelProps) {
-  const chartData: ChartEntry[] = result
-    ? result.feature_names
-        .map((name, i) => ({
-          feature: name,
-          importance: result.importances[i] ?? 0,
-        }))
-        .sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance))
+  const rows = result
+    ? [...result.rows].sort(
+        (a, b) => Math.abs(b.contribution) - Math.abs(a.contribution),
+      )
     : [];
+  const max = Math.max(0, ...rows.map((row) => Math.abs(row.contribution)));
 
   return (
     <section
       aria-labelledby="prediction-explain-section-title"
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-5"
+      aria-busy={loading}
     >
-      <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
-        <FiInfo className="size-5 text-primary-600" />
+      <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+        <FiInfo className="size-5 text-primary-600" aria-hidden="true" />
         <h2
           id="prediction-explain-section-title"
           className="font-semibold text-zinc-800"
         >
-          Explicabilidad del modelo
+          ¿Qué influyó en este resultado?
         </h2>
       </div>
-
-      <div className="flex flex-col w-full gap-4">
-        {!hasPrediction && (
-          <Alert variant="info">
-            Primero realice una predicción para activar la explicación.
-          </Alert>
-        )}
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="pred-method">Seleccionar método</Label>
-            <AccessibleSelect
-              id="pred-method"
-              value={method}
-              onChange={(value) => setMethod(value as ExplanationMethod)}
-              options={EXPLANATION_METHODS.map((m) => ({
-                value: m,
-                label: m,
-              }))}
-              fullWidth={false}
-              className="min-w-[220px]"
-            />
-          </div>
-
-          <Button
-            variant="secondary"
-            disabled={!hasPrediction || loading}
-            onClick={onExplain}
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Spinner size="sm" />
-                Generando...
-              </span>
-            ) : (
-              "Explicar"
-            )}
+      <p className="text-sm text-slate-600">
+        Para cada variable se compara la predicción del caso con otra en la que
+        solo esa variable se sustituye por un valor de referencia. Las barras
+        muestran la diferencia en puntos porcentuales.
+      </p>
+      {loading && (
+        <p
+          role="status"
+          className="flex items-center gap-2 text-sm text-slate-600"
+        >
+          <Spinner size="sm" /> Calculando la explicación…
+        </p>
+      )}
+      {error && (
+        <Alert variant="danger" title="No se pudo generar la explicación">
+          {error}
+        </Alert>
+      )}
+      {error && (
+        <div>
+          <Button variant="secondary" onClick={onExplain}>
+            Reintentar explicación
           </Button>
         </div>
-
-        {error && <Alert variant="danger">{error}</Alert>}
-
-        {result && (
-          <div className="flex flex-col w-full gap-3">
-            <h3 className="font-medium text-zinc-700">
-              {`Explicación con ${method}`}
-            </h3>
-            <div className="flex gap-4 text-xs text-zinc-500">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 bg-primary-500 rounded-sm" />
-                Positiva (aumenta probabilidad)
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 bg-slate-400 rounded-sm" />
-                Negativa (disminuye probabilidad)
-              </span>
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={chartData}
-                layout="vertical"
-                margin={{ top: 4, right: 24, left: 80, bottom: 4 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis
-                  type="number"
-                  tickFormatter={(v: number) => v.toFixed(2)}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="feature"
-                  width={76}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip formatter={formatChartValue} />
-                <ReferenceLine x={0} stroke="#ef4444" strokeDasharray="4 2" />
-                <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.importance >= 0 ? "#14b8a6" : "#94a3b8"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      )}
+      {result && (
+        <>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600">
+            <span>
+              <span className="font-semibold text-rose-700">+ Aumenta</span> la
+              probabilidad estimada
+            </span>
+            <span>
+              <span className="font-semibold text-teal-700">− Disminuye</span>{" "}
+              la probabilidad estimada
+            </span>
           </div>
-        )}
-      </div>
+          {rows.length === 0 ? (
+            <p className="text-sm text-slate-600">
+              No hay contribuciones disponibles para este caso.
+            </p>
+          ) : (
+            <ul className="space-y-4" aria-label="Contribuciones por variable">
+              {rows.map((row) => {
+                const points = row.contribution * 100;
+                const direction =
+                  points > 0
+                    ? "Aumenta"
+                    : points < 0
+                      ? "Disminuye"
+                      : "Sin diferencia";
+                return (
+                  <li
+                    key={row.feature_key}
+                    className="rounded-xl border border-slate-200 p-3"
+                  >
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm">
+                      <span className="font-medium text-slate-800">
+                        {labels[row.feature_key] ?? row.feature_name}
+                      </span>
+                      <span className="font-semibold tabular-nums text-slate-700">
+                        {direction}: {points > 0 ? "+" : ""}
+                        {points.toFixed(2)} puntos porcentuales
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Valor del caso: {row.patient_value_display}
+                      {row.patient_value_display !== String(row.patient_value)
+                        ? ` (código ${row.patient_value})`
+                        : ""}{" "}
+                      · Referencia: {row.baseline_value}
+                      {row.feature_key.startsWith("diag_") ? " (código)" : ""}
+                    </p>
+                    <div
+                      aria-hidden="true"
+                      className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100"
+                    >
+                      <div
+                        className={
+                          points < 0
+                            ? "bg-teal-600"
+                            : points > 0
+                              ? "bg-rose-600"
+                              : "bg-slate-400"
+                        }
+                        style={{
+                          width: `${max ? (Math.abs(row.contribution) / max) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="text-xs leading-relaxed text-slate-500">
+            La referencia es el punto medio del rango configurado para cada
+            variable; en diagnósticos es un código numérico y puede no
+            corresponder a una categoría clínica. Las diferencias se calculan
+            por separado y no deben sumarse. Describen el comportamiento del
+            modelo, no una relación causal. El resultado requiere interpretación
+            clínica.
+          </p>
+        </>
+      )}
     </section>
   );
 }

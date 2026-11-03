@@ -97,10 +97,10 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           tracking="tight"
           className="text-slate-900"
         >
-          "Crear cuenta"
+          Crear cuenta
         </Text>
         <Text as="p" size="sm" muted className="mt-2">
-          "Regístrate para acceder a la plataforma"
+          Regístrate para acceder a la plataforma
         </Text>
       </div>
 
@@ -112,7 +112,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="register-email">"Correo electrónico"</Label>
+          <Label htmlFor="register-email">Correo electrónico</Label>
           <Input
             id="register-email"
             type="email"
@@ -127,7 +127,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="register-username">"Nombre de usuario"</Label>
+          <Label htmlFor="register-username">Nombre de usuario</Label>
           <Input
             id="register-username"
             type="text"
@@ -141,7 +141,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="register-password">"Contraseña"</Label>
+          <Label htmlFor="register-password">Contraseña</Label>
           <Input
             id="register-password"
             type="password"
@@ -156,7 +156,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="register-confirm-password">
-            "Confirmar contraseña"
+            Confirmar contraseña
           </Label>
           <Input
             id="register-confirm-password"
@@ -177,7 +177,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           className="w-full"
           size="lg"
         >
-          "Crear cuenta"
+          Crear cuenta
         </Button>
       </form>
 

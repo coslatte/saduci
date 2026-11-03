@@ -13,7 +13,7 @@ from typing import Any, Callable, Iterable, Optional
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("sadeci-init")
+logger = logging.getLogger("saduci-init")
 
 
 @dataclass
@@ -128,8 +128,8 @@ class DockerComposeRunner:
 
 
 class SadeciInitializer:
-    APP_SERVICES = ["api-gateway", "prediction", "simulation"]
-    DB_SERVICES = ["prediction-db", "simulation-db"]
+    APP_SERVICES = ["api-gateway", "patient", "prediction", "simulation"]
+    DB_SERVICES = ["api-gateway-db", "patient-db", "prediction-db", "simulation-db"]
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = root or Path(__file__).resolve().parent.parent

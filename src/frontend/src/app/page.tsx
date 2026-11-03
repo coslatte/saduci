@@ -21,7 +21,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <FiBox className="size-5 text-primary-600" />
             <Text as="h3" size="lg" weight="semibold">
-              "Acerca de la Plataforma"
+              Acerca de la Plataforma
             </Text>
           </div>
           <div className="space-y-4">

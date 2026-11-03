@@ -8,13 +8,12 @@ import { PredictionForm } from "./PredictionForm";
 import { PredictionResultCard } from "./PredictionResultCard";
 import { ExplicacionPanel } from "./ExplicacionPanel";
 import {
-  EXPLANATION_METHODS,
   PREDICTION_LIMITS,
   runExplicacion,
   runPrediction,
   type ExplicacionResponse,
-  type ExplanationMethod,
   type PredictionResponse,
+  type PredictionRequest,
 } from "@/lib/prediction";
 
 /**
@@ -49,31 +48,51 @@ export function PredictionPageContent() {
   const [loadingExplain, setLoadingExplain] = useState<boolean>(false);
   const [predictError, setPredictError] = useState<string | null>(null);
   const [explainError, setExplainError] = useState<string | null>(null);
-  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
-  const [explicacion, setExplicacion] = useState<ExplicacionResponse | null>(
-    null,
-  );
-  const [method, setMethod] = useState<ExplanationMethod>(
-    EXPLANATION_METHODS[0],
-  );
+  const [predictionRecord, setPredictionRecord] = useState<{
+    result: PredictionResponse;
+    inputs: PredictionRequest;
+  } | null>(null);
+  const [explicacion, setExplicacion] = useState<{
+    result: ExplicacionResponse;
+    inputs: PredictionRequest;
+  } | null>(null);
+  const inputs: PredictionRequest = {
+    edad,
+    diag_ing1: diagIng1,
+    diag_ing2: diagIng2,
+    diag_egr2: diagEgr2,
+    apache,
+    tiempo_vam: tiempoVam,
+  };
+  const prediction =
+    predictionRecord &&
+    Object.keys(inputs).every(
+      (key) =>
+        inputs[key as keyof PredictionRequest] ===
+        predictionRecord.inputs[key as keyof PredictionRequest],
+    )
+      ? predictionRecord.result
+      : null;
 
   async function handlePredict(): Promise<void> {
+    if (loadingPredict || loadingExplain) return;
     setPredictError(null);
-    setPrediction(null);
     setExplicacion(null);
+    setExplainError(null);
     setLoadingPredict(true);
 
     try {
-      const result = await runPrediction({
-        edad,
-        diag_ing1: diagIng1,
-        diag_ing2: diagIng2,
-        diag_egr2: diagEgr2,
-        apache,
-        tiempo_vam: tiempoVam,
-      });
-
-      setPrediction(result);
+      const result = await runPrediction(inputs);
+      setPredictionRecord({ result, inputs });
+      setLoadingExplain(true);
+      try {
+        const explanation = await runExplicacion({ ...inputs, method: "LIME" });
+        setExplicacion({ result: explanation, inputs });
+      } catch (err) {
+        setExplainError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoadingExplain(false);
+      }
     } catch (err) {
       setPredictError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -82,24 +101,16 @@ export function PredictionPageContent() {
   }
 
   async function handleExplain(): Promise<void> {
-    if (!prediction) return;
+    if (!prediction || loadingPredict || loadingExplain) return;
 
     setExplainError(null);
     setExplicacion(null);
     setLoadingExplain(true);
 
     try {
-      const result = await runExplicacion({
-        edad,
-        diag_ing1: diagIng1,
-        diag_ing2: diagIng2,
-        diag_egr2: diagEgr2,
-        apache,
-        tiempo_vam: tiempoVam,
-        method,
-      });
+      const result = await runExplicacion({ ...inputs, method: "LIME" });
 
-      setExplicacion(result);
+      setExplicacion({ result, inputs });
     } catch (err) {
       setExplainError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -111,16 +122,19 @@ export function PredictionPageContent() {
     <Stack space="lg" className="pb-1">
       <div>
         <Text as="h1" size="xl" weight="bold" className="text-zinc-900">
-          "Predicción de No Supervivencia"
+          Predicción de No Supervivencia
         </Text>
         <Text size="sm" className="mt-1 text-zinc-500">
-          "Herramienta de apoyo en la predicción de no supervivencia de
-          pacientes en UCI."
+          Herramienta de apoyo en la predicción de no supervivencia de pacientes
+          en UCI.
         </Text>
       </div>
 
-      <div className="flex flex-col gap-5">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] xl:items-start">
+        <section
+          id="form"
+          className="rounded-2xl border border-slate-200 bg-white p-5"
+        >
           <PredictionForm
             edad={edad}
             setEdad={setEdad}
@@ -134,12 +148,28 @@ export function PredictionPageContent() {
             setApache={setApache}
             tiempoVam={tiempoVam}
             setTiempoVam={setTiempoVam}
-            loading={loadingPredict}
+            loading={loadingPredict || loadingExplain}
             onPredict={handlePredict}
           />
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section
+          id="results"
+          className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 xl:sticky xl:top-6"
+          aria-busy={loadingPredict}
+          aria-live="polite"
+        >
+          {loadingPredict && (
+            <p role="status" className="mb-4 text-sm text-slate-600">
+              Calculando la predicción…
+            </p>
+          )}
+          {predictionRecord && !prediction && (
+            <p className="mb-4 text-sm text-amber-800">
+              Los datos han cambiado. Calcule una nueva predicción para
+              actualizar el resultado.
+            </p>
+          )}
           {predictError && (
             <Alert variant="danger" title="Error en la predicción">
               {predictError}
@@ -147,26 +177,47 @@ export function PredictionPageContent() {
           )}
 
           {prediction ? (
-            <PredictionResultCard probability={prediction.probability} />
+            <PredictionResultCard
+              probability={prediction.probability}
+              threshold={prediction.threshold}
+            />
           ) : (
-            <div className="flex h-full min-h-44 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-(length:--font-size-sm) text-slate-500">
-              "Realice una predicción para visualizar el resultado del modelo."
+            <div
+              className="flex min-h-44 flex-col justify-center gap-2 p-2 text-(length:--font-size-sm) text-slate-500"
+              role="status"
+            >
+              <h2 className="text-base font-semibold text-slate-800">
+                Resultado
+              </h2>
+              <p>
+                Complete los datos del paciente y seleccione Predecir para ver
+                el resultado.
+              </p>
             </div>
           )}
         </section>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <ExplicacionPanel
-          hasPrediction={prediction !== null}
-          method={method}
-          setMethod={setMethod}
-          loading={loadingExplain}
-          onExplain={handleExplain}
-          result={explicacion}
-          error={explainError}
-        />
-      </section>
+      {prediction && (
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5">
+          <ExplicacionPanel
+            loading={loadingExplain}
+            onExplain={handleExplain}
+            result={
+              prediction &&
+              explicacion &&
+              Object.keys(inputs).every(
+                (key) =>
+                  inputs[key as keyof PredictionRequest] ===
+                  explicacion.inputs[key as keyof PredictionRequest],
+              )
+                ? explicacion.result
+                : null
+            }
+            error={explainError}
+          />
+        </section>
+      )}
     </Stack>
   );
 }

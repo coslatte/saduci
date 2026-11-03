@@ -32,7 +32,7 @@ function getInitials(name: string): string {
  * @param props.size - visual size token (xs, sm, md, lg, xl)
  * @param props.className - optional className to merge with the component root
  * @param props.disabled - when true attaches `data-disabled` for styling/testing
- * Used in X case: user identity previews in navbar and sidebar panels.
+ * Used for user identity previews in the navbar and sidebar.
  */
 
 export function Avatar({

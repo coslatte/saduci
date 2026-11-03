@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r src/api-gateway/requirements.txt
 
 # Copy application code
 COPY src/ /app/src/
+COPY services/api-gateway/alembic/ /app/services/api-gateway/alembic/
 
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser

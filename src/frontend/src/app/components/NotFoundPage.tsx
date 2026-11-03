@@ -23,19 +23,19 @@ export default function NotFoundPage() {
         className={`${styles.codeText} ${styles.codeSize}`}
         aria-label="Error 404"
       >
-        "404"
+        404
       </p>
       <div className={styles.divider} role="presentation" />
       <div className={styles.textBlock}>
         <Text as="h1" size="2xl" weight="semibold" tracking="tight">
-          "Página no encontrada"
+          Página no encontrada
         </Text>
         <Text size="sm" muted>
-          "La ruta que intentas acceder no existe o no está disponible."
+          La ruta que intentas acceder no existe o no está disponible.
         </Text>
       </div>
       <Link href="/">
-        <Button variant="primary">"Volver al inicio"</Button>
+        <Button variant="primary">Volver al inicio</Button>
       </Link>
     </div>
   );

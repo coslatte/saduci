@@ -6,6 +6,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import type { Role } from "@/lib/types";
@@ -26,6 +27,8 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  sessionUnavailable: boolean;
+  retrySession: () => void;
   login: (identifier: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -137,8 +140,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const sessionVersion = useRef(0);
 
   const clearSession = useCallback(() => {
+    sessionVersion.current++;
+    setIsLoading(false);
+    setSessionUnavailable(false);
     setUser(null);
     setToken(null);
 
@@ -153,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const version = ++sessionVersion.current;
     const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
     const storedUser = readStoredSession().user;
 
@@ -169,18 +178,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    setSessionUnavailable(false);
     try {
       const response = await fetch("/api/auth/me", {
         headers: {
           Authorization: `Bearer ${storedToken}`,
         },
+        signal: AbortSignal.timeout(10000),
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+      if (version !== sessionVersion.current) return;
+
+      if (response.status === 401 || response.status === 403) {
+        clearSession();
+        return;
       }
+      if (!response.ok)
+        throw new Error("Servicio de autenticación no disponible");
 
       const backendUser = (await response.json()) as BackendUser;
+      if (version !== sessionVersion.current) return;
       const nextUser = mapBackendUser(backendUser);
 
       setToken(storedToken);
@@ -191,21 +208,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         JSON.stringify(normalizeUser(nextUser)),
       );
     } catch {
-      if (storedUser) {
-        localStorage.removeItem(USER_STORAGE_KEY);
-      }
-      clearSession();
+      if (version === sessionVersion.current) setSessionUnavailable(true);
     } finally {
-      setIsLoading(false);
+      if (version === sessionVersion.current) setIsLoading(false);
     }
   }, [clearSession]);
 
   useEffect(() => {
+    const versionRef = sessionVersion;
     const timer = window.setTimeout(() => {
       void hydrateSession();
     }, 0);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      versionRef.current++;
+    };
   }, [hydrateSession]);
 
   const login = useCallback(async (identifier: string, password: string) => {
@@ -220,8 +238,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) {
       const message =
         payload && typeof payload === "object" && "detail" in payload
-          ? String((payload as Record<string, unknown>).detail)
-          : "No se pudo iniciar sesión.";
+          ? String(payload.detail)
+          : payload && typeof payload === "object" && "error" in payload
+            ? String(payload.error)
+            : "No se pudo iniciar sesión.";
       throw new Error(message);
     }
 
@@ -232,6 +252,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const nextUser = normalizeUser(mapBackendUser(authResponse.user));
 
+    sessionVersion.current++;
+    setIsLoading(false);
+    setSessionUnavailable(false);
     setToken(authResponse.access_token);
     setUser(nextUser);
     localStorage.setItem(TOKEN_STORAGE_KEY, authResponse.access_token);
@@ -252,7 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const detail =
           payload && typeof payload === "object" && "detail" in payload
             ? String(payload.detail)
-            : "No se pudo registrar el usuario.";
+            : payload && typeof payload === "object" && "error" in payload
+              ? String(payload.error)
+              : "No se pudo registrar el usuario.";
         throw new Error(detail);
       }
     },
@@ -282,6 +307,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         isAuthenticated: !!user,
         isLoading,
+        sessionUnavailable,
+        retrySession: () => {
+          setIsLoading(true);
+          void hydrateSession();
+        },
         login,
         register,
         logout,

@@ -4,12 +4,14 @@ import sys
 import hashlib
 import math
 import random
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 # Add shared modules to path
@@ -27,7 +29,7 @@ from shared.schemas import (
     FriedmanRequest,
     StatisticalTestResult,
 )
-from shared.utils import get_logger
+from shared.utils import get_logger, initialize_database
 
 # Import scipy for statistical tests
 try:
@@ -42,6 +44,18 @@ try:
     SIMUCI_AVAILABLE = True
 except ImportError:
     SIMUCI_AVAILABLE = False
+
+SIMUCI_CENTROIDS_PATH = Path(
+    os.getenv(
+        "SIMUCI_CENTROIDS_PATH",
+        Path(__file__).resolve().parents[3] / "data" / "df_centroides.csv",
+    )
+)
+
+
+def _simuci_ready() -> bool:
+    return SIMUCI_AVAILABLE and SIMUCI_CENTROIDS_PATH.is_file()
+
 
 logger = get_logger(__name__)
 
@@ -73,13 +87,16 @@ class SimulationRecord(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    initialize_database(Base, engine, logger, os.path.join(os.path.dirname(__file__), "migrations"))
+    yield
 
 app = FastAPI(
     title="Simulation Service",
     description="Clinical scenario simulation service",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -209,7 +226,12 @@ class SimulationEngine:
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
-    """Health check endpoint."""
+    """Check that the service and its database are available."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Simulation database unavailable") from exc
     return HealthCheck(status="healthy", service="simulation")
 
 
@@ -255,8 +277,56 @@ async def create_simulation(
         patient_id=request.patient_id,
         scenario=request.scenario,
         results=results,
-        timestamp=db_simulation.created_at.isoformat()
+        timestamp=db_simulation.created_at.isoformat(),
+        id=db_simulation.id,
+        created_at=db_simulation.created_at,
     )
+
+
+@app.get("/records")
+async def list_simulation_records(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    """List persisted simulations for the gateway's administrative API."""
+    records = (
+        db.query(SimulationRecord)
+        .order_by(SimulationRecord.created_at.desc(), SimulationRecord.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": record.id,
+            "patient_id": record.patient_id,
+            "scenario": record.scenario,
+            "parameters": record.parameters,
+            "results": record.results,
+            "created_at": record.created_at.isoformat(),
+        }
+        for record in records
+    ]
+
+
+@app.get("/records/{simulation_id}")
+async def get_simulation_record(
+    simulation_id: int,
+    db: Session = Depends(get_db),
+):
+    """Get one persisted simulation by its record ID."""
+    record = db.get(SimulationRecord, simulation_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Simulación no encontrada")
+    return {
+        "id": record.id,
+        "patient_id": record.patient_id,
+        "scenario": record.scenario,
+        "parameters": record.parameters,
+        "results": record.results,
+        "created_at": record.created_at.isoformat(),
+    }
 
 
 @app.get("/simulations/{patient_id}")
@@ -309,7 +379,7 @@ async def list_scenarios():
                 "name": "icu_patient_simulation",
                 "description": "Real ICU patient simulation using SimUCI discrete-event engine",
                 "required_parameters": ["age", "apache", "diagnosis codes", "ventilation parameters"],
-                "available": SIMUCI_AVAILABLE
+                "available": _simuci_ready()
             }
         ]
     }
@@ -328,7 +398,7 @@ class ICUSimulationEngine:
 
     def __init__(self):
         """Initialize ICU simulation engine with centroids data."""
-        self.centroids_path = Path(__file__).parent / "data" / "centroids.csv"
+        self.centroids_path = SIMUCI_CENTROIDS_PATH
         if not self.centroids_path.exists():
             logger.warning("Centroids file not found at %s", self.centroids_path)
             raise FileNotFoundError(
@@ -402,7 +472,7 @@ class ICUSimulationEngine:
             # Compute statistics
             statistics = {
                 "mean": results_df.mean().to_dict(),
-                "std": results_df.std().to_dict(),
+                "std": results_df.std(ddof=0).to_dict(),
                 "min": results_df.min().to_dict(),
                 "max": results_df.max().to_dict(),
                 "median": results_df.median().to_dict(),
@@ -451,10 +521,10 @@ async def create_icu_simulation(
     - Statistical measures (mean, std, min, max, median)
     - Multiple replication results for analysis
     """
-    if not SIMUCI_AVAILABLE:
+    if not _simuci_ready():
         raise HTTPException(
             status_code=503,
-            detail="SimUCI simulation engine is not available. Please install simuci package."
+            detail="SimUCI simulation engine or centroids dataset is unavailable."
         )
 
     logger.info("Running ICU simulation for patient %s", request.patient_id)
@@ -611,17 +681,16 @@ async def run_platform_simulation(request: PlatformSimulationRequest):
     returns time-phase statistics (pre_vam, vam, post_vam, uci, post_uci) with
     95% confidence intervals plus a binary mortality prediction.
 
-    When SimUCI is installed the endpoint uses the full discrete-event engine;
-    otherwise a statistical fallback is applied.
+    When SimUCI and its centroid dataset are available, use the full
+    discrete-event engine; otherwise apply the statistical fallback.
     """
     logger.info("Running platform simulation (age=%s, apache=%s)", request.age, request.apache)
 
-    if not SIMUCI_AVAILABLE:
-        logger.warning("SimUCI not available – using statistical fallback")
+    if not _simuci_ready():
+        logger.warning("SimUCI or centroids dataset unavailable; using statistical fallback")
         return _fallback_platform_simulation(request)
 
     try:
-        centroids_path = Path(__file__).parent / "data" / "centroids.csv"
         experiment = Experiment(
             age=request.age,
             diagnosis_admission1=request.d1,
@@ -641,7 +710,7 @@ async def run_platform_simulation(request: PlatformSimulationRequest):
         results_df = multiple_replication(
             experiment,
             n_reps=request.n_runs,
-            centroids_path=str(centroids_path),
+            centroids_path=str(SIMUCI_CENTROIDS_PATH),
         )
 
         simulation: Dict[str, TimeStats] = {}
@@ -649,7 +718,7 @@ async def run_platform_simulation(request: PlatformSimulationRequest):
             col = results_df[var] if var in results_df.columns else None
             if col is not None:
                 simulation[var] = _make_time_stats(
-                    float(col.mean()), float(col.std()), len(col)
+                    float(col.mean()), float(col.std(ddof=0)), len(col)
                 )
             else:
                 simulation[var] = TimeStats(mean=0.0, std=0.0, ci_lower=0.0, ci_upper=0.0)

@@ -57,12 +57,8 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
-<<<<<<< HEAD:src/shared/schemas/user.py
-
 class RegisterResponse(BaseModel):
     """Schema for registration response."""
 
     message: str
     user: UserResponse
-=======
->>>>>>> agents/crud-usuarios-medicos-admins-postgres:shared/schemas/user.py

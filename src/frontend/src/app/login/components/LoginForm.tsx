@@ -52,9 +52,7 @@ export default function LoginForm() {
       router.push("/");
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : LOGIN_ERROR_MSG,
+        submitError instanceof Error ? submitError.message : LOGIN_ERROR_MSG,
       );
     } finally {
       setLoading(false);
@@ -92,9 +90,7 @@ export default function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="login-identifier">
-                {LOGIN_EMAIL_LABEL}
-              </Label>
+              <Label htmlFor="login-identifier">{LOGIN_EMAIL_LABEL}</Label>
               <Input
                 id="login-identifier"
                 type="text"
@@ -145,7 +141,6 @@ export default function LoginForm() {
               </button>
             </Text>
           </div>
-
         </div>
       ) : (
         <div className="w-full max-w-md p-5 space-y-6 bg-white border shadow-xl rounded-2xl border-slate-200 sm:space-y-8 sm:p-8 md:p-10">
@@ -333,6 +328,5 @@ function RegisterFormInternal({
         </Text>
       </div>
     </>
-
   );
 }

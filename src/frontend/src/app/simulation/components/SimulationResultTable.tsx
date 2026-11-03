@@ -25,8 +25,8 @@ export function SimulationResultTable({
   const statsRows = [
     { label: "Promedio", key: "mean" as const },
     { label: "Desviación Estándar", key: "std" as const },
-    { label: "Límite Inf.", key: "ci_lower" as const },
-    { label: "Límite Sup.", key: "ci_upper" as const },
+    { label: "IC 95 % inferior", key: "ci_lower" as const },
+    { label: "IC 95 % superior", key: "ci_upper" as const },
   ];
 
   const columns = [
@@ -39,7 +39,7 @@ export function SimulationResultTable({
     },
     ...keys.map((k) => ({
       key: k,
-      label: TIME_VARIABLE_LABELS[k],
+      label: `${TIME_VARIABLE_LABELS[k]} (h)`,
       align: "right" as const,
       headerClassName: "px-3 text-zinc-700",
       cellClassName: "px-3 tabular-nums",
@@ -59,6 +59,7 @@ export function SimulationResultTable({
   return (
     <div {...dataDisabledProps(disabled)}>
       <DataTable
+        enableSorting={false}
         ariaLabel="Resultados de simulación"
         columns={columns}
         rows={rows}

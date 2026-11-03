@@ -2,7 +2,7 @@
 
 export const SIMULATION_LIMITS = {
   age: { min: 14, max: 100, default: 22 },
-  apache: { min: 0, max: 70, default: 12 },
+  apache: { min: 0, max: 36, default: 12 },
   vamTime: { min: 24, max: 700, default: 24 },
   utiStay: { min: 0, max: 200, default: 24 },
   preutiStay: { min: 0, max: 34, default: 10 },
@@ -111,6 +111,13 @@ export interface SimulationResponse {
   };
 }
 
+export interface SimulationRun {
+  patientId: string;
+  startedAt: string;
+  input: SimulationRequest;
+  result: SimulationResponse;
+}
+
 export interface RunSimulationOptions {
   signal?: AbortSignal;
 }
@@ -130,12 +137,28 @@ export async function runSimulation(
     });
 
     if (!response.ok) {
+      if (response.status === 503) {
+        throw new Error(
+          "El servicio de simulación no está disponible. Intente nuevamente más tarde.",
+        );
+      }
+      const body: unknown = await response.json().catch(() => null);
+      const message =
+        body && typeof body === "object"
+          ? "error" in body
+            ? body.error
+            : "detail" in body
+              ? body.detail
+              : null
+          : null;
       throw new Error(
-        `Error al ejecutar la simulación: ${response.status} ${response.statusText}`,
+        typeof message === "string"
+          ? message
+          : `Error al ejecutar la simulación: ${response.status} ${response.statusText}`,
       );
     }
 
-    return response.json() as Promise<SimulationResponse>;
+    return (await response.json()) as SimulationResponse;
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error("La simulación fue cancelada por el usuario.");
@@ -164,4 +187,21 @@ export const TIME_VARIABLE_LABELS: Record<
   post_vam: "Tiempo Post VAM",
   uci: "Estadía UCI",
   post_uci: "Estadía Post UCI",
+};
+
+export const SIMULATION_INPUT_LABELS: Record<string, string> = {
+  age: "Edad (años)",
+  apache: "APACHE II",
+  d1: "Diagnóstico principal",
+  d2: "Diagnóstico adicional 1",
+  d3: "Diagnóstico adicional 2",
+  d4: "Diagnóstico adicional 3",
+  diag_egreso2: "Diagnóstico de egreso",
+  artif_vent: "Tipo de ventilación",
+  vam_time: "Ventilación mecánica (h)",
+  uti_stay: "Estancia en UCI (h)",
+  preuti_stay: "Estancia previa a UCI (h)",
+  resp_insuf: "Causa de insuficiencia respiratoria",
+  percent: "Parámetro porcentual (%)",
+  n_runs: "Iteraciones",
 };

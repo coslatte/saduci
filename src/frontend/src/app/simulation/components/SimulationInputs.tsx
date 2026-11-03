@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { SimulationDiagnosesSection } from "./SimulationDiagnosesSection";
 import { SimulationMetricGroups } from "./SimulationMetricGroups";
@@ -45,12 +45,7 @@ interface Props {
   loading?: boolean;
   onSimulate: () => void;
   onCancel: () => void;
-  showLongRunWarning: boolean;
-  estimatedSeconds: number;
   elapsedSeconds: number;
-  estimatedProgressPercent: number;
-  cancelOnCooldown: boolean;
-  cancelCooldownSeconds: number;
 }
 
 /**
@@ -92,68 +87,66 @@ export default function SimulationInputs({
   loading = false,
   onSimulate,
   onCancel,
-  showLongRunWarning,
-  estimatedSeconds,
   elapsedSeconds,
-  estimatedProgressPercent,
-  cancelOnCooldown,
-  cancelCooldownSeconds,
 }: Props) {
   return (
-    <section className="flex flex-col gap-5">
-      <SimulationPatientSection
-        patientId={patientId}
-        setPatientId={setPatientId}
-        handleNewPatient={handleNewPatient}
-      />
-
-      <section className="p-5 bg-white border rounded-2xl border-slate-200">
-        <SimulationMetricGroups
-          age={age}
-          setAge={setAge}
-          apache={apache}
-          setApache={setApache}
-          preutiStay={preutiStay}
-          setPreutiStay={setPreutiStay}
-          vamTime={vamTime}
-          setVamTime={setVamTime}
-          utiStay={utiStay}
-          setUtiStay={setUtiStay}
-          simPercent={simPercent}
-          setSimPercent={setSimPercent}
+    <form
+      className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSimulate();
+      }}
+    >
+      <fieldset disabled={loading} className="flex min-w-0 flex-col gap-5">
+        <legend className="sr-only">Datos del escenario</legend>
+        <SimulationPatientSection
+          patientId={patientId}
+          setPatientId={setPatientId}
+          handleNewPatient={handleNewPatient}
+          loading={loading}
         />
-      </section>
 
-      <SimulationDiagnosesSection
-        diagIng1={diagIng1}
-        setDiagIng1={setDiagIng1}
-        diagIng2={diagIng2}
-        setDiagIng2={setDiagIng2}
-        diagIng3={diagIng3}
-        setDiagIng3={setDiagIng3}
-        diagIng4={diagIng4}
-        setDiagIng4={setDiagIng4}
-        diagEgreso2={diagEgreso2}
-        setDiagEgreso2={setDiagEgreso2}
-        respInsuf={respInsuf}
-        setRespInsuf={setRespInsuf}
-        ventType={ventType}
-        setVentType={setVentType}
-      />
+        <section className="p-5 bg-white border rounded-2xl border-slate-200">
+          <SimulationMetricGroups
+            age={age}
+            setAge={setAge}
+            apache={apache}
+            setApache={setApache}
+            preutiStay={preutiStay}
+            setPreutiStay={setPreutiStay}
+            vamTime={vamTime}
+            setVamTime={setVamTime}
+            utiStay={utiStay}
+            setUtiStay={setUtiStay}
+            simPercent={simPercent}
+            setSimPercent={setSimPercent}
+          />
+        </section>
 
+        <SimulationDiagnosesSection
+          diagIng1={diagIng1}
+          setDiagIng1={setDiagIng1}
+          diagIng2={diagIng2}
+          setDiagIng2={setDiagIng2}
+          diagIng3={diagIng3}
+          setDiagIng3={setDiagIng3}
+          diagIng4={diagIng4}
+          setDiagIng4={setDiagIng4}
+          diagEgreso2={diagEgreso2}
+          setDiagEgreso2={setDiagEgreso2}
+          respInsuf={respInsuf}
+          setRespInsuf={setRespInsuf}
+          ventType={ventType}
+          setVentType={setVentType}
+        />
+      </fieldset>
       <SimulationRunConfiguration
         simRuns={simRuns}
         setSimRuns={setSimRuns}
         loading={loading}
-        onSimulate={onSimulate}
         onCancel={onCancel}
-        showLongRunWarning={showLongRunWarning}
-        estimatedSeconds={estimatedSeconds}
         elapsedSeconds={elapsedSeconds}
-        estimatedProgressPercent={estimatedProgressPercent}
-        cancelOnCooldown={cancelOnCooldown}
-        cancelCooldownSeconds={cancelCooldownSeconds}
       />
-    </section>
+    </form>
   );
 }

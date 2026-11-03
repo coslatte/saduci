@@ -37,7 +37,7 @@ const initialFormState = {
 };
 
 export default function UsersPage() {
-  const { user } = useAuth();
+  const { user, isLoading, sessionUnavailable } = useAuth();
   const router = useRouter();
 
   const [users, setUsers] = useState<UserData[]>([]);
@@ -49,15 +49,17 @@ export default function UsersPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoading || sessionUnavailable) return;
     if (!user || !isAdmin(user)) {
       router.replace("/");
       return;
     }
     fetchUsers();
-  }, [user, router]);
+  }, [user, router, isLoading, sessionUnavailable]);
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch("/api/admin/users", {
         headers: {
@@ -65,7 +67,10 @@ export default function UsersPage() {
         },
       });
       if (!response.ok) {
-        throw new Error("Error al cargar usuarios");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.detail || data.error || "Error al cargar usuarios",
+        );
       }
       const data = await response.json();
       setUsers(data);
@@ -93,12 +98,13 @@ export default function UsersPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || "Error al crear usuario");
+        throw new Error(data.detail || data.error || "Error al crear usuario");
       }
 
+      const created: UserData = await response.json();
+      setUsers((previous) => [...previous, created]);
       setShowForm(false);
       setFormData(initialFormState);
-      fetchUsers();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -121,16 +127,26 @@ export default function UsersPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || "Error al eliminar usuario");
+        throw new Error(
+          data.detail || data.error || "Error al eliminar usuario",
+        );
       }
 
-      fetchUsers();
+      setUsers((previous) => previous.filter((entry) => entry.id !== userId));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error desconocido");
+      setError(err instanceof Error ? err.message : "Error desconocido");
     }
   };
 
-  if (!user || !isAdmin(user)) {
+  if (sessionUnavailable)
+    return (
+      <Alert variant="warning">
+        No se puede verificar el acceso a usuarios mientras el servicio de
+        autenticación no esté disponible.
+      </Alert>
+    );
+
+  if (isLoading || !user || !isAdmin(user)) {
     return null;
   }
 
@@ -276,7 +292,14 @@ export default function UsersPage() {
 
       {!loading && error && (
         <Alert variant="danger" title="Error">
-          {error}
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => void fetchUsers()}
+            className="mt-2 font-semibold underline focus-visible:outline-2"
+          >
+            Reintentar carga
+          </button>
         </Alert>
       )}
 

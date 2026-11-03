@@ -1,4 +1,5 @@
 """Prediction schemas."""
+from datetime import datetime
 from typing import Dict, Any, Optional, List, Literal
 
 from pydantic import BaseModel, Field
@@ -20,6 +21,8 @@ class PredictionResponse(BaseModel):
     prediction: Any
     confidence: Optional[float] = None
     timestamp: str
+    id: int
+    created_at: datetime
 
 
 class PlatformPredictionRequest(BaseModel):

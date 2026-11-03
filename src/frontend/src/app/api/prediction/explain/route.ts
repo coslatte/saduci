@@ -10,42 +10,7 @@ function resolveCoreApiUrl(): string {
 }
 
 const CORE_API_URL = resolveCoreApiUrl();
-const EXPLAIN_ENDPOINTS = [
-  `${CORE_API_URL}/prediction/explain`,
-  `${CORE_API_URL}/api/predictions/explain`,
-  "http://localhost:8002/predictions/explain",
-];
-
-function getUpstreamErrorMessage(data: unknown): string | null {
-  if (typeof data === "string" && data.trim().length > 0) return data;
-  if (!data || typeof data !== "object") return null;
-
-  if (
-    "error" in data &&
-    typeof data.error === "string" &&
-    data.error.trim().length > 0
-  ) {
-    return data.error;
-  }
-
-  if (
-    "detail" in data &&
-    typeof data.detail === "string" &&
-    data.detail.trim().length > 0
-  ) {
-    return data.detail;
-  }
-
-  if (
-    "message" in data &&
-    typeof data.message === "string" &&
-    data.message.trim().length > 0
-  ) {
-    return data.message;
-  }
-
-  return null;
-}
+const EXPLAIN_ENDPOINT = `${CORE_API_URL}/prediccion/explain`;
 
 export async function POST(req: NextRequest) {
   return handlePredictionExplainRequest(req);
@@ -69,42 +34,19 @@ export async function handlePredictionExplainRequest(
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    let lastStatus = 502;
-    let lastUrl = EXPLAIN_ENDPOINTS[0];
-    let lastData: unknown = null;
+    const upstream = await fetcher(EXPLAIN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
 
-    for (const endpoint of EXPLAIN_ENDPOINTS) {
-      lastUrl = endpoint;
-      const upstream = await fetcher(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+    const contentType = upstream.headers.get("content-type") ?? "";
+    const data: unknown = contentType.includes("application/json")
+      ? await upstream.json()
+      : { error: await upstream.text() };
 
-      const contentType = upstream.headers.get("content-type") ?? "";
-      const data: unknown = contentType.includes("application/json")
-        ? await upstream.json()
-        : { error: await upstream.text() };
-
-      lastStatus = upstream.status;
-      lastData = data;
-
-      if (upstream.status !== 404) {
-        return NextResponse.json(data, { status: upstream.status });
-      }
-    }
-
-    return NextResponse.json(
-      {
-        error:
-          "El backend activo no expone un endpoint compatible de explicabilidad. Verifica la versión desplegada de saduci-core o el servicio legacy.",
-        upstream_status: lastStatus,
-        upstream_url: lastUrl,
-        upstream_error: getUpstreamErrorMessage(lastData),
-      },
-      { status: 502 },
-    );
+    return NextResponse.json(data, { status: upstream.status });
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === "AbortError";
     return NextResponse.json(

@@ -3,11 +3,18 @@ import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Buttons";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { PATIENT_DIES, PATIENT_SURVIVES } from "@/constants/constants";
-import type { SimulationResponse } from "@/lib/simulation";
+import type { SimulationRun } from "@/lib/simulation";
+import {
+  SIMULATION_INPUT_LABELS,
+  PREUCI_DIAG,
+  RESP_INSUF,
+  VENTILATION_TYPE,
+} from "@/lib/simulation";
 import { SimulationResultTable } from "./SimulationResultTable";
 
 interface SimulationResultsSectionProps {
-  results: SimulationResponse[];
+  id?: string;
+  results: SimulationRun[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
   onDownload: () => void;
@@ -19,18 +26,16 @@ interface SimulationResultsSectionProps {
  * Used in X case: post-run results panel in the simulation workflow.
  */
 export function SimulationResultsSection({
+  id,
   results,
   activeIndex,
   onActiveIndexChange,
   onDownload,
   loading = false,
 }: SimulationResultsSectionProps) {
-  const currentResult = results[activeIndex];
-  const showSkeleton = loading;
-
-  if (!currentResult && !showSkeleton) {
-    return null;
-  }
+  const currentRunRecord = results[activeIndex];
+  const currentResult = currentRunRecord?.result;
+  const showSkeleton = loading && !currentResult;
 
   const totalRuns = results.length;
   const currentRun = activeIndex + 1;
@@ -39,11 +44,62 @@ export function SimulationResultsSection({
 
   const patientSurvives = currentResult?.prediction.class === 0;
 
+  if (!currentResult && !showSkeleton) {
+    return (
+      <section
+        id={id}
+        className="rounded-2xl border border-slate-200 bg-white p-5"
+      >
+        <h2 className="text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
+          Historial de simulaciones
+        </h2>
+        <p className="mt-2 text-(length:--font-size-sm) text-slate-500">
+          Complete el escenario y pulse Simular escenario. Aquí aparecerán los
+          tiempos estimados y el historial de esta sesión.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section
+      id={id}
       className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5"
-      aria-busy={showSkeleton}
+      aria-busy={loading}
     >
+      {loading && currentResult && (
+        <p role="status" className="text-sm text-slate-600">
+          Calculando un nuevo escenario. Estos son los resultados de la
+          ejecución seleccionada.
+        </p>
+      )}
+      {currentRunRecord && (
+        <details className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+          <summary className="cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-primary-500">
+            Caso {currentRunRecord.patientId} ·{" "}
+            {new Date(currentRunRecord.startedAt).toLocaleString("es")} ·{" "}
+            {currentRunRecord.input.n_runs} iteraciones · Ver parámetros
+          </summary>
+          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {Object.entries(currentRunRecord.input).map(([key, value]) => (
+              <div key={key}>
+                <dt className="font-medium">
+                  {SIMULATION_INPUT_LABELS[key] ?? key}
+                </dt>
+                <dd>
+                  {["d1", "d2", "d3", "d4", "diag_egreso2"].includes(key)
+                    ? (PREUCI_DIAG[value] ?? value)
+                    : key === "resp_insuf"
+                      ? RESP_INSUF[value]
+                      : key === "artif_vent"
+                        ? VENTILATION_TYPE[value]
+                        : value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
         {showSkeleton ? (
           <Skeleton className="h-4 w-48" />

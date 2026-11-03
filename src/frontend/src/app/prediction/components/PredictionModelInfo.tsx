@@ -19,11 +19,11 @@ export function PredictionModelInfo() {
     <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <Text as="h2" size="base" weight="semibold" className="text-zinc-800">
-          "Modelos usados en esta pantalla"
+          Modelos usados en esta pantalla
         </Text>
         <Text as="p" size="sm" className="text-zinc-500">
-          "El flujo combina un modelo principal de predicción con varios métodos
-          de explicabilidad para interpretar el resultado."
+          El flujo combina un modelo principal de predicción con varios métodos
+          de explicabilidad para interpretar el resultado.
         </Text>
       </div>
 

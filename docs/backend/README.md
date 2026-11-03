@@ -22,16 +22,12 @@ Define valores propios para `SECRET_KEY`, `AUTH_USERNAME`, `AUTH_PASSWORD` y las
 Desde la raíz del repositorio, inicia todos los servicios y las bases de datos:
 
 ```sh
-docker compose --env-file .env -f src/backend/docker-compose.yml up -d --build
+./b-run.sh
 ```
+
+El script acepta tres opciones: `./b-run.sh --up` inicia los servicios conectados a la terminal, `./b-run.sh --detached` los inicia en segundo plano y `./b-run.sh --down` los detiene. Sin opciones, inicia en segundo plano; si el backend ya está activo, muestra el estado y permite salir o seguir los logs.
 
 El API Gateway escucha en `http://localhost:8000`. Los servicios de pacientes, predicción y simulación escuchan en los puertos `8001`, `8002` y `8003` del host local.
-
-Para detener los servicios, ejecuta:
-
-```sh
-docker compose --env-file .env -f src/backend/docker-compose.yml down
-```
 
 ## Ejecutar un servicio en desarrollo
 

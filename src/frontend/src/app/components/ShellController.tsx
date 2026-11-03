@@ -17,7 +17,14 @@ interface Props {
 export default function ShellController({ children }: Props) {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    sessionUnavailable,
+    retrySession,
+    logout,
+  } = useAuth();
 
   useEffect(() => {
     if (isLoading) return;
@@ -36,17 +43,29 @@ export default function ShellController({ children }: Props) {
     router.push("/");
   }
 
-  // NOTE: admin UI removed from sidebar per request; admin source files remain untouched
-  const extraSections = undefined;
-
   return (
     <AppShell
       userName={user?.name}
       userRole={user?.role}
       userAvatar={user?.avatar}
       onLogout={handleLogout}
-      extraSections={extraSections}
     >
+      {sessionUnavailable && (
+        <div
+          role="alert"
+          className="mb-4 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          No se pudo verificar la sesión porque el servicio de autenticación no
+          está disponible. Puedes seguir navegando.{" "}
+          <button
+            type="button"
+            onClick={retrySession}
+            className="font-semibold underline focus-visible:outline-2"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
       {children}
     </AppShell>
   );

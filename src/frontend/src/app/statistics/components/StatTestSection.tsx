@@ -9,6 +9,7 @@ import { StatisticsFileDropzone } from "./StatisticsFileDropzone";
 import { StatisticsResultSection } from "./StatisticsResultSection";
 
 export interface WilcoxonSectionProps {
+  resultsId?: string;
   file1: File | null;
   file2: File | null;
   selectedColumn: string;
@@ -30,6 +31,7 @@ export interface WilcoxonSectionProps {
  * Used in X case: non-parametric paired comparison in statistics module.
  */
 export function WilcoxonSection({
+  resultsId,
   file1,
   file2,
   selectedColumn,
@@ -47,7 +49,10 @@ export function WilcoxonSection({
 }: WilcoxonSectionProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 pb-6 border-b border-slate-100">
+      <div
+        inert={loading}
+        className="flex flex-col gap-4 pb-6 border-b border-slate-100"
+      >
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <StatisticsFileDropzone
@@ -105,6 +110,7 @@ export function WilcoxonSection({
       </Button>
 
       <StatisticsResultSection
+        id={resultsId}
         result={result}
         error={error}
         warning={warning}
@@ -114,6 +120,7 @@ export function WilcoxonSection({
 }
 
 export interface FriedmanSectionProps {
+  resultsId?: string;
   files: File[];
   selectedColumn: string;
   loading: boolean;
@@ -132,6 +139,7 @@ export interface FriedmanSectionProps {
  * Used in X case: repeated-measures comparison across three or more samples.
  */
 export function FriedmanSection({
+  resultsId,
   files,
   selectedColumn,
   loading,
@@ -146,7 +154,10 @@ export function FriedmanSection({
 }: FriedmanSectionProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 pb-6 border-b border-slate-100">
+      <div
+        inert={loading}
+        className="flex flex-col gap-4 pb-6 border-b border-slate-100"
+      >
         <div className="flex flex-col gap-4">
           <StatisticsFileDropzone
             label={uploadLabel}
@@ -200,6 +211,7 @@ export function FriedmanSection({
       </Button>
 
       <StatisticsResultSection
+        id={resultsId}
         result={result}
         error={error}
         warning={warning}

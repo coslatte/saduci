@@ -14,7 +14,7 @@ services:
       - AUTH_USERNAME=${AUTH_USERNAME:?AUTH_USERNAME is required}
       - AUTH_PASSWORD=${AUTH_PASSWORD:?AUTH_PASSWORD is required}
       - DATABASE_URL=postgresql://gateway_user:${API_GATEWAY_DB_PASSWORD:?API_GATEWAY_DB_PASSWORD is required}@api-gateway-db:5432/api_gateway_db
-      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3030}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
       - PREDICTION_SERVICE_URL=http://prediction:8002
       - SIMULATION_SERVICE_URL=http://simulation:8003
@@ -32,7 +32,7 @@ services:
       - saduci-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -123,11 +123,14 @@ services:
       - PORT=8003
       - LOG_LEVEL=INFO
       - DATABASE_URL=postgresql://simulation_user:${SIMULATION_DB_PASSWORD:?SIMULATION_DB_PASSWORD is required}@simulation-db:5432/simulation_db
+      - SIMUCI_CENTROIDS_PATH=/app/data/df_centroides.csv
     depends_on:
       simulation-db:
         condition: service_healthy
     networks:
       - saduci-network
+    volumes:
+      - ../../data/df_centroides.csv:/app/data/df_centroides.csv:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]

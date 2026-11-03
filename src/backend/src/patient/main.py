@@ -4,15 +4,17 @@ from __future__ import annotations
 import os
 import sys
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Date
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Date, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from shared.schemas import PatientCreate, PatientUpdate, PatientResponse, HealthCheck
-from shared.utils import get_logger
+from shared.utils import get_logger, initialize_database
 
 
 logger = get_logger(__name__)
@@ -46,9 +48,18 @@ class PatientRecord(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    initialize_database(Base, engine, logger, os.path.join(os.path.dirname(__file__), "migrations"))
+    yield
 
-app = FastAPI(title="Patient Service", description="Patient registry service", version="1.0.0")
+
+app = FastAPI(
+    title="Patient Service",
+    description="Patient registry service",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 def get_db():
@@ -61,6 +72,11 @@ def get_db():
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Patient database unavailable") from exc
     return HealthCheck(status="healthy", service="patient")
 
 

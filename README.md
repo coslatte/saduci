@@ -21,8 +21,10 @@ En `src/frontend/.env.local`, configura la URL del gateway: `API_URL=http://loca
 Desde la raíz del proyecto, inicia los servicios backend:
 
 ```sh
-docker compose --env-file .env -f src/backend/docker-compose.yml up -d --build
+./b-run.sh
 ```
+
+Usa `./b-run.sh --up` para conectarte a la salida de los servicios, `./b-run.sh --detached` para iniciarlos en segundo plano o `./b-run.sh --down` para detenerlos. Sin opciones, el script inicia el backend en segundo plano; si ya está activo, muestra su estado y permite salir o seguir los logs.
 
 En otra terminal, inicia el frontend:
 
@@ -32,12 +34,6 @@ bun install
 bun dev
 ```
 
-Abre <http://localhost:3000>. El API Gateway queda en <http://localhost:8000>.
-
-Para detener el backend:
-
-```sh
-docker compose --env-file .env -f src/backend/docker-compose.yml down
-```
+Abre <http://localhost:3030>. El API Gateway queda en <http://localhost:8000>.
 
 Consulta el [índice de documentación](docs/README.md) para la arquitectura, las guías de frontend y backend, y los changelogs.

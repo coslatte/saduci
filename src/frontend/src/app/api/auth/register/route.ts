@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: req.signal,
+      signal: AbortSignal.any([req.signal, AbortSignal.timeout(10000)]),
     });
 
     const contentType = upstream.headers.get("content-type") ?? "";
@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(data, { status: upstream.status });
   } catch (err) {
-    const isAborted = err instanceof Error && err.name === "AbortError";
+    const isAborted =
+      err instanceof Error &&
+      (err.name === "AbortError" || err.name === "TimeoutError");
     return NextResponse.json(
       {
         error: isAborted

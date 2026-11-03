@@ -1,4 +1,5 @@
 """Simulation schemas."""
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from pydantic import BaseModel, Field
@@ -47,6 +48,8 @@ class SimulationResponse(BaseModel):
     scenario: str
     results: List[Dict[str, Any]]
     timestamp: str
+    id: int
+    created_at: datetime
 
 
 class ICUPatientSimulationRequest(BaseModel):

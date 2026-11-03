@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/molecules/Alert";
 import SimulationInputs from "./components/SimulationInputs";
 import { SimulationPageHeader } from "./components/SimulationPageHeader";
@@ -10,7 +10,7 @@ import {
   generatePatientId,
   runSimulation,
   type SimulationRequest,
-  type SimulationResponse,
+  type SimulationRun,
 } from "@/lib/simulation";
 import {
   validateSimulationInput,
@@ -19,17 +19,6 @@ import {
 } from "./helpers/index";
 
 import { sileo } from "sileo";
-
-const LONG_SIMULATION_THRESHOLD = 10_000;
-const CANCEL_COOLDOWN_MS = 1_000;
-const BASE_ESTIMATED_SIMULATION_MS = 1_200;
-const ESTIMATED_MS_PER_RUN = 2.8;
-
-function estimateSimulationDurationMs(simRuns: number): number {
-  const estimated =
-    BASE_ESTIMATED_SIMULATION_MS + simRuns * ESTIMATED_MS_PER_RUN;
-  return Math.max(BASE_ESTIMATED_SIMULATION_MS, Math.round(estimated));
-}
 
 export default function SimulacionPage() {
   const [patientId, setPatientId] = useState<string>("");
@@ -63,59 +52,52 @@ export default function SimulacionPage() {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [resultHistory, setResultHistory] = useState<SimulationResponse[]>([]);
+  const [resultHistory, setResultHistory] = useState<SimulationRun[]>([]);
   const [activeResultIndex, setActiveResultIndex] = useState<number>(-1);
   const [simulationStartedAt, setSimulationStartedAt] = useState<number | null>(
     null,
   );
   const [elapsedMs, setElapsedMs] = useState<number>(0);
-  const [clockNowMs, setClockNowMs] = useState<number>(Date.now());
-  const [cancelCooldownEndsAt, setCancelCooldownEndsAt] = useState<number>(0);
   const simulationController = useRef<AbortController | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
 
-  const estimatedDurationMs = useMemo(
-    () => estimateSimulationDurationMs(simRuns),
-    [simRuns],
-  );
-
-  const estimatedProgressPercent = loading
-    ? Math.min((elapsedMs / estimatedDurationMs) * 100, 95)
-    : 0;
-  const cancelOnCooldown = loading && clockNowMs < cancelCooldownEndsAt;
-  const cancelCooldownSeconds = cancelOnCooldown
-    ? Math.ceil((cancelCooldownEndsAt - clockNowMs) / 1000)
-    : 0;
+  useEffect(() => () => simulationController.current?.abort(), []);
 
   useEffect(() => {
     setPatientId(generatePatientId());
   }, []);
 
   useEffect(() => {
-    const shouldTick = loading || Date.now() < cancelCooldownEndsAt;
-    if (!shouldTick) return;
-
-    const intervalId = window.setInterval(() => {
-      const now = Date.now();
-      setClockNowMs(now);
-      if (loading && simulationStartedAt !== null) {
-        setElapsedMs(now - simulationStartedAt);
-      }
-    }, 200);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [loading, simulationStartedAt, cancelCooldownEndsAt]);
+    if (!loading || simulationStartedAt === null) return;
+    const timer = window.setInterval(
+      () => setElapsedMs(Date.now() - simulationStartedAt),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [loading, simulationStartedAt]);
 
   function handleNewPatient(): void {
     setPatientId(generatePatientId());
-    setResultHistory([]);
-    setActiveResultIndex(-1);
+    setAge(SIMULATION_LIMITS.age.default);
+    setApache(SIMULATION_LIMITS.apache.default);
+    setPreutiStay(SIMULATION_LIMITS.preutiStay.default);
+    setVamTime(SIMULATION_LIMITS.vamTime.default);
+    setUtiStay(SIMULATION_LIMITS.utiStay.default);
+    setSimPercent(SIMULATION_LIMITS.simPercent.default);
+    setSimRuns(SIMULATION_LIMITS.simRuns.default);
+    setDiagIng1(2);
+    setDiagIng2(0);
+    setDiagIng3(0);
+    setDiagIng4(0);
+    setDiagEgreso2(2);
+    setRespInsuf(2);
+    setVentType(0);
     setError(null);
   }
 
   async function handleSimulate(): Promise<void> {
-    if (loading) return;
+    if (simulationController.current) return;
     setError(null);
 
     const payload: SimulationRequest = {
@@ -136,6 +118,8 @@ export default function SimulacionPage() {
     };
 
     const validationErrors = validateSimulationInput(payload);
+    if (!patientId.trim())
+      validationErrors.unshift("Ingrese un identificador para el caso.");
     if ([diagIng1, diagIng2, diagIng3, diagIng4].every((d) => d === 0)) {
       validationErrors.unshift(
         "Todos los diagnósticos de ingreso están vacíos. Incluya al menos uno para la simulación.",
@@ -149,13 +133,13 @@ export default function SimulacionPage() {
 
     if (validationErrors.length > 0) {
       setError(validationErrors.join(" \n"));
+      requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
 
     setLoading(true);
     const startedAt = Date.now();
     setSimulationStartedAt(startedAt);
-    setClockNowMs(startedAt);
     setElapsedMs(0);
 
     const controller = new AbortController();
@@ -163,14 +147,23 @@ export default function SimulacionPage() {
 
     try {
       const data = await runSimulation(payload, { signal: controller.signal });
-      setResultHistory((previous) => {
-        const next = [...previous, data];
-        setActiveResultIndex(next.length - 1);
-        return next;
+      const run: SimulationRun = {
+        patientId,
+        startedAt: new Date(startedAt).toISOString(),
+        input: payload,
+        result: data,
+      };
+      setResultHistory((previous) => [...previous, run]);
+      setActiveResultIndex(resultHistory.length);
+      requestAnimationFrame(() => {
+        resultsRef.current?.focus();
+        resultsRef.current?.scrollIntoView({ block: "start" });
       });
     } catch (err) {
+      if (controller.signal.aborted) return;
       const message = formatErrorForUser(err);
       setError(message);
+      requestAnimationFrame(() => errorRef.current?.focus());
       console.error("Simulación fallida:", err);
       try {
         sileo.error({ title: "Error en la simulación", description: message });
@@ -184,23 +177,30 @@ export default function SimulacionPage() {
   }
 
   function handleCancelSimulation(): void {
-    if (!loading || !simulationController.current || cancelOnCooldown) return;
+    if (!loading || !simulationController.current) return;
 
     simulationController.current.abort();
-    setError("La simulación fue cancelada por el usuario.");
-    setCancelCooldownEndsAt(Date.now() + CANCEL_COOLDOWN_MS);
+    setError(null);
+    sileo.info({
+      title: "Espera cancelada",
+      description: "Se conservan los datos y los resultados anteriores.",
+    });
   }
 
   function handleDownload(): void {
     const selectedResult = resultHistory[activeResultIndex];
     if (!selectedResult) return;
-    downloadSimulationCSV(selectedResult, patientId);
+    downloadSimulationCSV(
+      selectedResult.result,
+      selectedResult.patientId,
+      selectedResult,
+    );
   }
   return (
     <>
       <SimulationPageHeader />
 
-      <div className="flex flex-col gap-5">
+      <div id="form" className="flex flex-col gap-5">
         <SimulationInputs
           patientId={patientId}
           setPatientId={setPatientId}
@@ -236,33 +236,41 @@ export default function SimulacionPage() {
           loading={loading}
           onSimulate={handleSimulate}
           onCancel={handleCancelSimulation}
-          showLongRunWarning={simRuns > LONG_SIMULATION_THRESHOLD}
-          estimatedSeconds={Math.round(estimatedDurationMs / 1000)}
           elapsedSeconds={Math.round(elapsedMs / 1000)}
-          estimatedProgressPercent={estimatedProgressPercent}
-          cancelOnCooldown={cancelOnCooldown}
-          cancelCooldownSeconds={cancelCooldownSeconds}
         />
 
         {error && (
-          <Alert variant="danger" title={"Error en la simulación"}>
-            {error
-              .split("\n")
-              .map((line, i) =>
-                line.trim() ? <div key={i}>{line.trim()}</div> : null,
-              )}
-          </Alert>
+          <div
+            ref={errorRef}
+            tabIndex={-1}
+            role="alert"
+            className="rounded-xl focus-visible:outline-2 focus-visible:outline-red-500"
+          >
+            <Alert variant="danger" title={"Error en la simulación"}>
+              {error
+                .split("\n")
+                .map((line, i) =>
+                  line.trim() ? <div key={i}>{line.trim()}</div> : null,
+                )}
+            </Alert>
+          </div>
         )}
 
-        {(loading || resultHistory.length > 0) && (
+        <div
+          ref={resultsRef}
+          tabIndex={-1}
+          className="scroll-mt-6 rounded-2xl focus-visible:outline-2 focus-visible:outline-primary-500"
+          aria-label="Resultados de simulación"
+        >
           <SimulationResultsSection
+            id="results"
             results={resultHistory}
             activeIndex={activeResultIndex}
             onActiveIndexChange={setActiveResultIndex}
             onDownload={handleDownload}
             loading={loading}
           />
-        )}
+        </div>
       </div>
     </>
   );

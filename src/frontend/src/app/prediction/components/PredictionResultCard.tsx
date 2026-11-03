@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 
 interface PredictionResultCardProps {
   probability: number;
+  threshold: number;
 }
 
 /**
@@ -10,8 +11,9 @@ interface PredictionResultCardProps {
  */
 export function PredictionResultCard({
   probability,
+  threshold,
 }: PredictionResultCardProps) {
-  const dies = probability >= 0.5;
+  const dies = probability >= threshold;
   const percentage = (probability * 100).toFixed(1);
 
   return (
@@ -20,7 +22,7 @@ export function PredictionResultCard({
       className="flex flex-col gap-4"
     >
       <h2 id="prediction-result-title" className="font-semibold text-zinc-800">
-        "Probabilidad de No Supervivencia"
+        Probabilidad de No Supervivencia
       </h2>
       <div className="flex flex-col items-center gap-3 py-2">
         <p
@@ -37,7 +39,13 @@ export function PredictionResultCard({
             dies ? "text-red-500" : "text-emerald-500",
           )}
         >
-          {dies ? "Paciente fallece" : "Paciente no fallece"}
+          {dies
+            ? "Por encima del umbral del modelo"
+            : "Por debajo del umbral del modelo"}
+        </p>
+        <p className="text-center text-xs text-slate-500">
+          Umbral de clasificación: {(threshold * 100).toFixed(1)}%. Es una
+          estimación, no un desenlace confirmado.
         </p>
         <div className="w-full max-w-sm">
           <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-100">

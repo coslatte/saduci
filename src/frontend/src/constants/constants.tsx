@@ -107,5 +107,3 @@ export function runsRangeText(min: number, max: number) {
 }
 
 // Navigation & UI
-export const NAV_BRAND_SHORT = "Saduci";
-export const NAVBAR_OPEN_NAVIGATION = "Abrir navegación";

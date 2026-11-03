@@ -25,7 +25,7 @@ bun install
 bun dev
 ```
 
-Abre <http://localhost:3000>.
+Abre <http://localhost:3030>.
 
 ## Enlaces
 

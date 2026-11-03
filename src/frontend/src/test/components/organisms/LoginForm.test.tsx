@@ -42,7 +42,7 @@ describe("LoginForm", () => {
     expect(scope.getByLabelText(LOGIN_EMAIL_LABEL)).toBeTruthy();
     expect(scope.getByLabelText(LOGIN_PASSWORD_LABEL)).toBeTruthy();
 
-    const submitButton = scope.getByRole("button");
+    const submitButton = scope.getByRole("button", { name: LOGIN_BUTTON });
     expect(submitButton.textContent?.includes(LOGIN_BUTTON)).toBe(true);
 
     fireEvent.input(scope.getByLabelText(LOGIN_EMAIL_LABEL), {

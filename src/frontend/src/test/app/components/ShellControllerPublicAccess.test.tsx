@@ -2,6 +2,11 @@ import "../../setup";
 import { render } from "@testing-library/react";
 import { describe, expect, it, mock } from "bun:test";
 
+mock.module("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: () => {}, replace: () => {} }),
+}));
+
 mock.module("sileo", () => ({
   Toaster: () => null,
   sileo: {
@@ -34,5 +39,24 @@ describe("ShellController public access", () => {
 
     expect(container.textContent?.includes("Contenido público")).toBe(true);
     expect(container.querySelector("main")).toBeTruthy();
+  });
+
+  it("renders the six sidebar destinations without requiring auth", () => {
+    const { container } = render(
+      <ShellController>
+        <div>Contenido</div>
+      </ShellController>,
+    );
+
+    for (const label of [
+      "Crear simulación",
+      "Registros de simulación",
+      "Realizar predicción",
+      "Registros de predicción",
+      "Realizar prueba estadística",
+      "Listar pruebas estadísticas",
+    ]) {
+      expect(container.textContent?.includes(label)).toBe(true);
+    }
   });
 });

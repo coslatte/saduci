@@ -19,7 +19,7 @@ El frontend y el backend conservan sus propios manifiestos y dependencias. Sus r
 
 ```mermaid
 flowchart LR
-    Browser[Navegador] --> Web[Next.js :3000]
+    Browser[Navegador] --> Web[Next.js :3030]
     Web -->|rutas de servidor| Gateway[API Gateway :8000]
     Gateway --> Patient[Patient Service :8001]
     Gateway --> Prediction[Prediction Service :8002]
@@ -94,3 +94,11 @@ La [arquitectura del backend](backend/ARCHITECTURE.md) describe las rutas y resp
 - Compose: [`src/backend/docker-compose.yml`](../src/backend/docker-compose.yml)
 - Configuración de Render: [`render.yaml`](../render.yaml)
 - Variables de entorno de ejemplo: [`src/backend/.env.example`](../src/backend/.env.example) y [`src/frontend/.env.example`](../src/frontend/.env.example)
+
+## Flujo de simulación en el frontend
+
+La página `src/frontend/src/app/simulation/page.tsx` mantiene los campos del escenario y el historial en memoria durante la sesión de la página. Cada ejecución conserva su identificador, fecha, parámetros y respuesta; editar el escenario o iniciar un caso nuevo no modifica las ejecuciones anteriores. Las exportaciones usan los datos de la ejecución seleccionada.
+
+`SimulationInputs` compone un formulario con datos clínicos y un panel de ejecución. Los campos se bloquean mientras hay una solicitud activa. Los resultados anteriores siguen disponibles durante el cálculo. La interfaz muestra tiempo transcurrido, ya que el servicio no ofrece progreso medido.
+
+El cliente llama a `/api/simulation`, cuyo Route Handler reenvía el formato compacto a `/simulation` del gateway. La espera tiene un límite de seis minutos. Cancelar aborta la espera y la petición saliente desde Next.js; no garantiza detener el cálculo del servicio clínico.

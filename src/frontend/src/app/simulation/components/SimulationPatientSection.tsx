@@ -8,6 +8,7 @@ interface SimulationPatientSectionProps {
   patientId: string;
   setPatientId: (value: string) => void;
   handleNewPatient: () => void;
+  loading: boolean;
 }
 
 // inline classes per styling guideline
@@ -20,6 +21,7 @@ export function SimulationPatientSection({
   patientId,
   setPatientId,
   handleNewPatient,
+  loading,
 }: SimulationPatientSectionProps) {
   return (
     <section className="flex flex-col gap-4 p-5 bg-white border rounded-2xl border-slate-200">
@@ -32,12 +34,19 @@ export function SimulationPatientSection({
         </span>
       </div>
 
+      <p className="text-sm text-slate-600">
+        El identificador etiqueta las exportaciones. Nuevo caso restablece los
+        campos y conserva el historial de esta sesión.
+      </p>
       <div className="flex flex-col items-end gap-4 md:flex-row">
         <div className="w-full md:w-1/3 flex flex-col gap-1.5">
           <Label htmlFor="patient-id">{"ID Paciente"}</Label>
           <Input
             id="patient-id"
+            required
+            maxLength={80}
             value={patientId}
+            disabled={loading}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
               setPatientId(event.target.value)
             }
@@ -47,13 +56,15 @@ export function SimulationPatientSection({
         </div>
 
         <Button
+          type="button"
           variant="secondary"
           size="sm"
           onClick={handleNewPatient}
-          aria-label="Generar nuevo ID de paciente"
+          disabled={loading}
+          aria-label="Iniciar un nuevo caso con valores predeterminados"
         >
           <FiRefreshCw className="size-4" />
-          {"Nuevo paciente"}
+          {"Nuevo caso"}
         </Button>
       </div>
     </section>

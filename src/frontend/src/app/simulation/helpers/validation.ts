@@ -5,6 +5,26 @@ export function validateSimulationInput(payload: SimulationRequest): string[] {
   const { age, apache, n_runs, percent, vam_time, uti_stay, preuti_stay } =
     payload;
 
+  const numericFields = {
+    age,
+    apache,
+    n_runs,
+    percent,
+    vam_time,
+    uti_stay,
+    preuti_stay,
+  };
+  if (
+    Object.values(numericFields).some(
+      (value) => !Number.isFinite(value) || !Number.isInteger(value),
+    )
+  ) {
+    errors.push("Complete todos los campos numéricos con números enteros.");
+  }
+  if (n_runs % SIMULATION_LIMITS.simRuns.step !== 0) {
+    errors.push("El número de iteraciones debe ser múltiplo de 50.");
+  }
+
   if (age < SIMULATION_LIMITS.age.min || age > SIMULATION_LIMITS.age.max) {
     errors.push(
       `Edad fuera de rango (${SIMULATION_LIMITS.age.min}-${SIMULATION_LIMITS.age.max}).`,

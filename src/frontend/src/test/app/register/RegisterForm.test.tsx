@@ -5,9 +5,7 @@ import {
   REGISTER_EMAIL_LABEL,
   REGISTER_PASSWORD_LABEL,
   REGISTER_CONFIRM_PASSWORD_LABEL,
-  REGISTER_ROLE_LABEL,
   REGISTER_PROMPT,
-  REGISTER_ROLE_MEDICO,
 } from "@/constants/constants";
 
 const push = mock(() => {});
@@ -40,7 +38,7 @@ describe("RegisterForm", () => {
     expect(scope.getByLabelText(REGISTER_EMAIL_LABEL)).toBeTruthy();
     expect(scope.getByLabelText(REGISTER_PASSWORD_LABEL)).toBeTruthy();
     expect(scope.getByLabelText(REGISTER_CONFIRM_PASSWORD_LABEL)).toBeTruthy();
-    expect(scope.getByLabelText(REGISTER_ROLE_LABEL)).toBeTruthy();
+    expect(scope.getByLabelText("Nombre de usuario")).toBeTruthy();
   });
 
   it("displays error on invalid email", () => {
@@ -56,9 +54,9 @@ describe("RegisterForm", () => {
     const confirmPasswordInput = scope.getByLabelText(
       REGISTER_CONFIRM_PASSWORD_LABEL,
     ) as HTMLInputElement;
-    const roleSelect = scope.getByLabelText(
-      REGISTER_ROLE_LABEL,
-    ) as HTMLSelectElement;
+    const usernameInput = scope.getByLabelText(
+      "Nombre de usuario",
+    ) as HTMLInputElement;
     const form = emailInput.closest("form");
 
     fireEvent.change(emailInput, { target: { value: "notanemail" } });
@@ -66,7 +64,7 @@ describe("RegisterForm", () => {
     fireEvent.change(confirmPasswordInput, {
       target: { value: "password123" },
     });
-    fireEvent.change(roleSelect, { target: { value: REGISTER_ROLE_MEDICO } });
+    fireEvent.change(usernameInput, { target: { value: "usuario" } });
     fireEvent.submit(form!);
 
     // Register should not have been called due to validation error
@@ -96,14 +94,14 @@ describe("RegisterForm", () => {
     const confirmPasswordInput = scope.getByLabelText(
       REGISTER_CONFIRM_PASSWORD_LABEL,
     ) as HTMLInputElement;
-    const roleSelect = scope.getByLabelText(
-      REGISTER_ROLE_LABEL,
-    ) as HTMLSelectElement;
+    const usernameInput = scope.getByLabelText(
+      "Nombre de usuario",
+    ) as HTMLInputElement;
 
     expect(emailInput.required).toBe(true);
     expect(passwordInput.required).toBe(true);
     expect(confirmPasswordInput.required).toBe(true);
-    expect(roleSelect.required).toBe(true);
+    expect(usernameInput.required).toBe(true);
   });
 
   it("displays link to login page", () => {
@@ -113,20 +111,6 @@ describe("RegisterForm", () => {
     const loginLink = scope.getByRole("link");
     expect(loginLink).toBeTruthy();
     expect(loginLink.getAttribute("href")).toBe("/login");
-  });
-
-  it("renders role select with role options", () => {
-    const { container } = render(<RegisterForm />);
-    const scope = within(container);
-
-    const roleSelect = scope.getByLabelText(
-      REGISTER_ROLE_LABEL,
-    ) as HTMLSelectElement;
-    const options = Array.from(roleSelect.options);
-    const optionValues = options.map((opt) => opt.value);
-
-    expect(optionValues).toContain(REGISTER_ROLE_MEDICO);
-    expect(optionValues).toContain("Administrador");
   });
 
   it("renders form with inputs that can be filled", () => {
@@ -171,15 +155,15 @@ describe("RegisterForm", () => {
     const confirmPasswordInput = scope.getByLabelText(
       REGISTER_CONFIRM_PASSWORD_LABEL,
     ) as HTMLInputElement;
-    const roleSelect = scope.getByLabelText(
-      REGISTER_ROLE_LABEL,
-    ) as HTMLSelectElement;
+    const usernameInput = scope.getByLabelText(
+      "Nombre de usuario",
+    ) as HTMLInputElement;
     const form = emailInput.closest("form");
 
     fireEvent.change(emailInput, { target: { value: "user@test.com" } });
     fireEvent.change(passwordInput, { target: { value: "password123" } });
     fireEvent.change(confirmPasswordInput, { target: { value: "different" } });
-    fireEvent.change(roleSelect, { target: { value: REGISTER_ROLE_MEDICO } });
+    fireEvent.change(usernameInput, { target: { value: "usuario" } });
     fireEvent.submit(form!);
 
     expect(register.mock.calls.length).toBe(0);
@@ -198,15 +182,15 @@ describe("RegisterForm", () => {
     const confirmPasswordInput = scope.getByLabelText(
       REGISTER_CONFIRM_PASSWORD_LABEL,
     ) as HTMLInputElement;
-    const roleSelect = scope.getByLabelText(
-      REGISTER_ROLE_LABEL,
-    ) as HTMLSelectElement;
+    const usernameInput = scope.getByLabelText(
+      "Nombre de usuario",
+    ) as HTMLInputElement;
     const form = emailInput.closest("form");
 
     fireEvent.change(emailInput, { target: { value: "user@test.com" } });
     fireEvent.change(passwordInput, { target: { value: "short" } });
     fireEvent.change(confirmPasswordInput, { target: { value: "short" } });
-    fireEvent.change(roleSelect, { target: { value: REGISTER_ROLE_MEDICO } });
+    fireEvent.change(usernameInput, { target: { value: "usuario" } });
     fireEvent.submit(form!);
 
     expect(register.mock.calls.length).toBe(0);

@@ -32,16 +32,15 @@ export function StatisticsFileDropzone({
   }
 
   function handleFileSelection(selected: File[]): void {
+    if (selected.length === 0) return;
     const csvFiles = selected.filter(hasCSVExtension);
 
     if (csvFiles.length !== selected.length) {
       setDropError("Solo se aceptan archivos con extensión .csv");
+      onChange([]);
+      return;
     } else {
       setDropError(null);
-    }
-
-    if (csvFiles.length === 0) {
-      return;
     }
 
     onChange(multiple ? csvFiles : [csvFiles[0]]);
@@ -56,7 +55,7 @@ export function StatisticsFileDropzone({
         aria-label={label}
         className={cn(
           "flex flex-col items-center justify-center gap-2",
-          "cursor-pointer rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-primary-400",
+          "cursor-pointer rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700",
           isDragging && "border-primary-500 bg-primary-100",
           files.length > 0 && "border-primary-300 bg-primary-50",
         )}
@@ -83,6 +82,7 @@ export function StatisticsFileDropzone({
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
             inputRef.current?.click();
           }
         }}
@@ -93,12 +93,16 @@ export function StatisticsFileDropzone({
           type="file"
           accept=".csv"
           multiple={multiple}
+          tabIndex={-1}
+          aria-hidden="true"
           className="sr-only"
+          onClick={(event) => event.stopPropagation()}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
             const selected = event.target.files
               ? Array.from(event.target.files)
               : [];
             handleFileSelection(selected);
+            event.target.value = "";
           }}
         />
 
@@ -135,7 +139,9 @@ export function StatisticsFileDropzone({
       </div>
 
       {dropError && (
-        <p className="text-(length:--font-size-xs) text-red-600">{dropError}</p>
+        <p role="alert" className="text-(length:--font-size-xs) text-red-600">
+          {dropError}
+        </p>
       )}
     </div>
   );

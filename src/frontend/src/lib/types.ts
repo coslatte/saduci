@@ -12,15 +12,6 @@ export type Variant =
 
 export type Status = "info" | "success" | "warning" | "danger" | "default";
 
-export type NavItemType = {
-  label: string;
-  href: string;
-  icon?: React.ReactNode;
-  active?: boolean;
-  current?: boolean;
-  children?: NavItemType[];
-};
-
 // Common props that many global components should accept
 export interface GlobalProps {
   /** When true the component should render as disabled (visual + interaction) */

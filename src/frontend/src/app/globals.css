@@ -40,19 +40,16 @@
 }
 
 @layer base {
-  ::selection {
-    background-color: #1e293b !important;
-    color: white !important;
-  }
-
-  *::selection {
-    background-color: #1e293b !important;
-    color: white !important;
-  }
-
   a {
     text-decoration: none;
   }
+}
+
+/* Keep native browser text selection and square page geometry. */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
 }
 
 :root {
@@ -78,6 +75,33 @@
 
 body {
   font-family: var(--font-family-primary), ui-sans-serif, system-ui, sans-serif;
+}
+
+.login-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #f8fbfb;
+}
+
+.login-page::before {
+  position: absolute;
+  z-index: -1;
+  inset: -35%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20, 184, 166, 0.055), transparent 58%);
+  content: "";
+  animation: login-background-drift 28s ease-in-out infinite alternate;
+}
+
+@keyframes login-background-drift {
+  from { transform: translate3d(-1%, -1%, 0) scale(1); }
+  to { transform: translate3d(1%, 1%, 0) scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page::before {
+    animation: none;
+  }
 }
 
 .font-primary {
@@ -121,7 +145,7 @@ body {
 }
 
 [data-disabled="true"] {
-  opacity: 0 !important;
+  opacity: 0.5;
   pointer-events: none !important;
 }
 
@@ -171,7 +195,7 @@ input[type="number"] {
     backdrop-filter: blur(var(--surface-blur-lg));
   }
 
-  /* stronger glass surface used for primary chrome like navbar/sidebar */
+  /* stronger glass surface used for primary chrome */
   .surface-backdrop-full {
     background-color: var(--surface-bg-full);
     -webkit-backdrop-filter: blur(var(--surface-blur-lg));

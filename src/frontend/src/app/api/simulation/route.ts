@@ -17,14 +17,17 @@ export async function POST(req: NextRequest) {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  const abort = () => controller.abort();
+  req.signal.addEventListener("abort", abort, { once: true });
+  if (req.signal.aborted) controller.abort();
+  const timeout = setTimeout(() => controller.abort(), 360_000);
 
   try {
-    const upstream = await fetch(`${CORE_API_URL}/simulations/icu`, {
+    const upstream = await fetch(`${CORE_API_URL}/simulation`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: controller.signal,
+      signal: AbortSignal.any([req.signal, controller.signal]),
     });
 
     const contentType = upstream.headers.get("content-type") ?? "";
@@ -38,12 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: isAborted
-          ? "La solicitud de simulación fue cancelada."
+          ? "El servicio de simulación tardó demasiado en responder."
           : "No se pudo conectar con el servidor de simulación.",
       },
       { status: isAborted ? 504 : 502 },
     );
   } finally {
     clearTimeout(timeout);
+    req.signal.removeEventListener("abort", abort);
   }
 }

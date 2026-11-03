@@ -36,6 +36,7 @@ export function BaseButton({
     <button
       {...dataDisabledProps(disabled)}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         "relative inline-flex items-center justify-center overflow-hidden font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
         className,
@@ -52,6 +53,7 @@ export function BaseButton({
       </span>
 
       <span
+        aria-hidden="true"
         className={cn(
           "absolute inset-0 flex items-center justify-center transition-all duration-150 pointer-events-none",
           loading ? "scale-100 opacity-100" : "scale-75 opacity-0",

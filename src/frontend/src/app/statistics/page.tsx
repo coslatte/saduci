@@ -13,7 +13,7 @@ import { WilcoxonSection, FriedmanSection } from "./components/StatTestSection";
 import { StatisticsTabPanel } from "./components/StatisticsTabPanel";
 import { StatisticsTabs } from "./components/StatisticsTabs";
 import type { ActiveStatisticsTab } from "./components/types";
-import { readCSVFile, extractNumericColumn, adjustArraySizes } from "./helpers";
+import { readCSVFile, extractNumericColumn } from "./helpers";
 
 function formatAvailableColumns(csv: Record<string, string[]>): string {
   const columns = Object.keys(csv).filter((column) => column.trim().length > 0);
@@ -77,19 +77,14 @@ export default function StatisticsPage() {
         return;
       }
 
-      let x = col1;
-      let y = col2;
-
       if (col1.length !== col2.length) {
-        const { adjusted, minSize } = adjustArraySizes([col1, col2]);
-        x = adjusted[0];
-        y = adjusted[1];
-        setWxWarning(
-          `Para realizar correctamente la prueba se ajustaron los tamaños de muestra. Todas las columnas quedaron con el mismo número de filas. (${minSize} filas)`,
+        setWxError(
+          "Las muestras deben tener el mismo número de filas para conservar la correspondencia entre observaciones.",
         );
+        return;
       }
 
-      const result = await runWilcoxonTest({ sample_a: x, sample_b: y });
+      const result = await runWilcoxonTest({ sample_a: col1, sample_b: col2 });
       setWxResult(result);
     } catch (err: unknown) {
       setWxError(
@@ -120,12 +115,12 @@ export default function StatisticsPage() {
       const columns = csvData.map((csv) => extractNumericColumn(csv, fmColumn));
 
       const validColumns = columns.filter((col) => col.length > 0);
-      if (validColumns.length < 3) {
+      if (validColumns.length !== columns.length) {
         const availableColumns = Array.from(
           new Set(csvData.flatMap((csv) => Object.keys(csv))),
         );
         setFmError(
-          `La columna "${fmColumn}" no se encontró en suficientes archivos CSV. Columnas detectadas: ${
+          `La columna "${fmColumn}" debe contener datos en todos los archivos CSV. Columnas detectadas: ${
             availableColumns.length > 0
               ? availableColumns.join(", ")
               : "No se detectaron columnas"
@@ -134,17 +129,17 @@ export default function StatisticsPage() {
         return;
       }
 
-      const { adjusted, minSize } = adjustArraySizes(validColumns);
-
-      const originalMin = Math.min(...validColumns.map((c) => c.length));
-      if (originalMin !== minSize || validColumns.length < columns.length) {
-        setFmWarning(
-          `Para realizar correctamente la prueba se ajustaron los tamaños de muestra. Todas las columnas quedaron con el mismo número de filas. (${minSize} filas)`,
+      if (
+        validColumns.some((column) => column.length !== validColumns[0].length)
+      ) {
+        setFmError(
+          "Las muestras deben tener el mismo número de filas para conservar la correspondencia entre observaciones.",
         );
+        return;
       }
 
       const groups: Record<string, number[]> = {};
-      adjusted.forEach((arr, i) => {
+      validColumns.forEach((arr, i) => {
         groups[`group_${String.fromCharCode(97 + i)}`] = arr;
       });
       const result = await runFriedmanTest({ groups });
@@ -164,7 +159,7 @@ export default function StatisticsPage() {
     <>
       <StatisticsPageHeader />
 
-      <div className="flex flex-col gap-6">
+      <div id="form" className="flex flex-col gap-6">
         <StatisticsTabs activeTab={activeTab} onChange={setActiveTab} />
 
         <StatisticsTabPanel
@@ -173,6 +168,7 @@ export default function StatisticsPage() {
           hidden={activeTab !== "wilcoxon"}
         >
           <WilcoxonSection
+            resultsId={activeTab === "wilcoxon" ? "results" : undefined}
             file1={wxFile1}
             file2={wxFile2}
             selectedColumn={wxColumn}
@@ -180,9 +176,24 @@ export default function StatisticsPage() {
             result={wxResult}
             error={wxError}
             warning={wxWarning}
-            onFile1Change={setWxFile1}
-            onFile2Change={setWxFile2}
-            onColumnChange={setWxColumn}
+            onFile1Change={(file) => {
+              setWxFile1(file);
+              setWxResult(null);
+              setWxError(null);
+              setWxWarning(null);
+            }}
+            onFile2Change={(file) => {
+              setWxFile2(file);
+              setWxResult(null);
+              setWxError(null);
+              setWxWarning(null);
+            }}
+            onColumnChange={(column) => {
+              setWxColumn(column);
+              setWxResult(null);
+              setWxError(null);
+              setWxWarning(null);
+            }}
             onRun={handleRunWilcoxon}
             runLabel="Realizar prueba de Wilcoxon"
             uploadLabel1="Experimento 1 (CSV)"
@@ -196,14 +207,25 @@ export default function StatisticsPage() {
           hidden={activeTab !== "friedman"}
         >
           <FriedmanSection
+            resultsId={activeTab === "friedman" ? "results" : undefined}
             files={fmFiles}
             selectedColumn={fmColumn}
             loading={fmLoading}
             result={fmResult}
             error={fmError}
             warning={fmWarning}
-            onFilesChange={setFmFiles}
-            onColumnChange={setFmColumn}
+            onFilesChange={(files) => {
+              setFmFiles(files);
+              setFmResult(null);
+              setFmError(null);
+              setFmWarning(null);
+            }}
+            onColumnChange={(column) => {
+              setFmColumn(column);
+              setFmResult(null);
+              setFmError(null);
+              setFmWarning(null);
+            }}
             onRun={handleRunFriedman}
             runLabel="Realizar prueba de Friedman"
             uploadLabel="Experimentos (CSV)"

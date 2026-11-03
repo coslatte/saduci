@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         Authorization: authorization,
       },
       body: JSON.stringify(body),
-      signal: req.signal,
+      signal: AbortSignal.any([req.signal, AbortSignal.timeout(10000)]),
     });
 
     const contentType = upstream.headers.get("content-type") ?? "";
@@ -39,10 +39,18 @@ export async function POST(req: Request) {
       : { message: await upstream.text() };
 
     return NextResponse.json(data, { status: upstream.status });
-  } catch {
+  } catch (error) {
+    const timedOut =
+      error instanceof Error &&
+      (error.name === "TimeoutError" || error.name === "AbortError");
     return NextResponse.json(
-      { ok: false, message: "Error en el servidor." },
-      { status: 500 },
+      {
+        ok: false,
+        message: timedOut
+          ? "El servicio de autenticación tardó demasiado en responder."
+          : "No se pudo conectar con el servicio de autenticación.",
+      },
+      { status: timedOut ? 504 : 502 },
     );
   }
 }
