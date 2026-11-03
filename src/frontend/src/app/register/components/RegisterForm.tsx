@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/atoms/Buttons";
 import { Input } from "@/components/atoms/Input";
 import { Label } from "@/components/atoms/Label";
-import { Select } from "@/components/atoms/Select";
 import { Text } from "@/components/atoms/Text";
 import { Alert } from "@/components/molecules/Alert";
 import {
@@ -21,14 +20,9 @@ import {
   REGISTER_PASSWORD_PLACEHOLDER,
   REGISTER_CONFIRM_PASSWORD_LABEL,
   REGISTER_CONFIRM_PASSWORD_PLACEHOLDER,
-  REGISTER_ROLE_LABEL,
-  REGISTER_ROLE_PLACEHOLDER,
-  REGISTER_ROLE_MEDICO,
-  REGISTER_ROLE_ADMIN,
   REGISTER_PASSWORD_MISMATCH,
   REGISTER_PASSWORD_MIN_LENGTH,
   REGISTER_INVALID_EMAIL,
-  REGISTER_ROLE_REQUIRED,
   REGISTER_LOGIN_LINK,
   ALERT_ERROR_TITLE,
 } from "@/constants/constants";
@@ -47,16 +41,16 @@ export default function RegisterForm() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     email?: string;
+    username?: string;
     password?: string;
     confirmPassword?: string;
-    role?: string;
   }>({});
 
   function validateForm(): boolean {
@@ -69,6 +63,10 @@ export default function RegisterForm() {
       errors.email = REGISTER_INVALID_EMAIL;
     }
 
+    if (!username.trim()) {
+      errors.username = "El nombre de usuario es requerido";
+    }
+
     if (!password) {
       errors.password = "La contraseña es requerida";
     } else if (password.length < 8) {
@@ -79,10 +77,6 @@ export default function RegisterForm() {
       errors.confirmPassword = "Debe confirmar la contraseña";
     } else if (password !== confirmPassword) {
       errors.confirmPassword = REGISTER_PASSWORD_MISMATCH;
-    }
-
-    if (!role) {
-      errors.role = REGISTER_ROLE_REQUIRED;
     }
 
     setValidationErrors(errors);
@@ -98,13 +92,13 @@ export default function RegisterForm() {
     }
 
     const finalEmail = email.trim();
+    const finalUsername = username.trim();
     const finalPassword = password;
-    const finalRole = role;
 
     setLoading(true);
     try {
-      await register(finalEmail, finalPassword, finalRole);
-      router.push("/");
+      await register(finalEmail, finalUsername, finalPassword);
+      router.push("/login");
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : REGISTER_ERROR_MSG,
@@ -170,6 +164,35 @@ export default function RegisterForm() {
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <Label htmlFor="register-username">Nombre de usuario</Label>
+          <Input
+            id="register-username"
+            type="text"
+            value={username}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              setUsername(event.target.value)
+            }
+            placeholder="usuario"
+            fullWidth
+            required
+            error={!!validationErrors.username}
+            aria-describedby={
+              validationErrors.username ? "register-username-error" : undefined
+            }
+            aria-invalid={!!validationErrors.username}
+          />
+          {validationErrors.username && (
+            <p
+              id="register-username-error"
+              role="alert"
+              className="text-(length:--font-size-xs) text-red-600"
+            >
+              {validationErrors.username}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="register-password">{REGISTER_PASSWORD_LABEL}</Label>
           <Input
             id="register-password"
@@ -227,37 +250,6 @@ export default function RegisterForm() {
               className="text-(length:--font-size-xs) text-red-600"
             >
               {validationErrors.confirmPassword}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="register-role">{REGISTER_ROLE_LABEL}</Label>
-          <Select
-            id="register-role"
-            value={role}
-            onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-              setRole(event.target.value)
-            }
-            fullWidth
-            required
-            error={!!validationErrors.role}
-            aria-describedby={
-              validationErrors.role ? "register-role-error" : undefined
-            }
-            aria-invalid={!!validationErrors.role}
-          >
-            <option value="">{REGISTER_ROLE_PLACEHOLDER}</option>
-            <option value={REGISTER_ROLE_MEDICO}>{REGISTER_ROLE_MEDICO}</option>
-            <option value={REGISTER_ROLE_ADMIN}>{REGISTER_ROLE_ADMIN}</option>
-          </Select>
-          {validationErrors.role && (
-            <p
-              id="register-role-error"
-              role="alert"
-              className="text-(length:--font-size-xs) text-red-600"
-            >
-              {validationErrors.role}
             </p>
           )}
         </div>

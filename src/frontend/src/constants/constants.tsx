@@ -1,5 +1,3 @@
-import React from "react";
-
 // Centralized UI strings, labels and defaults
 export const APP_NAME = "Saduci Platform";
 
@@ -108,11 +106,6 @@ export function runsRangeText(min: number, max: number) {
   return `Mínimo ${min} — máximo ${max.toLocaleString()} iteraciones`;
 }
 
->>>>>>> agents/login-skip-authentication
 // Navigation & UI
 export const NAV_BRAND_SHORT = "Saduci";
 export const NAVBAR_OPEN_NAVIGATION = "Abrir navegación";
-
-// Shared prediction/simulation result labels (used in 3+ files)
-export const PATIENT_SURVIVES = "Paciente no fallece";
-export const PATIENT_DIES = "Paciente fallece";

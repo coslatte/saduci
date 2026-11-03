@@ -31,7 +31,6 @@ interface AuthState {
     email: string,
     username: string,
     password: string,
-    role?: string,
   ) => Promise<void>;
   logout: () => void;
   updateUserAvatar: (avatar: string | null) => void;
@@ -250,9 +249,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(payload, "No se pudo registrar el usuario."),
-        );
+        const detail =
+          payload && typeof payload === "object" && "detail" in payload
+            ? String(payload.detail)
+            : "No se pudo registrar el usuario.";
+        throw new Error(detail);
       }
     },
     [],
@@ -273,44 +274,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return nextUser;
     });
   }, []);
-
-  const register = useCallback(
-    async (email: string, password: string, role: string = "Médico") => {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const message =
-          payload && typeof payload === "object" && "detail" in payload
-            ? String((payload as Record<string, unknown>).detail)
-            : "No se pudo crear el usuario.";
-        throw new Error(message);
-      }
-
-      const authResponse = payload as AuthResponse | null;
-      if (!authResponse?.access_token || !authResponse.user) {
-        throw new Error("La respuesta de autenticación no es válida.");
-      }
-
-      const nextUser = mapBackendUser(authResponse.user);
-
-      setToken(authResponse.access_token);
-      setUser(nextUser);
-      localStorage.setItem(TOKEN_STORAGE_KEY, authResponse.access_token);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-    },
-    [],
-  );
-
-  const logout = useCallback(() => {
-    clearSession();
-  }, [clearSession]);
->>>>>>> agents/login-skip-authentication
 
   return (
     <AuthContext.Provider

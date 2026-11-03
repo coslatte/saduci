@@ -23,23 +23,12 @@ import {
   ALERT_ERROR_TITLE,
 } from "@/constants/constants";
 
-const MOCK_DEV_USER = {
-  id: "999",
-  username: "dev_user",
-  name: "Desarrollador",
-  email: "dev@saduci.com",
-  role: "Administrador" as const,
-  isActive: true,
-  isSuperuser: true,
-};
-
 /**
  * Handles credential input, authentication request, and login feedback states.
  *
  * @example
  * <LoginForm />
  */
->>>>>>> agents/login-skip-authentication
 export default function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
@@ -50,7 +39,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showRegister, setShowRegister] = useState(false);
 
-  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
@@ -59,20 +48,13 @@ export default function LoginForm() {
 
     setLoading(true);
     try {
-      if (!finalIdentifier && !finalPassword) {
-        localStorage.setItem("saduci_token", "mock_dev_token_" + Date.now());
-        localStorage.setItem("saduci_user", JSON.stringify(MOCK_DEV_USER));
-        window.location.reload();
-        return;
-      }
-
       await login(finalIdentifier, finalPassword);
       router.push("/");
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "No se pudo iniciar sesión. Verifique sus credenciales.",
+          : LOGIN_ERROR_MSG,
       );
     } finally {
       setLoading(false);
@@ -92,19 +74,18 @@ export default function LoginForm() {
               tracking="tight"
               className="text-slate-900"
             >
-              {"Saduci Platform".toUpperCase()}
+              {APP_NAME.toUpperCase()}
             </Text>
             <Text as="p" size="sm" muted className="mt-2">
-              Inicie sesión para acceder a la plataforma
+              {LOGIN_PROMPT}
             </Text>
             <Text as="p" size="xs" muted className="mt-1">
-              El acceso depende de las credenciales válidas de
-              saduci-core.
+              {LOGIN_HELP_TEXT}
             </Text>
           </div>
 
           {error && (
-            <Alert variant="danger" title="Error">
+            <Alert variant="danger" title={ALERT_ERROR_TITLE}>
               {error}
             </Alert>
           )}
@@ -112,7 +93,7 @@ export default function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="login-identifier">
-                &quot;Usuario o correo electrónico&quot;
+                {LOGIN_EMAIL_LABEL}
               </Label>
               <Input
                 id="login-identifier"
@@ -121,13 +102,14 @@ export default function LoginForm() {
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                   setIdentifier(event.target.value)
                 }
-                placeholder="usuario@saduci.com"
+                placeholder={LOGIN_EMAIL_PLACEHOLDER}
                 fullWidth
                 autoFocus
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="login-password">&quot;Contraseña&quot;</Label>
+              <Label htmlFor="login-password">{LOGIN_PASSWORD_LABEL}</Label>
               <Input
                 id="login-password"
                 type="password"
@@ -135,8 +117,9 @@ export default function LoginForm() {
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                   setPassword(event.target.value)
                 }
-                placeholder="••••••••"
+                placeholder={LOGIN_PASSWORD_PLACEHOLDER}
                 fullWidth
+                required
               />
             </div>
             <Button
@@ -146,7 +129,7 @@ export default function LoginForm() {
               className="w-full"
               size="lg"
             >
-              &quot;Iniciar sesión&quot;
+              {LOGIN_BUTTON}
             </Button>
           </form>
 
@@ -158,21 +141,11 @@ export default function LoginForm() {
                 onClick={() => setShowRegister(true)}
                 className="text-primary-600 hover:underline"
               >
-                &quot;Crear cuenta&quot;
+                {LOGIN_REGISTER_LINK}
               </button>
             </Text>
           </div>
 
-          {!identifier &&
-            !password &&
-            process.env.NODE_ENV === "development" && (
-              <div className="p-3 text-center rounded-lg bg-amber-50">
-                <Text as="p" size="xs" className="text-amber-700">
-                  Modo desarrollo: Deja los campos vacíos para entrar con
-                  usuario de prueba
-                </Text>
-              </div>
-            )}
         </div>
       ) : (
         <div className="w-full max-w-md p-5 space-y-6 bg-white border shadow-xl rounded-2xl border-slate-200 sm:space-y-8 sm:p-8 md:p-10">

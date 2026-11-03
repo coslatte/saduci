@@ -4,12 +4,6 @@ import { FiBox } from "react-icons/fi";
 import { useAuth } from "@/lib/auth";
 import { Text } from "@/components/atoms/Text";
 import { DashboardInfoSection } from "@/app/components/DashboardInfoSection";
-import {
-  HOME_DEFAULT_GREETING,
-  HOME_WELCOME_SUBTITLE,
-  ABOUT_TITLE,
-  ABOUT_DESC,
-} from "@/constants/constants";
 
 export default function Home() {
   const { user } = useAuth();
