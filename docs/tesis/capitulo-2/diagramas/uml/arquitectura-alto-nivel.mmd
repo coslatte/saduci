@@ -1,0 +1,54 @@
+```mermaid
+graph TB
+    subgraph Clients["Capa de Clientes"]
+        Browser["Navegador Web<br/>Médico"]
+        Admin["Panel Admin<br/>Administrador"]
+    end
+
+    subgraph Frontend["Frontend: saduci-platform"]
+        NextJS["Next.js 16<br/>App Router"]
+        RSC["React Server<br/>Components"]
+        Client["Client<br/>Components"]
+        Atomic["Sistema Atómico<br/>A/M/O/L"]
+    end
+
+    subgraph Gateway["Backend: API Gateway"]
+        JWT["JWT Auth"]
+        Proxy["Proxy"]
+        Public["Rutas<br/>Públicas"]
+        Protected["Rutas<br/>Protegidas"]
+    end
+
+    subgraph Prediction["Servicios de Dominio"]
+        PredServ["Prediction<br/>Service :8002"]
+        SimServ["Simulation<br/>Service :8003"]
+    end
+
+    subgraph Data["Capa de Datos"]
+        PredDB["prediction-db<br/>PostgreSQL"]
+        SimDB["simulation-db<br/>PostgreSQL"]
+        ML["new_workflow<br/>.joblib"]
+        SimUCI["SimUCI<br/>Engine"]
+    end
+
+    Browser --> NextJS
+    Admin --> NextJS
+    NextJS --> RSC
+    NextJS --> Client
+    NextJS --> Gateway
+    Gateway --> JWT
+    Gateway --> Proxy
+    JWT --> Public
+    JWT --> Protected
+    Proxy --> PredServ
+    Proxy --> SimServ
+    PredServ --> PredDB
+    PredServ --> ML
+    SimServ --> SimDB
+    SimServ --> SimUCI
+
+    style Frontend fill:#e1f5fe
+    style Gateway fill:#fff3e0
+    style Prediction fill:#e8f5e9
+    style Data fill:#fce4ec
+```

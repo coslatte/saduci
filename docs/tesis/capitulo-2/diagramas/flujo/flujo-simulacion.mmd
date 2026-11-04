@@ -1,0 +1,26 @@
+```mermaid
+flowchart TD
+    Start["Solicitud de<br/>Simulación"] --> Params["Ingresar<br/>Parámetros"]
+
+    Params --> Check["¿SimUCI<br/>disponible?"]
+
+    Check -->|Sí| SimUCI["Ejecutar<br/>SimUCI Engine"]
+    Check -->|No| Fallback["Ejecutar Fallback<br/>Determinista"]
+
+    SimUCI --> Run["single_run<br/>multiple_replication"]
+    Fallback --> SHA["Generar Seed<br/>SHA-256"]
+
+    Run --> Stats["Calcular<br/>Estadísticas"]
+    SHA --> Stats
+
+    Stats --> Time["TimeStats<br/>mean/std/CI 95%"]
+
+    Time --> Response["ICUPatientSimulation<br/>Response"]
+
+    Response --> End["Resultado de<br/>Simulación"]
+
+    style Check fill:#fff9c4
+    style Time fill:#e8f5e9
+    style Start fill:#e3f2fd
+    style End fill:#f3e5f5
+```

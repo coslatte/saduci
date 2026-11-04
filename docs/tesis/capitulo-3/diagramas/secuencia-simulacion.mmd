@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant Doctor as Médico
+    participant Frontend as saduci-platform
+    participant Gateway as API Gateway :8000
+    participant SimSvc as Simulation Service :8003
+    participant Engine as SimUCI / Fallback
+
+    Doctor->>Frontend: Configura parámetros
+    Doctor->>Frontend: (edad, apache, diagnósticos, VM, n_runs)
+
+    Frontend->>Frontend: Validar inputs (SIMULATION_LIMITS)
+
+    alt Con autenticación
+        Frontend->>Gateway: POST /api/simulations/icu (Bearer + X-User-ID)
+    else Sin autenticación
+        Frontend->>Gateway: POST /simulation
+    end
+
+    Gateway->>SimSvc: Forward request
+    SimSvc->>SimSvc: Validar con Pydantic
+
+    alt SimUCI disponible
+        SimSvc->>Engine: simuci.Experiment.single_run()
+        Engine-->>SimSvc: Resultados de simulación
+    else Fallback determinista
+        SimSvc->>Engine: SHA-256 seeded random
+        Engine-->>SimSvc: Resultados estadísticos
+    end
+
+    SimSvc->>SimSvc: Calcular TimeStats (mean, std, CI 95%)
+    SimSvc->>SimSvc: Persistir en simulation-db (con user_id)
+    SimSvc-->>Frontend: ICUPatientSimulationResponse
+
+    Frontend-->>Doctor: Muestra resultados + tabla + descarga CSV
+
+    Note over Doctor,SimSvc: === Pruebas Estadísticas ===
+    Doctor->>Frontend: Sube archivo CSV
+    Frontend->>Gateway: POST /statistics/wilcoxon | /statistics/friedman
+    Gateway->>SimSvc: Forward
+    SimSvc->>SimSvc: scipy.stats.wilcoxon() | scipy.stats.friedmanchisquare()
+    SimSvc-->>Frontend: StatisticalTestResult {statistic, p_value}
+    Frontend-->>Doctor: Muestra resultado + interpretación

@@ -1,0 +1,24 @@
+{
+  // Adaptador del proyecto al stack de herramientas y MCP definido en
+  // docs/ai/tooling.md. El agente y el modelo son intercambiables; estos
+  // servidores MCP son la capa de conocimiento compartida.
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "codebase-memory-mcp": {
+      "type": "local",
+      "enabled": true,
+      "command": ["codebase-memory-mcp"]
+    },
+    "serena": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project-from-cwd"
+      ]
+    }
+  }
+}

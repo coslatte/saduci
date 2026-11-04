@@ -1,0 +1,145 @@
+# Despliegue de los microservicios + gateway usando un PostgreSQL EXTERNO.
+#
+# Para que sirve: levantar el backend en contenedores cuando NO se puede
+# descargar la imagen de Postgres (Docker Hub bloqueado en esta red). Apunta a
+# un PostgreSQL ya existente (el de tu maquina, en host.docker.internal:5432).
+#
+# Requisitos:
+#   - Las 4 bases creadas en ese PostgreSQL (python scripts/saduci.py up las
+#     prepara con el password de desarrollo 'changeme').
+#   - El PostgreSQL debe aceptar conexiones desde la red de Docker
+#     (host.docker.internal). En Windows con el instalador oficial funciona.
+#
+# Uso (desde apps/core):
+#   docker compose -f compose.external-db.yaml up -d
+#   docker compose -f compose.external-db.yaml down
+#
+# Si tu password no es el de desarrollo, exporta DB_PASSWORD antes de levantar.
+name: saduci
+
+services:
+  api-gateway:
+    build:
+      context: ./src/api-gateway
+      additional_contexts:
+        core: .
+    image: saduci-api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "${API_GATEWAY_HOST_PORT:-7000}:7000"
+    environment:
+      - PORT=7000
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://localhost:4000}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW=${LOGIN_RATE_LIMIT_WINDOW:-60}
+      - USER_SERVICE_URL=http://user-service:7001
+      - PATIENT_SERVICE_URL=http://patient-service:7002
+      - PREDICTION_SERVICE_URL=http://prediction-service:7003
+      - SIMULATION_SERVICE_URL=http://simulation-service:7004
+    depends_on:
+      user-service:
+        condition: service_started
+      patient-service:
+        condition: service_started
+      prediction-service:
+        condition: service_started
+      simulation-service:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saduci-network
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./src/user
+      additional_contexts:
+        core: .
+    image: saduci-user-service:latest
+    container_name: user-service
+    ports:
+      - "127.0.0.1:${USER_HOST_PORT:-7001}:7001"
+    environment:
+      - PORT=7001
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - AUTH_USERNAME=${AUTH_USERNAME:?AUTH_USERNAME is required}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:?AUTH_PASSWORD is required}
+      - DATABASE_URL=postgresql+psycopg2://user_user:${DB_PASSWORD:-changeme}@host.docker.internal:5432/user_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saduci-network
+    restart: unless-stopped
+
+  patient-service:
+    build:
+      context: ./src/patient
+      additional_contexts:
+        core: .
+    image: saduci-patient-service:latest
+    container_name: patient-service
+    ports:
+      - "127.0.0.1:${PATIENT_HOST_PORT:-7002}:7002"
+    environment:
+      - PORT=7002
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - DATABASE_URL=postgresql+asyncpg://patient_user:${DB_PASSWORD:-changeme}@host.docker.internal:5432/patient_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saduci-network
+    restart: unless-stopped
+
+  prediction-service:
+    build:
+      context: ./src/prediction
+      additional_contexts:
+        core: .
+    image: saduci-prediction-service:latest
+    container_name: prediction-service
+    ports:
+      - "127.0.0.1:${PREDICTION_HOST_PORT:-7003}:7003"
+    environment:
+      - PORT=7003
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - DATABASE_URL=postgresql+psycopg2://prediction_user:${DB_PASSWORD:-changeme}@host.docker.internal:5432/prediction_db
+      - PREDICTION_NARRATIVE_PROVIDER=${PREDICTION_NARRATIVE_PROVIDER:-stub}
+      - PREDICTION_MODEL_PATH=/app/models/v1/new_workflow.joblib
+      - GATEWAY_URL=http://api-gateway:7000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saduci-network
+    restart: unless-stopped
+
+  simulation-service:
+    build:
+      context: ./src/simulation
+      additional_contexts:
+        core: .
+    image: saduci-simulation-service:latest
+    container_name: simulation-service
+    ports:
+      - "127.0.0.1:${SIMULATION_HOST_PORT:-7004}:7004"
+    environment:
+      - PORT=7004
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - DATABASE_URL=postgresql+psycopg2://simulation_user:${DB_PASSWORD:-changeme}@host.docker.internal:5432/simulation_db
+      - GATEWAY_URL=http://api-gateway:7000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saduci-network
+    restart: unless-stopped
+
+networks:
+  saduci-network:
+    driver: bridge

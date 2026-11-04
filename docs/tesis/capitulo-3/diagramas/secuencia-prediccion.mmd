@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant Doctor as Médico
+    participant Frontend as saduci-platform
+    participant Gateway as API Gateway :8000
+    participant PredSvc as Prediction Service :8002
+    participant Model as new_workflow.joblib
+
+    Doctor->>Frontend: Ingresa datos del paciente
+    Doctor->>Frontend: (edad, diag, apache, tiempo_vam)
+
+    alt Sin autenticación (público)
+        Frontend->>Gateway: POST /prediction
+    else Con autenticación
+        Frontend->>Gateway: POST /api/predictions (Bearer + X-User-ID)
+    end
+
+    Gateway->>PredSvc: Forward request
+    PredSvc->>PredSvc: Validar con Pydantic
+    PredSvc->>Model: predict_proba(features)
+    Model-->>PredSvc: [prob_survive, prob_mortality]
+
+    PredSvc->>PredSvc: Calcular: probability, class, label
+    PredSvc->>PredSvc: Persistir en prediction-db (con user_id)
+
+    alt Explicabilidad solicitada
+        Frontend->>Gateway: POST /prediction/explain {method: "SHAP"}
+        Gateway->>PredSvc: Forward
+        PredSvc->>PredSvc: Calcular contribuciones por feature
+        PredSvc->>PredSvc: Generar rows (feature, value, baseline, contribution, direction)
+        alt Narrativa solicitada
+            PredSvc->>PredSvc: Generar narrativa (stub/gemini/local)
+            PredSvc-->>Frontend: PlatformExplanationResponse {method, rows, narrative}
+        else
+            PredSvc-->>Frontend: PlatformExplanationResponse {method, rows}
+        end
+    else
+        PredSvc-->>Frontend: PlatformPredictionResponse {probability, class, label}
+    end
+
+    Frontend-->>Doctor: Muestra resultado + gráfico

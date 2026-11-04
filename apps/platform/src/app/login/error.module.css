@@ -1,0 +1,107 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: linear-gradient(to bottom right, rgb(240 249 255), rgb(255 255 255), rgb(253 246 255));
+  background-size: 200% 200%;
+  animation: gradientShift 14s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.card {
+  width: 100%;
+  max-width: 28rem;
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+  padding: 2.5rem;
+  text-align: center;
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.iconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, rgb(239 68 68 / 0.1), rgb(220 38 38 / 0.1));
+  margin-bottom: 1.5rem;
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: rgb(220 38 38);
+}
+
+.content {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  color: rgb(15 23 42);
+  margin-bottom: 0.75rem;
+}
+
+.description {
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.digest {
+  display: block;
+  margin-top: 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.primaryButton {
+  width: 100%;
+}
+
+.outlineButton {
+  width: 100%;
+}
+
+.help {
+  padding-top: 1rem;
+  border-top: 1px solid rgb(226 232 240);
+}
+
+@media (min-width: 640px) {
+  .actions {
+    flex-direction: row;
+  }
+
+  .primaryButton,
+  .outlineButton {
+    width: auto;
+    flex: 1;
+  }
+}

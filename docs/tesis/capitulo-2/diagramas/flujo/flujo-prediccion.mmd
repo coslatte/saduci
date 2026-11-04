@@ -1,0 +1,44 @@
+```mermaid
+flowchart LR
+    subgraph Input["Entrada de Datos"]
+        P["Paciente"]
+        M["Médico"]
+    end
+
+    subgraph Frontend["Frontend"]
+        Form["Formulario<br/>Predicción"]
+        View["Visualización<br/>Resultados"]
+    end
+
+    subgraph API["API Layer"]
+        Route["API Route<br/>Next.js"]
+        Gateway["API Gateway<br/>JWT"]
+    end
+
+    subgraph Services["Servicios"]
+        Pred["Prediction<br/>Service"]
+        ML["Modelo ML<br/>(joblib)"]
+    end
+
+    subgraph Output["Salida"]
+        Result["Resultado<br/>Probabilidad"]
+        Explain["Explicación<br/>Features"]
+    end
+
+    P -->|datos| Form
+    M -->|verificar| Form
+    Form -->|submit| Route
+    Route -->|proxy| Gateway
+    Gateway -->|forward| Pred
+    Pred -->|inference| ML
+    ML -->|probability| Pred
+    Pred -->|response| Gateway
+    Gateway -->|data| Route
+    Route -->|render| View
+    View -->|display| Result
+    View -->|display| Explain
+
+    style Input fill:#e3f2fd
+    style Output fill:#f3e5f5
+    style Services fill:#fff8e1
+```

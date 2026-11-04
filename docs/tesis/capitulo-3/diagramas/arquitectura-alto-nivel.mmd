@@ -1,0 +1,55 @@
+graph TB
+    subgraph Clients["Capa de Clientes"]
+        Browser["Navegador Web<br/>Personal Médico"]
+        Admin["Panel Admin<br/>Administrador"]
+    end
+
+    subgraph Frontend["saduci-platform (Next.js 16)"]
+        NextJS["App Router<br/>+ React Server Components"]
+        ClientComp["Client Components<br/>(useAuth, AuthProvider)"]
+        Atomic["Sistema Atómico<br/>Atoms / Molecules / Organisms"]
+    end
+
+    subgraph Gateway["API Gateway :8000 (FastAPI)"]
+        JWT["JWT Auth +<br/>Rate Limiting"]
+        Proxy["Proxy a Servicios<br/>Internos"]
+        CORS["CORS Middleware"]
+    end
+
+    subgraph Services["Microservicios Internos"]
+        UserSvc["User Service<br/>:8004<br/>Gestión de Usuarios"]
+        PatientSvc["Patient Service<br/>:8001<br/>Registro Pacientes"]
+        PredSvc["Prediction Service<br/>:8002<br/>Inferencia ML + XAI"]
+        SimSvc["Simulation Service<br/>:8003<br/>SimUCI + Estadísticas"]
+    end
+
+    subgraph Data["Capas de Datos"]
+        UserDB[("user-db<br/>PostgreSQL")]
+        PatientDB[("patient-db<br/>PostgreSQL")]
+        PredDB[("prediction-db<br/>PostgreSQL")]
+        SimDB[("simulation-db<br/>PostgreSQL")]
+        MLModel[("Modelo ML<br/>new_workflow.joblib")]
+        SimUCI["SimUCI Engine<br/>(opcional)"]
+    end
+
+    Browser --> NextJS
+    Admin --> NextJS
+    NextJS --> ClientComp
+    ClientComp --> Gateway
+    Gateway --> JWT
+    JWT --> Proxy
+    Proxy --> UserSvc
+    Proxy --> PatientSvc
+    Proxy --> PredSvc
+    Proxy --> SimSvc
+    UserSvc --> UserDB
+    PatientSvc --> PatientDB
+    PredSvc --> PredDB
+    PredSvc --> MLModel
+    SimSvc --> SimDB
+    SimSvc --> SimUCI
+
+    style Frontend fill:#e1f5fe
+    style Gateway fill:#fff3e0
+    style Services fill:#e8f5e9
+    style Data fill:#fce4ec

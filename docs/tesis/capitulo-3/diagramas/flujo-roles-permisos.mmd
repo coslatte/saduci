@@ -1,0 +1,58 @@
+flowchart TD
+    A["Petición HTTP entrante"] --> B["API Gateway"]
+    B --> C{"¿Requiere<br/>autenticación?"}
+    C -->|No| D["Endpoint público"]
+    D --> E["Proxy directo a<br/>servicio interno"]
+
+    C -->|Sí| F["Extraer<br/>Authorization: Bearer"]
+    F --> G{"¿JWT válido?"}
+    G -->|No| H["401 Unauthorized"]
+
+    G -->|Sí| I["Decodificar JWT:<br/>sub, uid, email,<br/>role, is_superuser"]
+
+    I --> J{"¿Requiere<br/>ADMIN?"}
+    J -->|Sí| K{"¿role == ADMIN<br/>o is_superuser?"}
+    K -->|No| L["403 Forbidden"]
+    K -->|Sí| M["✓ Autorizado"]
+
+    J -->|No| N{"¿Requiere<br/>ESPECIALISTA o ADMIN?"}
+    N -->|Sí| O{"¿role in (ADMIN,<br/>ESPECIALISTA)?"}
+    O -->|No| L
+    O -->|Sí| M
+
+    N -->|No| P{"¿Requiere<br/>SUPERUSER?"}
+    P -->|Sí| Q{"¿is_superuser<br/>== true?"}
+    Q -->|No| L
+    Q -->|Sí| M
+
+    P -->|No| R{"¿Endpoint de<br/>recurso?"}
+
+    R -->|"Predicciones"| S{"¿role permite?"}
+    S -->|ADMIN, ESPECIALISTA| M
+    S -->|MEDICO| T{"¿Solo<br/>lectura?"}
+    T -->|Sí| M
+    T -->|No| L
+
+    R -->|"Simulaciones"| U{"¿role permite?"}
+    U -->|ADMIN, ESPECIALISTA| M
+    U -->|MEDICO| T
+
+    R -->|"Pacientes"| V{"¿role permite?"}
+    V -->|ADMIN, ESPECIALISTA| M
+    V -->|MEDICO| T
+
+    M --> W["Añadir headers:<br/>X-User-ID, X-User-Role,<br/>X-User-Username"]
+    W --> X["Proxy a servicio<br/>interno con tracking"]
+
+    style A fill:#e3f2fd
+    style C fill:#fff3e0
+    style F fill:#fff3e0
+    style G fill:#fce4ec
+    style J fill:#f3e5f5
+    style N fill:#f3e5f5
+    style P fill:#f3e5f5
+    style M fill:#e8f5e9
+    style H fill:#fce4ec
+    style L fill:#fce4ec
+    style W fill:#e1f5fe
+    style X fill:#e1f5fe

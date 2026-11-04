@@ -1,0 +1,21 @@
+[MASTER]
+ignore=.venv,.venv-1,__pycache__
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-class-docstring,
+    too-few-public-methods,
+    wrong-import-position,
+    wrong-import-order,
+    invalid-name,
+    duplicate-code,
+    no-member,
+    trailing-whitespace
+
+[FORMAT]
+max-line-length=130
+
+[TYPECHECK]
+ignored-modules=alembic.context,alembic.op

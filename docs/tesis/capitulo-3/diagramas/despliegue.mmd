@@ -1,0 +1,41 @@
+graph TD
+    subgraph DockerHost["Host Docker (Docker Compose)"]
+        subgraph Network["saduci-network (bridge)"]
+            Gateway["api-gateway<br/>:8000<br/>Público"]
+
+            User["user<br/>:8004<br/>Interno"]
+            Patient["patient<br/>:8001<br/>Interno"]
+            Pred["prediction<br/>:8002<br/>Interno"]
+            Sim["simulation<br/>:8003<br/>Interno"]
+
+            UserDB["user-db<br/>PostgreSQL :5432"]
+            PatientDB["patient-db<br/>PostgreSQL :5432"]
+            PredDB["prediction-db<br/>PostgreSQL :5432"]
+            SimDB["simulation-db<br/>PostgreSQL :5432"]
+        end
+
+        Gateway --> User
+        Gateway --> Patient
+        Gateway --> Pred
+        Gateway --> Sim
+        User --> UserDB
+        Patient --> PatientDB
+        Pred --> PredDB
+        Sim --> SimDB
+    end
+
+    subgraph External["Acceso Externo"]
+        Browser["Navegador"]
+        Platform["saduci-platform<br/>:3000"]
+    end
+
+    Platform -->|HTTP :8000| Gateway
+    Browser -->|HTTPS :3000| Platform
+
+    style External fill:#f5f5f5
+    style Network fill:#e8f5e9
+    style Gateway fill:#fff3e0,stroke:#f57c00
+    style User fill:#e3f2fd
+    style Patient fill:#e3f2fd
+    style Pred fill:#e3f2fd
+    style Sim fill:#e3f2fd

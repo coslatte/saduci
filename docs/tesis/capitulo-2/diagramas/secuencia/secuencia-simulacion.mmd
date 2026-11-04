@@ -1,0 +1,34 @@
+```mermaid
+sequenceDiagram
+    participant Client as Cliente Web
+    participant Gateway as API Gateway
+    participant Sim as Simulation Service
+    participant SimUCI as SimUCI Engine
+    participant DB as simulation-db
+
+    Client->>Gateway: POST /simulations/icu<br/>{patient_params...}
+    Gateway->>Gateway: Verificar CORS
+    Gateway->>Sim: Proxy request
+    Sim->>Sim: Verificar disponibilidad<br/>de SimUCI
+
+    alt SimUCI Disponible
+        Sim->>SimUCI: single_run(centroids.csv)
+        SimUCI-->>Sim: Estadísticas de salida
+    else SimUCI No Disponible
+        Sim->>Sim: Generar seed SHA-256
+        Sim->>Sim: Calcular fallback<br/>determinista
+    end
+
+    Sim->>DB: Almacenar simulación
+    DB-->>Sim: ID de simulación
+
+    Sim-->>Gateway: ICUPatientSimulation<br/>Response
+    Gateway-->>Client: {simulation_results,<br/>statistics...}
+
+    Note over Client: mean, std, CI 95%<br/>Listo para análisis clínico
+
+    Client->>Gateway: GET /scenarios
+    Gateway->>Sim: Proxy request
+    Sim-->>Gateway: [{scenario_list}]
+    Gateway-->>Client: Lista de escenarios<br/>disponibles
+```

@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant User as Usuario
+    participant Frontend as saduci-platform
+    participant Gateway as API Gateway :8000
+    participant UserSvc as User Service :8004
+
+    Note over User,Gateway: === Flujo de Login ===
+    User->>Frontend: Ingresa credenciales
+    Frontend->>Gateway: POST /auth/login
+    Gateway->>Gateway: Rate limit check (5 req/60s)
+    Gateway->>UserSvc: POST /auth/login {username, password}
+    UserSvc->>UserSvc: authenticate_user()
+    UserSvc-->>Gateway: UserResponse {id, username, email, role}
+    Gateway->>Gateway: create_access_token({sub, uid, email, role, is_superuser})
+    Gateway-->>Frontend: LoginResponse {access_token, user}
+    Frontend->>Frontend: localStorage.setItem("saduci_token", token)
+    Frontend-->>User: Sesión iniciada
+
+    Note over User,Gateway: === Hydration de Sesión ===
+    Frontend->>Frontend: Al montar, leer token de localStorage
+    Frontend->>Gateway: GET /auth/me (Bearer token)
+    Gateway->>Gateway: verify_token()
+    Gateway->>UserSvc: GET /users/{uid}
+    UserSvc-->>Gateway: UserResponse
+    Gateway-->>Frontend: UserResponse
+    Frontend->>Frontend: AuthProvider actualiza estado
+
+    Note over User,Gateway: === Petición Protegida ===
+    User->>Frontend: Crear predicción
+    Frontend->>Gateway: POST /api/predictions (Bearer token)
+    Gateway->>Gateway: verify_token() + require_especialista_or_admin()
+    alt No autorizado
+        Gateway-->>Frontend: 403 Forbidden
+    else Autorizado
+        Gateway->>Gateway: Headers X-User-ID, X-User-Role
+        Gateway->>PredSvc: POST /predictions + headers
+        PredSvc-->>Gateway: PredictionResponse {user_id, ...}
+        Gateway-->>Frontend: Respuesta exitosa
+    end

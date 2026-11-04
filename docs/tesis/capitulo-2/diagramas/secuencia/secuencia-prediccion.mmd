@@ -1,0 +1,29 @@
+```mermaid
+sequenceDiagram
+    participant Client as Cliente Web
+    participant Gateway as API Gateway
+    participant Pred as Prediction Service
+    participant ML as Modelo ML<br/>(joblib)
+    participant DB as prediction-db
+
+    Client->>Gateway: POST /prediccion<br/>{features...}
+    Gateway->>Gateway: Verificar CORS<br/>Validar schema
+    Gateway->>Pred: Proxy request
+    Pred->>ML: Cargar pipeline<br/>new_workflow.joblib
+    ML->>ML: Inferencia<br/>pipeline.predict()
+    ML-->>Pred: Probabilidad + Clase
+    Pred->>DB: Almacenar predicción
+    DB-->>Pred: Confirmación
+    Pred-->>Gateway: PlatformPrediction<br/>Response
+    Gateway-->>Client: {probability, class...}
+
+    Note over Client: Respuesta en <3s<br/>UMBRAL=0.5
+
+    Client->>Gateway: POST /prediccion/explain<br/>{method: SHAP}
+    Gateway->>Pred: Proxy request<br/>(include_narrative=true)
+    Pred->>ML: SHAP explanation
+    ML-->>Pred: Feature contributions
+    Pred->>Pred: Generar narrativa (stub)
+    Pred-->>Gateway: PlatformExplanation<br/>Response
+    Gateway-->>Client: {rows, narrative...}
+```

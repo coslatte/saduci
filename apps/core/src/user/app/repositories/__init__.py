@@ -1,0 +1,31 @@
+from app.repositories.user_repository import (
+    count_users,
+    get_user_by_id,
+    get_user_by_identifier,
+    get_user_by_username,
+    get_user_by_email,
+    get_all_users,
+    get_users_by_role,
+    update_user,
+    delete_user,
+    create_user,
+    update_password,
+    authenticate_user,
+    normalize_identifier,
+)
+
+__all__ = [
+    "count_users",
+    "get_user_by_id",
+    "get_user_by_identifier",
+    "get_user_by_username",
+    "get_user_by_email",
+    "get_all_users",
+    "get_users_by_role",
+    "update_user",
+    "delete_user",
+    "create_user",
+    "update_password",
+    "authenticate_user",
+    "normalize_identifier",
+]
