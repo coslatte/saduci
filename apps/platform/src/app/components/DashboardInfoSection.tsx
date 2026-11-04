@@ -34,19 +34,19 @@ export function DashboardInfoSection({
   children,
 }: DashboardInfoSectionProps) {
   return (
-    <section className={cn("px-0 py-8 bg-transparent md:py-10", className)}>
+    <section className={cn("bg-transparent", className)}>
       <div>
         <Text
           as={titleAs}
-          size="2xl"
+          size="3xl"
           weight="bold"
           tracking="tight"
-          className="md:text-(length:--font-size-3xl)"
+          className="max-w-3xl text-(length:--font-size-4xl) leading-tight md:text-(length:--font-size-5xl)"
         >
           {title}
         </Text>
         {description && (
-          <Text size="sm" muted className="mt-2 text-justify">
+          <Text size="lg" muted className="mt-4 max-w-3xl leading-7">
             {description}
           </Text>
         )}
