@@ -1,31 +1,95 @@
 "use client";
 
-import { Text } from "@/components/atoms/Text";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
+import { cn } from "@/lib/utils";
 
 interface RecordsPageHeaderProps {
   title: string;
   description?: string;
   roleHint: string;
+  search?: {
+    query: string;
+    onChange: (query: string) => void;
+    count: number;
+    total: number;
+    loading: boolean;
+  };
 }
 
 export function RecordsPageHeader({
   title,
   description,
   roleHint,
+  search,
 }: RecordsPageHeaderProps) {
+  const pathname = usePathname();
   return (
-    <div className="mb-6 flex flex-col gap-2">
-      <div>
-        <Text as="h1" size="2xl" weight="semibold" className="text-zinc-900">
+    <header className="mb-6">
+      <div className="border-b border-slate-300 pb-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary-700">
+          {RECORD_WORKSPACE_COPY.archive}
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
           {title}
-        </Text>
-        <Text as="p" size="sm" muted className="mt-1">
-          {description}
-        </Text>
+        </h1>
+        {description && (
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+            {description}
+          </p>
+        )}
+        {roleHint && (
+          <p className="mt-3 border-l-2 border-slate-300 pl-3 text-sm leading-6 text-slate-600">
+            {roleHint}
+          </p>
+        )}
       </div>
-      <Text as="p" size="sm" className="text-slate-400">
-        {roleHint}
-      </Text>
-    </div>
+      <nav
+        aria-label={RECORD_WORKSPACE_COPY.navigation}
+        className="flex flex-wrap border-b border-slate-300"
+      >
+        {RECORD_WORKSPACE_COPY.tabs.map((tab) => {
+          const active =
+            pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "border-b-2 px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-primary-600",
+                active
+                  ? "border-primary-700 bg-primary-50 text-primary-800"
+                  : "border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+      {search && (
+        <div className="mt-6 grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <label className="grid max-w-xl gap-2 text-sm font-medium text-slate-700">
+            {RECORD_WORKSPACE_COPY.search}
+            <input
+              type="search"
+              value={search.query}
+              onChange={(event) => search.onChange(event.target.value)}
+              placeholder={RECORD_WORKSPACE_COPY.placeholder}
+              className="min-w-0 w-full border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none placeholder:text-slate-500 focus:border-primary-600 focus:ring-2 focus:ring-primary-100"
+            />
+          </label>
+          <p
+            role="status"
+            aria-live="polite"
+            className="py-2 text-sm tabular-nums text-slate-600"
+          >
+            {!search.loading && `${search.count} / ${search.total}`}
+          </p>
+        </div>
+      )}
+    </header>
   );
 }

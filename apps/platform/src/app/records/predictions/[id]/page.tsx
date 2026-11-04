@@ -157,10 +157,10 @@ export default function PredictionDetailPage() {
   const explainRequest = detail ? toPredictionRequest(detail.features) : null;
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-7xl min-w-0">
       <Link
         href="/records/predictions"
-        className="mb-4 inline-flex items-center gap-1.5 text-(length:--font-size-sm) text-slate-500 transition-colors hover:text-slate-800"
+        className="mb-4 inline-flex items-center gap-1.5 text-(length:--font-size-sm) text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         <FiArrowLeft className="size-4" />
         Volver a registros
@@ -193,38 +193,38 @@ export default function PredictionDetailPage() {
           onRetry={() => void loadDetail()}
         />
       ) : (
-        <div className="flex flex-col gap-5">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <section className="lg:col-span-2 border border-slate-300 bg-white p-5 sm:p-6">
+            <h2 className="mb-5 border-b border-slate-200 pb-3 text-base font-semibold text-slate-900">
               Resumen
             </h2>
-            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Paciente
                 </dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="mt-1 break-words font-medium text-slate-900">
                   {detail.record.patientId}
                 </dd>
               </div>
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Resultado
                 </dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="mt-1 break-words font-medium text-slate-900">
                   {detail.record.outcome}
                 </dd>
               </div>
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Probabilidad
                 </dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="mt-1 break-words font-medium text-slate-900">
                   {(detail.record.probability * 100).toFixed(1)}%
                 </dd>
               </div>
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Estado
                 </dt>
                 <dd>
@@ -234,40 +234,40 @@ export default function PredictionDetailPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Creado por
                 </dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="mt-1 break-words font-medium text-slate-900">
                   {detail.record.createdBy}
                 </dd>
               </div>
               <div>
-                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Fecha
                 </dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="mt-1 break-words font-medium text-slate-900">
                   {formatRecordDate(detail.record.createdAt)}
                 </dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <section className="border border-slate-300 bg-white p-5 sm:p-6">
             <PredictionResultCard probability={detail.record.probability} />
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
+          <section className="border border-slate-300 bg-white p-5 sm:p-6">
+            <h2 className="mb-5 border-b border-slate-200 pb-3 text-base font-semibold text-slate-900">
               Datos de entrada
             </h2>
             {featureEntries.length > 0 ? (
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                 {featureEntries.map(([key, value]) => (
                   <div key={key}>
-                    <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-400">
+                    <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                       {FEATURE_LABELS[key] ?? key}
                     </dt>
-                    <dd className="font-medium text-slate-800">
+                    <dd className="mt-1 break-words font-medium text-slate-900">
                       {featureValue(key, value)}
                     </dd>
                   </div>
@@ -280,7 +280,7 @@ export default function PredictionDetailPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <section className="lg:col-span-2 border border-slate-300 bg-white p-5 sm:p-6">
             <ExplicacionPanel
               hasPrediction={explainRequest !== null}
               method={method}

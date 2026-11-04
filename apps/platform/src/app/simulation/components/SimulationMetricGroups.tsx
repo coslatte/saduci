@@ -28,8 +28,8 @@ interface MetricSectionProps {
  */
 function MetricSection({ title, children }: MetricSectionProps) {
   return (
-    <section className="flex flex-col h-full gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0">
-      <p className="text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-900">
+    <section className="grid gap-4 sm:grid-cols-2">
+      <p className="sm:col-span-2 border-b border-slate-200 pb-3 text-sm font-semibold text-slate-900">
         {title}
       </p>
       {children}
@@ -56,7 +56,7 @@ export function SimulationMetricGroups({
   setSimPercent,
 }: SimulationMetricGroupsProps) {
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-slate-200/80">
+    <div className="grid gap-7">
       <MetricSection title={"Demográficos & Tiempos"}>
         <NumberInputField
           id="age"

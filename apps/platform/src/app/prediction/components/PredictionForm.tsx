@@ -49,7 +49,7 @@ interface DiagnosisSelectFieldProps {
  * - help: Contextual help text displayed in the field helper button.
  *
  * Example:
- * - <DiagnosisSelectField id="pred-diag-ing1" label="Diag.Ing1" value={1} onChange={setDiagIng1} options={[]} help="..." />
+ * - <DiagnosisSelectField id="pred-diag-ing1" label="Diagnóstico principal de ingreso" value={1} onChange={setDiagIng1} options={[]} help="..." />
  */
 function DiagnosisSelectField({
   id,
@@ -103,11 +103,11 @@ export function PredictionForm({
     >
       <h2
         id="prediction-patient-section-title"
-        className="font-semibold text-zinc-800"
+        className="border-b border-slate-200 pb-4 text-lg font-semibold text-slate-900"
       >
         Características del Paciente
       </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2">
         <FormField
           id="pred-edad"
           label="Edad"
@@ -140,7 +140,7 @@ export function PredictionForm({
         />
         <FormField
           id="pred-tiempo-vam"
-          label="TiempoVAM"
+          label="Tiempo VAM (h)"
           help={"Tiempo en Ventilación Asistida Mecánica (VAM) en horas."}
           inputProps={{
             type: "number",
@@ -152,9 +152,11 @@ export function PredictionForm({
               setTiempoVam(Number(e.target.value)),
           }}
         />
+      </div>
+      <div className="grid grid-cols-1 gap-5 border-t border-slate-200 pt-5">
         <DiagnosisSelectField
           id="pred-diag-ing1"
-          label="Diag.Ing1"
+          label="Diagnóstico principal de ingreso"
           help={
             "Diagnóstico principal de ingreso del paciente a la unidad. Seleccione la categoría clínica que mejor describe el estado inicial."
           }
@@ -164,7 +166,7 @@ export function PredictionForm({
         />
         <DiagnosisSelectField
           id="pred-diag-ing2"
-          label="Diag.Ing2"
+          label="Segundo diagnóstico de ingreso"
           help={
             "Segundo diagnóstico de ingreso del paciente. Seleccione el código del catálogo clínico (0 = Vacío)."
           }
@@ -174,7 +176,7 @@ export function PredictionForm({
         />
         <DiagnosisSelectField
           id="pred-diag-egr2"
-          label="Diag.Egr2"
+          label="Segundo diagnóstico de egreso"
           help={
             "Segundo diagnóstico de egreso del paciente. Seleccione el código del catálogo clínico."
           }
@@ -183,8 +185,8 @@ export function PredictionForm({
           options={PREDICTION_DIAG_EGR2_OPTIONS}
         />
       </div>
-      <div className="flex justify-end mt-5">
-        <Button variant="glass" disabled={loading} onClick={onPredict}>
+      <div className="mt-3 flex justify-end border-t border-slate-200 pt-5">
+        <Button variant="primary" disabled={loading} onClick={onPredict}>
           <FiActivity aria-hidden className="mr-2 inline size-4" />
           {loading ? "Prediciendo..." : "Predecir"}
         </Button>

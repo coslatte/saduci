@@ -1,27 +1,8 @@
 import type { ReactNode } from "react";
 import { Text } from "@/components/atoms/Text";
+import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
 import { cn } from "@/lib/utils";
 
-/**
- * PageLayout
- *
- * Page frame for the wide, form-driven screens (prediction, simulation).
- *
- * It exists because those two pages were the only ones without a width of their
- * own: every other page invents one (`max-w-6xl` on the dashboard, `max-w-5xl`
- * in settings, `max-w-7xl` in register, `max-w-4xl` in explanations), so the
- * same content ended up a different width depending on where it was opened.
- * Here the frame is decided once, in one place.
- *
- * Two behaviours worth knowing:
- *
- * - `width` caps the measure so a form does not stretch to a 27" display.
- * - `split` puts the form in a `main` column and the outcome in an `aside`
- *   column, collapsing to a single column below `xl`. It is deliberately not
- *   `sticky`: these panels are tall, and pinning them would fight with the
- *   page scrollbar. The outcome stays visible on a laptop, which is the case
- *   that matters, and the two columns keep their natural order on a phone.
- */
 export type PageWidth = "narrow" | "default" | "wide";
 
 const WIDTH_CLASS: Record<PageWidth, string> = {
@@ -60,12 +41,15 @@ export function PageLayout({
         className,
       )}
     >
-      <header>
-        <Text as="h1" size="xl" weight="bold" className="text-zinc-900">
+      <header className="border-b border-slate-300 pb-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary-700">
+          {RECORD_WORKSPACE_COPY.workspace}
+        </p>
+        <Text as="h1" size="3xl" weight="semibold" className="text-zinc-900">
           {title}
         </Text>
         {description && (
-          <Text size="sm" className="mt-1 text-zinc-500">
+          <Text size="sm" className="mt-3 max-w-3xl leading-6 text-slate-600">
             {description}
           </Text>
         )}
@@ -73,8 +57,8 @@ export function PageLayout({
 
       <div
         className={cn(
-          "flex flex-col gap-5",
-          aside ? "xl:flex-row xl:items-start xl:gap-6" : null,
+          "grid items-start gap-6",
+          aside ? "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]" : null,
         )}
       >
         <div
@@ -86,7 +70,7 @@ export function PageLayout({
           {main}
         </div>
         {aside && (
-          <div className="flex min-w-0 flex-col gap-5 xl:w-[22rem] xl:shrink-0">
+          <div className="flex min-w-0 flex-col gap-5 border-t-2 border-primary-700">
             {aside}
           </div>
         )}

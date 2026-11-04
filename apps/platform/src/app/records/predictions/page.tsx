@@ -26,6 +26,7 @@ import type {
   PredictionRecordStatus,
 } from "@/lib/recordsMockData";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
+import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
 import { RecordsPageHeader } from "../components/RecordsPageHeader";
 import { RecordActionsCell } from "../components/RecordActionsCell";
 import { PredictionRecordDialog } from "../components/PredictionRecordDialog";
@@ -88,6 +89,7 @@ function buildPredictionRows(
 export default function PredictionsRecordsPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [records, setRecords] = useState<PredictionRecord[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -241,8 +243,14 @@ export default function PredictionsRecordsPage() {
     [token, editingRecord, closeForm, loadRecords],
   );
 
+  const normalizedQuery = query.trim().toLocaleLowerCase("es");
+  const visibleRecords = records.filter((record) =>
+    Object.values(record).some((value) =>
+      String(value).toLocaleLowerCase("es").includes(normalizedQuery),
+    ),
+  );
   const tableRows = buildPredictionRows(
-    records,
+    visibleRecords,
     permissions,
     deletingId,
     (record) => setPendingDelete(record),
@@ -256,14 +264,21 @@ export default function PredictionsRecordsPage() {
   );
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-7xl min-w-0">
       <RecordsPageHeader
         title="Registros de predicciones"
         description="Consulta las predicciones del modelo clínico."
+        search={{
+          query,
+          onChange: setQuery,
+          count: visibleRecords.length,
+          total: records.length,
+          loading: loading || authLoading,
+        }}
         roleHint={getRecordRoleHint(normalizeRole(user?.role))}
       />
 
-      <div className="mb-4 flex items-center justify-end gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 pb-4">
         {permissions.canCreate && (
           <Button
             variant="primary"
@@ -341,8 +356,12 @@ export default function PredictionsRecordsPage() {
           { key: "actions", label: "Acciones", align: "center" },
         ]}
         rows={tableRows}
-        getRowKey={(_, index) => records[index]?.id ?? index}
-        emptyMessage="No hay predicciones registradas."
+        getRowKey={(_, index) => visibleRecords[index]?.id ?? index}
+        emptyMessage={
+          query.trim()
+            ? RECORD_WORKSPACE_COPY.emptySearch
+            : "No hay predicciones registradas."
+        }
       />
     </main>
   );

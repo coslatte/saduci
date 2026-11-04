@@ -53,6 +53,11 @@ describe("PredictionPageContent", () => {
     const { findByText, getByRole } = render(<PredictionPageContent />);
 
     expect(await findByText("API no disponible")).toBeTruthy();
+    expect(
+      getByRole("link", { name: "Ver historial completo" }).getAttribute(
+        "href",
+      ),
+    ).toBe("/records/predictions");
     failHistoryRequest = false;
     fireEvent.click(getByRole("button", { name: RECORD_HISTORY_COPY.retry }));
 

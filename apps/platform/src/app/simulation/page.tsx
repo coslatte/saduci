@@ -6,7 +6,10 @@ import SimulationInputs from "./components/SimulationInputs";
 import { SimulationResultsSection } from "./components/SimulationResultsSection";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Skeleton } from "@/components/atoms/Skeleton";
-import { RECORD_HISTORY_COPY } from "@/constants/recordHistory";
+import {
+  RECORD_WORKSPACE_COPY,
+  RECORD_HISTORY_COPY,
+} from "@/constants/recordHistory";
 import { useAuth } from "@/lib/auth";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { fetchSimulationRecords, formatRecordDate } from "@/lib/recordsApi";
@@ -74,7 +77,7 @@ export default function SimulacionPage() {
       description="Ingrese los datos clínicos del paciente para simular su evolución en la Unidad de Cuidados Intensivos."
       main={<SimulationInputs runner={runner} />}
       aside={
-        (loading || resultHistory.length > 0) && (
+        loading || resultHistory.length > 0 ? (
           <SimulationResultsSection
             results={resultHistory}
             activeIndex={activeResultIndex}
@@ -83,15 +86,30 @@ export default function SimulacionPage() {
             onDownloadSvg={handleDownloadSvg}
             loading={loading}
           />
+        ) : (
+          <section className="border border-slate-300 bg-white p-6">
+            <h2 className="border-b border-slate-200 pb-4 text-lg font-semibold text-slate-900">
+              {RECORD_WORKSPACE_COPY.results}
+            </h2>
+            <p role="status" className="mt-5 text-sm leading-6 text-slate-600">
+              {RECORD_WORKSPACE_COPY.ready}
+            </p>
+          </section>
         )
       }
       below={
         token ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <section className="border border-slate-300 bg-white p-5 sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <h2 className="min-w-0 text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
                 {RECORD_HISTORY_COPY.simulations.title}
               </h2>
+              <Link
+                href="/records/simulations"
+                className="text-sm font-medium text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+              >
+                {RECORD_WORKSPACE_COPY.all}
+              </Link>
               <button
                 onClick={loadSavedSimulations}
                 disabled={loadingSaved}

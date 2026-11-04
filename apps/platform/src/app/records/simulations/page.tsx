@@ -25,6 +25,7 @@ import type {
   SimulationRecordStatus,
 } from "@/lib/recordsMockData";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
+import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
 import { RecordsPageHeader } from "../components/RecordsPageHeader";
 import { RecordActionsCell } from "../components/RecordActionsCell";
 import { SimulationRecordDialog } from "../components/SimulationRecordDialog";
@@ -86,6 +87,7 @@ function buildSimulationRows(
 export default function SimulationsRecordsPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [records, setRecords] = useState<SimulationRecord[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -199,8 +201,14 @@ export default function SimulationsRecordsPage() {
     [token],
   );
 
+  const normalizedQuery = query.trim().toLocaleLowerCase("es");
+  const visibleRecords = records.filter((record) =>
+    Object.values(record).some((value) =>
+      String(value).toLocaleLowerCase("es").includes(normalizedQuery),
+    ),
+  );
   const tableRows = buildSimulationRows(
-    records,
+    visibleRecords,
     permissions,
     deletingId,
     (record) => setPendingDelete(record),
@@ -209,14 +217,21 @@ export default function SimulationsRecordsPage() {
   );
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-7xl min-w-0">
       <RecordsPageHeader
         title="Registros de simulaciones"
         description="Consulta las simulaciones clínicas registradas en la plataforma."
+        search={{
+          query,
+          onChange: setQuery,
+          count: visibleRecords.length,
+          total: records.length,
+          loading: loading || authLoading,
+        }}
         roleHint={getRecordRoleHint(normalizeRole(user?.role))}
       />
 
-      <div className="mb-4 flex items-center justify-end gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 pb-4">
         {permissions.canCreate && (
           <Button
             variant="primary"
@@ -278,8 +293,12 @@ export default function SimulationsRecordsPage() {
           { key: "actions", label: "Acciones", align: "center" },
         ]}
         rows={tableRows}
-        getRowKey={(_, index) => records[index]?.id ?? index}
-        emptyMessage="No hay simulaciones registradas."
+        getRowKey={(_, index) => visibleRecords[index]?.id ?? index}
+        emptyMessage={
+          query.trim()
+            ? RECORD_WORKSPACE_COPY.emptySearch
+            : "No hay simulaciones registradas."
+        }
       />
     </main>
   );

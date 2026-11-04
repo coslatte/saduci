@@ -7,7 +7,10 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { showToast } from "@/components/molecules/Toast";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PREDICTION_LOADING_PHASES } from "@/constants/loading";
-import { RECORD_HISTORY_COPY } from "@/constants/recordHistory";
+import {
+  RECORD_WORKSPACE_COPY,
+  RECORD_HISTORY_COPY,
+} from "@/constants/recordHistory";
 import { useProgressiveStatus } from "@/hooks/useProgressiveStatus";
 import { PredictionForm } from "./PredictionForm";
 import { PredictionResultCard } from "./PredictionResultCard";
@@ -141,7 +144,7 @@ export function PredictionPageContent() {
       title="Predicción de Supervivencia"
       description="Herramienta de apoyo para la predicción de supervivencia de pacientes en UCI."
       main={
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="border border-slate-300 bg-white p-5 sm:p-6">
           <PredictionForm
             edad={edad}
             setEdad={setEdad}
@@ -161,7 +164,7 @@ export function PredictionPageContent() {
         </section>
       }
       aside={
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="border border-slate-300 bg-white p-5 sm:p-6">
           {loadingPredict ? (
             <div className="flex h-full min-h-44 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
               <Spinner size="lg" label={predictMessage} />
@@ -184,7 +187,7 @@ export function PredictionPageContent() {
       }
       below={
         <>
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <section className="border border-slate-300 bg-white p-5 sm:p-6">
             <ExplicacionPanel
               hasPrediction={prediction !== null}
               method={method}
@@ -196,11 +199,17 @@ export function PredictionPageContent() {
           </section>
 
           {token && (
-            <section className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
+            <section className="border border-slate-300 bg-white p-5 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <h2 className="min-w-0 text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
                   {RECORD_HISTORY_COPY.predictions.title}
                 </h2>
+                <Link
+                  href="/records/predictions"
+                  className="text-sm font-medium text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                >
+                  {RECORD_WORKSPACE_COPY.all}
+                </Link>
                 <button
                   onClick={loadSavedPredictions}
                   disabled={loadingSaved}

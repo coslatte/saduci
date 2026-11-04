@@ -100,7 +100,7 @@ export function SimulationRunConfiguration({
             size="lg"
             aria-label="Realizar simulación"
             className="w-full"
-            variant="glass"
+            variant="primary"
           >
             <FiPlay className="size-4" />
             {"Realizar Simulación"}
