@@ -1,0 +1,12 @@
+workspace:
+  id: cf97b855-ae0b-40e6-8a0a-dc04fe1a73d6
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/GuamáParq - API local completa: f52bdc9d-b062-4865-9e49-c8557eced615
+  environments:
+    ../postman/environments/GuamáParq local.environment.yaml: 45207113-48357ac6-a7f2-4e2f-90d3-6674e7f4ef68
+  globals:
+    ../postman/globals/workspace.globals.yaml: ebdc928e-856b-4720-8514-61faf5a19ede
