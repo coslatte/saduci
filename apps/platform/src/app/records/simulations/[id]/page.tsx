@@ -38,6 +38,8 @@ import {
   type SimulationIteration,
 } from "./SimulationIterationsChart";
 import { RecordsPageHeader } from "../../components/RecordsPageHeader";
+import { SimulationRecordDialog } from "../../components/SimulationRecordDialog";
+import type { SimulationInitialValues } from "@/app/simulation/hooks/useSimulationRunner";
 
 const STATUS_LABELS: Record<SimulationRecordStatus, string> = {
   completada: "Terminado",
@@ -123,6 +125,14 @@ function percent(value: unknown): string {
   return formatted === "—" ? formatted : `${formatted}%`;
 }
 
+function parameterNumber(
+  parameters: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = parameters[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 export default function SimulationDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -133,6 +143,7 @@ export default function SimulationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [resimulating, setResimulating] = useState(false);
   const permissions = getRecordPermissions(
     normalizeRole(user?.role),
     "simulations",
@@ -275,6 +286,13 @@ export default function SimulationDetailPage() {
 
       {detail && !loading && !error && (
         <div className="mb-3 flex flex-wrap justify-center gap-2 print:hidden">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setResimulating(true)}
+          >
+            Volver a simular
+          </Button>
           {permissions.canEdit && (
             <Button
               variant="outline"
@@ -366,6 +384,33 @@ export default function SimulationDetailPage() {
         />
       )}
 
+      {detail && (
+        <SimulationRecordDialog
+          open={resimulating}
+          onClose={() => setResimulating(false)}
+          onSaved={() => {
+            setResimulating(false);
+            void loadDetail();
+          }}
+          initialValues={{
+            patientId: detail.record.patientId,
+            age: parameterNumber(detail.parameters, "age"),
+            apache: parameterNumber(detail.parameters, "apache"),
+            preutiStay: parameterNumber(detail.parameters, "preuti_stay"),
+            vamTime: parameterNumber(detail.parameters, "vam_time"),
+            utiStay: parameterNumber(detail.parameters, "uti_stay"),
+            simPercent: parameterNumber(detail.parameters, "percent"),
+            diagIng1: parameterNumber(detail.parameters, "d1"),
+            diagIng2: parameterNumber(detail.parameters, "d2"),
+            diagIng3: parameterNumber(detail.parameters, "d3"),
+            diagIng4: parameterNumber(detail.parameters, "d4"),
+            diagEgreso2: parameterNumber(detail.parameters, "diag_egreso2"),
+            respInsuf: parameterNumber(detail.parameters, "resp_insuf"),
+            ventType: parameterNumber(detail.parameters, "artif_vent"),
+            simRuns: parameterNumber(detail.parameters, "n_runs"),
+          } satisfies SimulationInitialValues}
+        />
+      )}
       {loading || authLoading ? (
         <div className="flex flex-col gap-4">
           <Skeleton className="h-32 w-full" />

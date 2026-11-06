@@ -29,6 +29,7 @@ class PredictionUpdate(BaseModel):
 
 
 class PlatformPredictionRequest(BaseModel):
+    patient_id: Optional[str] = None
     edad: int = Field(ge=14, le=61)
     diag_ing1: int = Field(ge=1, le=20)
     diag_ing2: int = Field(ge=0, le=40)

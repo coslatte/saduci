@@ -91,6 +91,8 @@ export function PredictionPageContent() {
     setTiempoVam,
     loadingPredict,
     prediction,
+    patientId,
+    patientSkuLoading,
   } = runner;
 
   const { message: predictMessage } = useProgressiveStatus(loadingPredict, {
@@ -143,6 +145,7 @@ export function PredictionPageContent() {
 
     try {
       const result = await runExplicacion({
+        patient_id: patientId,
         edad,
         diag_ing1: diagIng1,
         diag_ing2: diagIng2,
@@ -176,6 +179,8 @@ export function PredictionPageContent() {
       main={
         <section className="border border-slate-300 bg-white p-5 sm:p-6">
           <PredictionForm
+            patientId={patientId}
+            patientSkuLoading={patientSkuLoading}
             edad={edad}
             setEdad={setEdad}
             diagIng1={diagIng1}

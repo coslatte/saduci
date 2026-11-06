@@ -24,7 +24,7 @@ export function PredictionRecordDialog({
   onClose,
   onSaved,
 }: PredictionRecordDialogProps) {
-  const runner = usePredictionRunner({ onSuccess: onSaved });
+  const runner = usePredictionRunner({ onSuccess: onSaved, enabled: open });
   const { token } = useAuth();
   const [diagnosisOptions, setDiagnosisOptions] = useState<DiagnosisOption[]>(
     [],
@@ -56,6 +56,8 @@ export function PredictionRecordDialog({
       <div className="flex flex-col gap-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <PredictionForm
+            patientId={runner.patientId}
+            patientSkuLoading={runner.patientSkuLoading}
             edad={runner.edad}
             setEdad={runner.setEdad}
             diagIng1={runner.diagIng1}

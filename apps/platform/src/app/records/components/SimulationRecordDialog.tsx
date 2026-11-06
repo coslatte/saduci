@@ -3,7 +3,10 @@
 import { Dialog } from "@/components/molecules/Dialog";
 import SimulationInputs from "@/app/simulation/components/SimulationInputs";
 import { SimulationResultsSection } from "@/app/simulation/components/SimulationResultsSection";
-import { useSimulationRunner } from "@/app/simulation/hooks/useSimulationRunner";
+import {
+  useSimulationRunner,
+  type SimulationInitialValues,
+} from "@/app/simulation/hooks/useSimulationRunner";
 import {
   downloadSimulationCSV,
   downloadSimulationSVG,
@@ -13,6 +16,7 @@ interface SimulationRecordDialogProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
+  initialValues?: SimulationInitialValues;
 }
 
 /**
@@ -23,8 +27,13 @@ export function SimulationRecordDialog({
   open,
   onClose,
   onSaved,
+  initialValues,
 }: SimulationRecordDialogProps) {
-  const runner = useSimulationRunner({ onSuccess: onSaved });
+  const runner = useSimulationRunner({
+    onSuccess: onSaved,
+    initialValues,
+    enabled: open,
+  });
   const {
     patientId,
     loading,

@@ -35,6 +35,7 @@ import { PredictionResultCard } from "@/app/prediction/components/PredictionResu
 import { ExplicacionPanel } from "@/app/prediction/components/ExplicacionPanel";
 import { diagnosisDetailLabel } from "@/lib/diagnosisLabels";
 import { RecordsPageHeader } from "../../components/RecordsPageHeader";
+import { SimulationRecordDialog } from "../../components/SimulationRecordDialog";
 
 const STATUS_LABELS: Record<PredictionRecordStatus, string> = {
   activa: "Activa",
@@ -67,10 +68,17 @@ function featureValue(key: string, value: unknown): string {
   return "—";
 }
 
+function featureNumber(features: Record<string, unknown>, key: string): number | undefined {
+  const value = features[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function toPredictionRequest(
   features: Record<string, unknown>,
+  patientId: string,
 ): PredictionRequest | null {
   const request = {
+    patient_id: patientId,
     edad: features.edad,
     diag_ing1: features.diag_ing1,
     diag_ing2: features.diag_ing2,
@@ -78,7 +86,7 @@ function toPredictionRequest(
     apache: features.apache,
     tiempo_vam: features.tiempo_vam,
   };
-  const values = Object.values(request);
+  const values = Object.values(request).filter((value) => typeof value !== "string");
   if (
     values.length !== 6 ||
     !values.every((v) => typeof v === "number" && Number.isFinite(v))
@@ -105,6 +113,7 @@ export default function PredictionDetailPage() {
     EXPLANATION_METHODS[0],
   );
   const [editing, setEditing] = useState(false);
+  const [resimulating, setResimulating] = useState(false);
   const permissions = getRecordPermissions(
     normalizeRole(user?.role),
     "predictions",
@@ -152,7 +161,7 @@ export default function PredictionDetailPage() {
 
   async function handleExplain(method: ExplanationMethod): Promise<void> {
     if (!detail) return;
-    const request = toPredictionRequest(detail.features);
+    const request = toPredictionRequest(detail.features, detail.record.patientId);
     if (!request) return;
     setExplicacion(null);
     setLoadingExplain(true);
@@ -179,7 +188,9 @@ export default function PredictionDetailPage() {
   }
 
   const featureEntries = detail ? Object.entries(detail.features) : [];
-  const explainRequest = detail ? toPredictionRequest(detail.features) : null;
+  const explainRequest = detail
+    ? toPredictionRequest(detail.features, detail.record.patientId)
+    : null;
   const exportRows: [string, string][] = detail
     ? [
         ["Paciente", detail.record.patientId],
@@ -224,6 +235,13 @@ export default function PredictionDetailPage() {
 
       {detail && !loading && !error && (
         <div className="mb-3 flex flex-wrap justify-center gap-2 print:hidden">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setResimulating(true)}
+          >
+            Volver a simular
+          </Button>
           {permissions.canEdit && (
             <Button
               variant="outline"
@@ -309,6 +327,25 @@ export default function PredictionDetailPage() {
         />
       )}
 
+      {detail && (
+        <SimulationRecordDialog
+          open={resimulating}
+          onClose={() => setResimulating(false)}
+          onSaved={() => {
+            setResimulating(false);
+            void loadDetail();
+          }}
+          initialValues={{
+            patientId: detail.record.patientId,
+            age: featureNumber(detail.features, "edad"),
+            apache: featureNumber(detail.features, "apache"),
+            diagIng1: featureNumber(detail.features, "diag_ing1"),
+            diagIng2: featureNumber(detail.features, "diag_ing2"),
+            diagEgreso2: featureNumber(detail.features, "diag_egr2"),
+            vamTime: featureNumber(detail.features, "tiempo_vam"),
+          }}
+        />
+      )}
       {loading || authLoading ? (
         <div className="flex flex-col gap-4">
           <Skeleton className="h-32 w-full" />

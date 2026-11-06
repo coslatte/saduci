@@ -23,6 +23,7 @@ export const EXPLANATION_METHODS: ExplanationMethod[] = [
 ];
 
 export interface PredictionRequest {
+  patient_id: string;
   edad: number;
   diag_ing1: number;
   diag_ing2: number;

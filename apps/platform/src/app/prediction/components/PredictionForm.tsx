@@ -6,6 +6,8 @@ import { PREDICTION_LIMITS } from "@/lib/prediction";
 import type { DiagnosisOption } from "@/lib/predictionDiagnoses";
 
 interface PredictionFormProps {
+  patientId: string;
+  patientSkuLoading: boolean;
   edad: number;
   setEdad: (v: number) => void;
   diagIng1: number;
@@ -77,6 +79,8 @@ function DiagnosisSelectField({
  * Used in X case: patient data entry step for mortality prediction.
  */
 export function PredictionForm({
+  patientId,
+  patientSkuLoading,
   edad,
   setEdad,
   diagIng1,
@@ -107,6 +111,12 @@ export function PredictionForm({
       >
         Características del Paciente
       </h2>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <span className="text-sm font-medium text-slate-600">SKU del paciente</span>
+        <span className="font-mono text-sm font-semibold text-primary-800">
+          {patientSkuLoading ? "Generando…" : patientId || "No disponible"}
+        </span>
+      </div>
       <div className="grid grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2">
         <FormField
           id="pred-edad"

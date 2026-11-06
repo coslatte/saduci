@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.controllers.auth import get_current_user, require_especialista_or_admin
@@ -9,8 +10,25 @@ from app.controllers.auth import get_current_user, require_especialista_or_admin
 from app.models.database import get_db
 from app.schemas import PatientCreate, PatientUpdate, PatientResponse
 from app.services.patient_service import create_patient, get_by_mrn, update
+from app.models.patient import PatientSkuSequence
 
 router = APIRouter(tags=["patients"])
+
+
+@router.post("/api/patients/next-sku")
+async def reserve_next_patient_sku(
+    _current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        update(PatientSkuSequence)
+        .where(PatientSkuSequence.id == 1)
+        .values(next_value=PatientSkuSequence.next_value + 1)
+        .returning(PatientSkuSequence.next_value)
+    )
+    sequence_value = result.scalar_one() - 1
+    await db.commit()
+    return {"sku": f"PRED-{sequence_value:06d}"}
 
 
 @router.post("/api/patients", response_model=PatientResponse)

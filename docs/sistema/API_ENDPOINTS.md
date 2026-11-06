@@ -30,6 +30,7 @@ no se exponen públicamente.
 
 ### Pacientes
 - `POST /api/patients` - Crear paciente (JWT)
+- `POST /api/patients/next-sku` - Reservar el siguiente SKU secuencial de paciente (JWT); responde `{ "sku": "PRED-000001" }`.
 - `GET /api/patients/{mrn}` - Obtener paciente (JWT)
 - `PUT /api/patients/{mrn}` - Actualizar paciente (JWT)
 
@@ -114,4 +115,4 @@ el BFF y este reenvía al API Gateway.
 
 ## Patient Service (:7002)
 
-- `GET /health`, `POST /api/patients`, `GET /api/patients/{mrn}`, `PUT /api/patients/{mrn}`
+- `GET /health`, `POST /api/patients/next-sku`, `POST /api/patients`, `GET /api/patients/{mrn}`, `PUT /api/patients/{mrn}`

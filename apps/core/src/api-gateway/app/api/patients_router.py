@@ -11,6 +11,19 @@ from app.schemas.auth import TokenUser
 router = APIRouter(tags=["patients"])
 
 
+@router.post("/api/patients/next-sku")
+async def reserve_next_patient_sku(
+    current_user: TokenUser = Depends(get_current_user),
+):
+    try:
+        return await patient_client.post(
+            "/api/patients/next-sku", {}, headers=_user_auth_headers(current_user)
+        )
+    except Exception as e:
+        logger.error("Error forwarding patient SKU reservation: %s", e)
+        raise _translate_upstream_error(e, "Patient service unavailable") from e
+
+
 @router.post("/api/patients")
 async def create_patient(
     patient_data: dict,

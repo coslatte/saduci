@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { showToast } from "@/components/molecules/Toast";
+import { useAuth } from "@/lib/auth";
+import { fetchNextPatientSku } from "@/lib/recordsApi";
 import {
   PREDICTION_LIMITS,
   runPrediction,
@@ -11,6 +13,7 @@ import {
 interface UsePredictionRunnerOptions {
   /** Called after a prediction is computed and persisted by the backend. */
   onSuccess?: () => void;
+  enabled?: boolean;
 }
 
 /**
@@ -19,7 +22,11 @@ interface UsePredictionRunnerOptions {
  * run the same process.
  */
 export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
-  const { onSuccess } = options;
+  const { onSuccess, enabled = true } = options;
+  const { token } = useAuth();
+  const [patientId, setPatientId] = useState("");
+  const [patientSkuLoading, setPatientSkuLoading] = useState(true);
+  const wasEnabled = useRef(enabled);
   const [edad, setEdad] = useState<number>(PREDICTION_LIMITS.edad.default);
   const [diagIng1, setDiagIng1] = useState<number>(
     PREDICTION_LIMITS.diagIng1.default,
@@ -40,12 +47,54 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
   const [loadingPredict, setLoadingPredict] = useState<boolean>(false);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
 
+  useEffect(() => {
+    if (!enabled) {
+      wasEnabled.current = false;
+      return;
+    }
+    if (!wasEnabled.current) {
+      wasEnabled.current = true;
+      setPatientId("");
+      setPatientSkuLoading(true);
+    }
+    if (patientId) return;
+    let cancelled = false;
+    void fetchNextPatientSku(token)
+      .then((sku) => {
+        if (!cancelled) setPatientId(sku);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          showToast({
+            title: "No se pudo asignar el paciente",
+            description: error instanceof Error ? error.message : String(error),
+            type: "error",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPatientSkuLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, patientId, token]);
+
   async function handlePredict(): Promise<void> {
+    if (!patientId) {
+      showToast({
+        title: "SKU del paciente pendiente",
+        description: "Espere a que se genere el SKU antes de ejecutar la predicción.",
+        type: "error",
+      });
+      return;
+    }
     setPrediction(null);
     setLoadingPredict(true);
 
     try {
       const result = await runPrediction({
+        patient_id: patientId,
         edad,
         diag_ing1: diagIng1,
         diag_ing2: diagIng2,
@@ -74,6 +123,8 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
   }
 
   return {
+    patientId,
+    patientSkuLoading,
     edad,
     setEdad,
     diagIng1,

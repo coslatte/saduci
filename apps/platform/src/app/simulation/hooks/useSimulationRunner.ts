@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { showToast } from "@/components/molecules/Toast";
+import { useAuth } from "@/lib/auth";
+import { fetchNextPatientSku } from "@/lib/recordsApi";
 import {
   SIMULATION_LIMITS,
-  generatePatientId,
   runSimulation,
   type SimulationRequest,
   type SimulationResponse,
@@ -25,6 +26,26 @@ function estimateSimulationDurationMs(simRuns: number): number {
 interface UseSimulationRunnerOptions {
   /** Called after a run is computed and persisted by the backend. */
   onSuccess?: () => void;
+  initialValues?: SimulationInitialValues;
+  enabled?: boolean;
+}
+
+export interface SimulationInitialValues {
+  patientId?: string;
+  age?: number;
+  apache?: number;
+  preutiStay?: number;
+  vamTime?: number;
+  utiStay?: number;
+  simPercent?: number;
+  diagIng1?: number;
+  diagIng2?: number;
+  diagIng3?: number;
+  diagIng4?: number;
+  diagEgreso2?: number;
+  respInsuf?: number;
+  ventType?: number;
+  simRuns?: number;
 }
 
 /**
@@ -33,34 +54,35 @@ interface UseSimulationRunnerOptions {
  * and the "+ Nuevo" dialog in records so both run the same process.
  */
 export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
-  const { onSuccess } = options;
-  const [patientId, setPatientId] = useState<string>("");
-  const [age, setAge] = useState<number>(SIMULATION_LIMITS.age.default);
+  const { onSuccess, initialValues, enabled = true } = options;
+  const { token } = useAuth();
+  const [patientId, setPatientId] = useState<string>(initialValues?.patientId ?? "");
+  const [age, setAge] = useState<number>(initialValues?.age ?? SIMULATION_LIMITS.age.default);
   const [apache, setApache] = useState<number>(
-    SIMULATION_LIMITS.apache.default,
+    initialValues?.apache ?? SIMULATION_LIMITS.apache.default,
   );
   const [preutiStay, setPreutiStay] = useState<number>(
-    SIMULATION_LIMITS.preutiStay.default,
+    initialValues?.preutiStay ?? SIMULATION_LIMITS.preutiStay.default,
   );
   const [vamTime, setVamTime] = useState<number>(
-    SIMULATION_LIMITS.vamTime.default,
+    initialValues?.vamTime ?? SIMULATION_LIMITS.vamTime.default,
   );
   const [utiStay, setUtiStay] = useState<number>(
-    SIMULATION_LIMITS.utiStay.default,
+    initialValues?.utiStay ?? SIMULATION_LIMITS.utiStay.default,
   );
   const [simPercent, setSimPercent] = useState<number>(
-    SIMULATION_LIMITS.simPercent.default,
+    initialValues?.simPercent ?? SIMULATION_LIMITS.simPercent.default,
   );
-  const [diagIng1, setDiagIng1] = useState<number>(2);
-  const [diagIng2, setDiagIng2] = useState<number>(0);
-  const [diagIng3, setDiagIng3] = useState<number>(0);
-  const [diagIng4, setDiagIng4] = useState<number>(0);
-  const [diagEgreso2, setDiagEgreso2] = useState<number>(2);
-  const [respInsuf, setRespInsuf] = useState<number>(2);
-  const [ventType, setVentType] = useState<number>(0);
+  const [diagIng1, setDiagIng1] = useState<number>(initialValues?.diagIng1 ?? 2);
+  const [diagIng2, setDiagIng2] = useState<number>(initialValues?.diagIng2 ?? 0);
+  const [diagIng3, setDiagIng3] = useState<number>(initialValues?.diagIng3 ?? 0);
+  const [diagIng4, setDiagIng4] = useState<number>(initialValues?.diagIng4 ?? 0);
+  const [diagEgreso2, setDiagEgreso2] = useState<number>(initialValues?.diagEgreso2 ?? 2);
+  const [respInsuf, setRespInsuf] = useState<number>(initialValues?.respInsuf ?? 2);
+  const [ventType, setVentType] = useState<number>(initialValues?.ventType ?? 0);
 
   const [simRuns, setSimRuns] = useState<number>(
-    SIMULATION_LIMITS.simRuns.default,
+    initialValues?.simRuns ?? SIMULATION_LIMITS.simRuns.default,
   );
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -73,6 +95,7 @@ export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
   const [clockNowMs, setClockNowMs] = useState<number>(() => Date.now());
   const [cancelCooldownEndsAt, setCancelCooldownEndsAt] = useState<number>(0);
   const simulationController = useRef<AbortController | null>(null);
+  const wasEnabled = useRef(enabled);
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
 
@@ -87,8 +110,37 @@ export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
     : 0;
 
   useEffect(() => {
-    setPatientId(generatePatientId());
-  }, []);
+    if (!enabled) {
+      wasEnabled.current = false;
+      return;
+    }
+    if (!wasEnabled.current) {
+      wasEnabled.current = true;
+      setResultHistory([]);
+      setActiveResultIndex(-1);
+      if (!initialValues?.patientId) {
+        setPatientId("");
+      }
+    }
+    if (initialValues?.patientId || patientId) return;
+    let cancelled = false;
+    void fetchNextPatientSku(token)
+      .then((sku) => {
+        if (!cancelled) setPatientId(sku);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          showToast({
+            title: "No se pudo asignar el paciente",
+            description: error instanceof Error ? error.message : String(error),
+            type: "error",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, initialValues?.patientId, patientId, token]);
 
   useEffect(() => {
     const shouldTick = loading || Date.now() < cancelCooldownEndsAt;
@@ -107,14 +159,31 @@ export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
     };
   }, [loading, simulationStartedAt, cancelCooldownEndsAt]);
 
-  function handleNewPatient(): void {
-    setPatientId(generatePatientId());
+  async function handleNewPatient(): Promise<void> {
+    try {
+      setPatientId(await fetchNextPatientSku(token));
+    } catch (error) {
+      showToast({
+        title: "No se pudo asignar el paciente",
+        description: error instanceof Error ? error.message : String(error),
+        type: "error",
+      });
+      return;
+    }
     setResultHistory([]);
     setActiveResultIndex(-1);
   }
 
   async function handleSimulate(): Promise<void> {
     if (loading) return;
+    if (!patientId.trim()) {
+      showToast({
+        title: "SKU del paciente pendiente",
+        description: "Espere a que se genere el SKU antes de ejecutar la simulación.",
+        type: "error",
+      });
+      return;
+    }
 
     const payload: SimulationRequest = {
       patient_id: patientId,

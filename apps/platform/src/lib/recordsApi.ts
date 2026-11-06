@@ -444,6 +444,21 @@ export async function fetchSimulationRecords(
   return mapSimulationRecords(payload, fallbackUser);
 }
 
+export async function fetchNextPatientSku(token: string | null): Promise<string> {
+  const response = await apiFetch("/api/patients/next-sku", {
+    method: "POST",
+    headers: token ? authHeaders(token) : undefined,
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(extractApiError(payload, "No se pudo generar el SKU del paciente."));
+  }
+  if (!isRecord(payload) || typeof payload.sku !== "string" || !payload.sku) {
+    throw new Error("El servicio no devolvió un SKU válido.");
+  }
+  return payload.sku;
+}
+
 export interface SimulationDetail {
   record: SimulationRecord;
   parameters: Record<string, unknown>;

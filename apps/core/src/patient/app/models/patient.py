@@ -30,3 +30,12 @@ class PatientRecord(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+
+class PatientSkuSequence(Base):
+    """Atomic sequence used to reserve unique patient SKUs."""
+
+    __tablename__ = "patient_sku_sequence"
+
+    id = Column(Integer, primary_key=True)
+    next_value = Column(Integer, nullable=False)

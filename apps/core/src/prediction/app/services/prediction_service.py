@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -140,17 +141,15 @@ async def create_platform_prediction(
 
     try:
         db_prediction = PredictionRecord(
-            patient_id="PRED-PENDING",
+            patient_id=request.patient_id or f"PRED-{uuid4().hex[:12].upper()}",
             model_name="platform_mortality",
-            features=request.model_dump(mode="json"),
+            features=request.model_dump(mode="json", exclude={"patient_id"}),
             prediction=response.model_dump(mode="json"),
             confidence=probability,
             user_id=x_user_id,
             created_by=x_user_username,
         )
         db.add(db_prediction)
-        db.flush()
-        db_prediction.patient_id = f"PRED-{db_prediction.id:06d}"
         db.commit()
         await _notify_gateway("prediction_created")
     except Exception as exc:
