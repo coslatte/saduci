@@ -51,7 +51,14 @@ export function WilcoxonSection({
     phases: STATISTICS_LOADING_PHASES,
   });
   return (
-    <div className="flex flex-col gap-4">
+    <form
+      aria-label="Formulario de la prueba de Wilcoxon"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onRun();
+      }}
+      className="flex flex-col gap-4"
+    >
       <div className="flex flex-col gap-4 pb-6 border-b border-slate-100">
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -102,7 +109,7 @@ export function WilcoxonSection({
       <Button
         variant="glass"
         fullWidth
-        onClick={onRun}
+        type="submit"
         disabled={loading}
         aria-label={runLabel}
       >
@@ -124,7 +131,7 @@ export function WilcoxonSection({
         error={error}
         warning={warning}
       />
-    </div>
+    </form>
   );
 }
 
@@ -163,7 +170,14 @@ export function FriedmanSection({
     phases: STATISTICS_LOADING_PHASES,
   });
   return (
-    <div className="flex flex-col gap-4">
+    <form
+      aria-label="Formulario de la prueba de Friedman"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onRun();
+      }}
+      className="flex flex-col gap-4"
+    >
       <div className="flex flex-col gap-4 pb-6 border-b border-slate-100">
         <div className="flex flex-col gap-4">
           <StatisticsFileDropzone
@@ -210,7 +224,7 @@ export function FriedmanSection({
       <Button
         variant="glass"
         fullWidth
-        onClick={onRun}
+        type="submit"
         disabled={loading}
         aria-label={runLabel}
       >
@@ -232,6 +246,6 @@ export function FriedmanSection({
         error={error}
         warning={warning}
       />
-    </div>
+    </form>
   );
 }

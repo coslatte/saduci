@@ -92,6 +92,7 @@ def _fallback_platform_simulation(request: PlatformSimulationRequest) -> Dict[st
     pre_vam_mean = max(1.0, request.preuti_stay * 0.8 + rng.gauss(0, 1))
 
     simulation: Dict[str, TimeStats] = {}
+    distributions: list[tuple[str, float, float]] = []
     for var, mean_val, std_frac in [
         ("pre_vam", pre_vam_mean, 0.25),
         ("vam", base_vam, 0.30),
@@ -101,10 +102,21 @@ def _fallback_platform_simulation(request: PlatformSimulationRequest) -> Dict[st
     ]:
         std_val = max(0.1, mean_val * std_frac)
         simulation[var] = _make_time_stats(abs(mean_val), std_val, n)
+        distributions.append((var, abs(mean_val), std_val))
 
     return {
         "simulation": {k: v.model_dump() for k, v in simulation.items()},
         "prediction": _mortality_prediction(request.apache, request.age),
+        "iterations": [
+            {
+                "iteration": index + 1,
+                **{
+                    variable: round(max(0.0, rng.gauss(mean, std)), 4)
+                    for variable, mean, std in distributions
+                },
+            }
+            for index in range(n)
+        ],
     }
 
 
@@ -190,6 +202,17 @@ def run_platform_simulation_logic(request: PlatformSimulationRequest) -> Dict[st
         return {
             "simulation": {k: v.model_dump() for k, v in simulation.items()},
             "prediction": _mortality_prediction(request.apache, request.age),
+            "iterations": [
+                {
+                    "iteration": index + 1,
+                    **{
+                        variable: float(row[variable])
+                        for variable in _PLATFORM_SIM_VARS
+                        if variable in results_df.columns and row[variable] is not None
+                    },
+                }
+                for index, row in enumerate(results_df.to_dict(orient="records"))
+            ],
             "fallback": False,
         }
 

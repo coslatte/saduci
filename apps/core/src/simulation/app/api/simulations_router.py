@@ -10,7 +10,6 @@ from app.services.simulation_service import (
     count_simulations,
     get_patient_simulations,
     update_simulation,
-    delete_simulation,
 )
 from app.services.icu_service import create_icu_simulation as icu_create
 from app.services.platform import run_platform_simulation_logic, persist_platform_simulation
@@ -20,7 +19,6 @@ from app.services.statistics import (
     create_statistical_test_record,
     list_statistical_test_records,
     update_statistical_test,
-    delete_statistical_test,
 )
 from app.models.database import get_db
 from shared_core.schemas import (
@@ -74,11 +72,6 @@ async def update_simulation_endpoint(
     db: Session = Depends(get_db),
 ):
     return update_simulation(db, simulation_id, payload)
-
-
-@router.delete("/api/simulations/{simulation_id}")
-async def delete_simulation_endpoint(simulation_id: int, db: Session = Depends(get_db)):
-    return delete_simulation(db, simulation_id)
 
 
 @router.post("/api/simulations/icu")
@@ -147,8 +140,3 @@ async def update_stat_test_endpoint(
     db: Session = Depends(get_db),
 ):
     return update_statistical_test(db, test_id, payload)
-
-
-@router.delete("/api/statistical-tests/{test_id}")
-async def delete_stat_test_endpoint(test_id: int, db: Session = Depends(get_db)):
-    return delete_statistical_test(db, test_id)

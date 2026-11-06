@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.controllers.auth import (
     get_current_user,
     get_current_user_optional,
-    require_especialista_or_admin,
     _optional_user_headers,
 )
 from app.controllers.config import logger, simulation_client
@@ -74,7 +73,7 @@ async def list_statistical_test_records(
 @router.post("/api/statistical-tests")
 async def create_statistical_test_record(
     test_data: StatisticalTestCreate,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     result = await _proxy_with_user(
         simulation_client, "/api/statistical-tests", test_data.model_dump(mode="json"), current_user
@@ -87,28 +86,13 @@ async def create_statistical_test_record(
 async def update_statistical_test_record(
     test_id: int,
     payload: StatisticalTestUpdate,
-    _current_user: TokenUser = Depends(require_especialista_or_admin),
+    _current_user: TokenUser = Depends(get_current_user),
 ):
     try:
         return await simulation_client.put(
             f"/api/statistical-tests/{test_id}",
             payload.model_dump(mode="json", exclude_unset=True),
         )
-    except httpx.HTTPStatusError as e:
-        detail = _extract_upstream_detail(e)
-        raise HTTPException(status_code=e.response.status_code, detail=detail)
-    except Exception as e:
-        logger.error("Simulation service unavailable: %s", e)
-        raise HTTPException(status_code=502, detail="Simulation service unavailable")
-
-
-@router.delete("/api/statistical-tests/{test_id}")
-async def delete_statistical_test_record(
-    test_id: int,
-    _current_user: TokenUser = Depends(require_especialista_or_admin),
-):
-    try:
-        return await simulation_client.delete(f"/api/statistical-tests/{test_id}")
     except httpx.HTTPStatusError as e:
         detail = _extract_upstream_detail(e)
         raise HTTPException(status_code=e.response.status_code, detail=detail)

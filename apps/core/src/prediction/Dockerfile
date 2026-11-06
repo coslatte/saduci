@@ -18,6 +18,11 @@ COPY models/ ./models/
 COPY alembic.ini ./
 COPY migrations/ ./migrations/
 RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+      --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
+      --only-binary=llama-cpp-python \
+      "llama-cpp-python==0.3.36"
+RUN --mount=type=cache,target=/root/.cache/pip \
     pip install .
 
 EXPOSE 7003

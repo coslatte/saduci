@@ -1,24 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Buttons";
 import { Table } from "@/components/molecules/Table";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { showToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/lib/auth";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { normalizeRole } from "@/entities/user";
 import {
   getRecordPermissions,
-  getRecordRoleHint,
   type RecordPermissions,
 } from "@/lib/recordPermissions";
 import {
-  deleteSimulationRecord,
   fetchSimulationRecords,
   formatRecordDate,
+  updateSimulationRecord,
 } from "@/lib/recordsApi";
 import type {
   SimulationRecord,
@@ -26,12 +25,14 @@ import type {
 } from "@/lib/recordsMockData";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
 import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
+import { MODULE_DESCRIPTIONS } from "@/constants/moduleDescriptions";
 import { RecordsPageHeader } from "../components/RecordsPageHeader";
 import { RecordActionsCell } from "../components/RecordActionsCell";
+import { RecordDateForm } from "../components/RecordDateForm";
 import { SimulationRecordDialog } from "../components/SimulationRecordDialog";
 
 const STATUS_LABELS: Record<SimulationRecordStatus, string> = {
-  completada: "Completada",
+  completada: "Terminado",
   cancelada: "Cancelada",
   en_proceso: "En proceso",
 };
@@ -48,12 +49,17 @@ const STATUS_BADGE: Record<
 function buildSimulationRows(
   records: SimulationRecord[],
   permissions: RecordPermissions,
-  deletingId: string | null,
-  handleDelete: (record: SimulationRecord) => void,
   openDetail: (recordId: string) => void,
 ) {
   return records.map((record) => ({
-    patientId: <span className="text-center block">{record.patientId}</span>,
+    patientId: (
+      <Link
+        href={`/records/simulations/${encodeURIComponent(record.id)}`}
+        className="block text-center font-medium text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+      >
+        {record.patientId}
+      </Link>
+    ),
     runs: (
       <span className="text-center block">
         {record.runs.toLocaleString("es-ES")}
@@ -77,8 +83,6 @@ function buildSimulationRows(
       <RecordActionsCell
         permissions={permissions}
         onView={() => openDetail(record.id)}
-        onDelete={() => handleDelete(record)}
-        isDeleting={deletingId === record.id}
       />
     ),
   }));
@@ -90,19 +94,19 @@ export default function SimulationsRecordsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<SimulationRecord | null>(
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<SimulationRecord | null>(
     null,
   );
-  // Simulations run from a popout dialog; they are deletable, never editable.
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const permissions: RecordPermissions = {
-    ...getRecordPermissions(normalizeRole(user?.role), "simulations"),
-    // Simulations are deletable but never editable.
-    canEdit: false,
-  };
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const permissions = getRecordPermissions(
+    normalizeRole(user?.role),
+    "simulations",
+  );
   const fallbackUser = user?.username ?? "";
   const router = useRouter();
+  const isRecordsPanel = usePathname().startsWith("/records");
 
   const loadRecords = useCallback(async () => {
     if (!token) {
@@ -169,37 +173,24 @@ export default function SimulationsRecordsPage() {
     }
   }
 
-  const handleDelete = useCallback(
-    async (record: SimulationRecord) => {
-      if (!token) return;
-
-      setDeletingId(record.id);
-      try {
-        await deleteSimulationRecord(token, record.id);
-        setRecords((current) =>
-          current.filter((item) => item.id !== record.id),
-        );
-        showToast({
-          title: "Simulación eliminada",
-          description: "El registro se eliminó correctamente.",
-          type: "success",
-        });
-      } catch (err) {
-        showToast({
-          title: "Error al eliminar",
-          description: friendlyErrorMessage(
-            err,
-            "No se pudo eliminar la simulación.",
-          ),
-          type: "error",
-        });
-      } finally {
-        setDeletingId(null);
-        setPendingDelete(null);
-      }
-    },
-    [token],
-  );
+  async function handleFormSubmit(createdAt: string) {
+    if (!token || !editingRecord) return;
+    setFormSubmitting(true);
+    setFormError(null);
+    try {
+      await updateSimulationRecord(token, editingRecord.id, { createdAt });
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === editingRecord.id ? { ...item, createdAt } : item,
+        ),
+      );
+      setEditingRecord(null);
+    } catch (err) {
+      setFormError(friendlyErrorMessage(err, "No se pudo guardar la fecha."));
+    } finally {
+      setFormSubmitting(false);
+    }
+  }
 
   const normalizedQuery = query.trim().toLocaleLowerCase("es");
   const visibleRecords = records.filter((record) =>
@@ -210,8 +201,6 @@ export default function SimulationsRecordsPage() {
   const tableRows = buildSimulationRows(
     visibleRecords,
     permissions,
-    deletingId,
-    (record) => setPendingDelete(record),
     (recordId) =>
       router.push(`/records/simulations/${encodeURIComponent(recordId)}`),
   );
@@ -219,8 +208,11 @@ export default function SimulationsRecordsPage() {
   return (
     <main className="mx-auto w-full max-w-7xl min-w-0">
       <RecordsPageHeader
-        title="Registros de simulaciones"
-        description="Consulta las simulaciones clínicas registradas en la plataforma."
+        title={isRecordsPanel ? "Historial de registros" : "Simulaciones"}
+        expandableDescription={
+          isRecordsPanel ? undefined : MODULE_DESCRIPTIONS.simulation
+        }
+        showNavigation={isRecordsPanel}
         search={{
           query,
           onChange: setQuery,
@@ -228,7 +220,6 @@ export default function SimulationsRecordsPage() {
           total: records.length,
           loading: loading || authLoading,
         }}
-        roleHint={getRecordRoleHint(normalizeRole(user?.role))}
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 pb-4">
@@ -239,7 +230,7 @@ export default function SimulationsRecordsPage() {
             onClick={() => setDialogOpen(true)}
           >
             <FiPlus className="mr-1.5" />
-            Nuevo
+            Nueva simulación
           </Button>
         )}
         <Button
@@ -263,22 +254,19 @@ export default function SimulationsRecordsPage() {
         />
       )}
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Eliminar simulación"
-        description={
-          pendingDelete
-            ? `¿Eliminar la simulación de ${pendingDelete.patientId}?`
-            : undefined
-        }
-        confirmLabel="Eliminar"
-        loading={deletingId !== null}
-        onConfirm={() => {
-          if (pendingDelete) void handleDelete(pendingDelete);
-        }}
-        onClose={() => setPendingDelete(null)}
-      />
-
+      {editingRecord && token && (
+        <RecordDateForm
+          key={editingRecord.id}
+          kind="simulation"
+          recordId={editingRecord.id}
+          token={token}
+          createdAt={editingRecord.createdAt}
+          submitting={formSubmitting}
+          error={formError}
+          onSubmit={(value) => void handleFormSubmit(value)}
+          onCancel={() => setEditingRecord(null)}
+        />
+      )}
       <Table
         ariaLabel="Registros de simulaciones"
         loading={loading || authLoading}

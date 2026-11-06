@@ -3,6 +3,7 @@ import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Buttons";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import type { SimulationResponse } from "@/lib/simulation";
+import { SimulationFlowDiagram } from "./SimulationFlowDiagram";
 import { SimulationResultTable } from "./SimulationResultTable";
 
 interface SimulationResultsSectionProps {
@@ -156,6 +157,10 @@ export function SimulationResultsSection({
         </div>
       ) : (
         <SimulationResultTable result={currentResult.simulation} />
+      )}
+
+      {!showSkeleton && currentResult && (
+        <SimulationFlowDiagram times={currentResult.simulation} />
       )}
 
       {showSkeleton ? (

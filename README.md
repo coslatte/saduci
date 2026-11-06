@@ -1,6 +1,6 @@
 # SADUCI
 
-Sistema de Apoyo a la Decisión en la Unidad de Cuidado Intensivo — Hospital
+Sistema de Ayuda a la Decisión en la Unidad de Cuidados Intensivos — Hospital
 Universitario Arnaldo Milián Castro.
 
 Monorepo con 5 microservicios Python (puertos 7000-7004), un cliente web

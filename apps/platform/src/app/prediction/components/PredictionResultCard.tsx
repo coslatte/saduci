@@ -17,29 +17,31 @@ export function PredictionResultCard({
   return (
     <section
       aria-labelledby="prediction-result-title"
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3 sm:gap-2"
     >
       <h2 id="prediction-result-title" className="font-semibold text-zinc-800">
         Probabilidad de No Supervivencia
       </h2>
-      <div className="flex flex-col items-center gap-3 py-2">
-        <p
-          className={cn(
-            "text-4xl font-bold tabular-nums",
-            dies ? "text-red-600" : "text-emerald-600",
-          )}
-        >
-          {percentage}%
-        </p>
-        <p
-          className={cn(
-            "text-sm font-medium",
-            dies ? "text-red-500" : "text-emerald-500",
-          )}
-        >
-          {dies ? "Paciente fallece" : "Paciente no fallece"}
-        </p>
-        <div className="w-full max-w-sm">
+      <div className="flex flex-col items-center gap-3 py-1 sm:flex-row sm:justify-between">
+        <div className="text-center sm:text-left">
+          <p
+            className={cn(
+              "text-3xl font-bold tabular-nums",
+              dies ? "text-red-600" : "text-emerald-600",
+            )}
+          >
+            {percentage}%
+          </p>
+          <p
+            className={cn(
+              "text-sm font-medium",
+              dies ? "text-red-500" : "text-emerald-500",
+            )}
+          >
+            {dies ? "Paciente fallece" : "Paciente no fallece"}
+          </p>
+        </div>
+        <div className="w-full max-w-sm sm:flex-1 sm:pl-6">
           <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-100">
             <div
               className={cn(

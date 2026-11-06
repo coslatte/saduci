@@ -17,7 +17,7 @@ Este prompt debe proporcionarse completo a un LLM para generar el capítulo. El 
 
 ## CONTEXTO DEL PROYECTO
 
-**SADUCI** (Sistema de Apoyo a Decisiones en Unidad de Cuidados Intensivos) es una plataforma web modular para el Hospital Universitario Arnaldo Milián Castro. Proporciona predicción clínica, simulación y análisis estadístico basados en inteligencia artificial para la UCI.
+**SADUCI** (Sistema de Ayuda a la Decisión en la Unidad de Cuidados Intensivos) es una plataforma web modular para el Hospital Universitario Arnaldo Milián Castro. Ayuda al personal clínico en la toma de decisiones mediante predicción clínica, simulación y análisis estadístico basados en inteligencia artificial para la UCI.
 
 ### Stack Tecnológico Final
 

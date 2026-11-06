@@ -402,9 +402,7 @@ export interface PredictionRecordInput {
 }
 
 export interface PredictionRecordUpdateInput {
-  patientId: string;
-  outcome: string;
-  probability: number;
+  createdAt: string;
 }
 
 export interface StatisticsRecordInput {
@@ -534,6 +532,57 @@ export async function fetchPredictionRecords(
   return mapPredictionRecords(payload, fallbackUser);
 }
 
+export async function fetchDiagnosisCatalog(
+  token: string,
+): Promise<Array<{ id: number; name: string }>> {
+  const response = await apiFetch("/api/diagnoses", {
+    headers: authHeaders(token),
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      extractApiError(payload, "No se pudieron cargar los diagnósticos."),
+    );
+  }
+  if (!Array.isArray(payload)) return [];
+  return payload.flatMap((item) => {
+    if (
+      !isRecord(item) ||
+      typeof item.id !== "number" ||
+      typeof item.name !== "string"
+    )
+      return [];
+    return [{ id: item.id, name: item.name }];
+  });
+}
+
+export async function fetchRespiratoryInsufficiencyCatalog(
+  token: string,
+): Promise<Array<{ id: number; name: string }>> {
+  const response = await apiFetch("/api/respiratory-insufficiency-types", {
+    headers: authHeaders(token),
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      extractApiError(
+        payload,
+        "No se pudieron cargar los tipos de insuficiencia respiratoria.",
+      ),
+    );
+  }
+  if (!Array.isArray(payload)) return [];
+  return payload.flatMap((item) => {
+    if (
+      !isRecord(item) ||
+      typeof item.id !== "number" ||
+      typeof item.name !== "string"
+    )
+      return [];
+    return [{ id: item.id, name: item.name }];
+  });
+}
+
 export interface PredictionDetail {
   record: PredictionRecord;
   features: Record<string, unknown>;
@@ -642,20 +691,12 @@ export async function createStatisticsRecord(
 export async function updateSimulationRecord(
   token: string,
   id: string,
-  input: SimulationRecordInput,
+  input: PredictionRecordUpdateInput,
 ): Promise<void> {
   const response = await apiFetch(`/api/simulations/${id}`, {
     method: "PUT",
     headers: authHeaders(token),
-    body: JSON.stringify({
-      patient_id: input.patientId,
-      scenario: "treatment_response",
-      parameters: {
-        n_runs: input.runs,
-        result: input.result,
-        status: input.status,
-      },
-    }),
+    body: JSON.stringify({ created_at: input.createdAt }),
   });
   await ensureOk(response, "No se pudo actualizar la simulación.");
 }
@@ -685,11 +726,7 @@ export async function updatePredictionRecord(
   const response = await apiFetch(`/api/predictions/${id}`, {
     method: "PUT",
     headers: authHeaders(token),
-    body: JSON.stringify({
-      patient_id: input.patientId,
-      prediction: { outcome: input.outcome },
-      confidence: input.probability,
-    }),
+    body: JSON.stringify({ created_at: input.createdAt }),
   });
   await ensureOk(response, "No se pudo actualizar la predicción.");
 }

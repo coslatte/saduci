@@ -62,6 +62,18 @@ terminado sin ejecutarlos.
 
 `bun run build` solo si el usuario lo pide explícitamente.
 
+## Propósito y marca
+
+- El nombre canónico es **SADUCI — Sistema de Ayuda a la Decisión en la Unidad
+  de Cuidados Intensivos**.
+- Describe el propósito del software como ayuda para la valoración clínica y la
+  toma de decisiones. En el nombre, el branding y los textos propios del
+  sistema, usa «ayuda»/«ayudar»; no describas esa función como «apoyo»/«apoyar».
+- Presenta SADUCI como una herramienta que ayuda al personal clínico; no como
+  sustituto de su criterio profesional.
+- Conserva sin cambios las citas textuales y los nombres técnicos canónicos
+  cuando «apoyo» forme parte de la fuente citada o de su terminología oficial.
+
 ## Idioma
 
 El código (identificadores, rutas, commits, claves de entorno) va en inglés; los

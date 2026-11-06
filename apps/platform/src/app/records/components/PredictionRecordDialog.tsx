@@ -4,6 +4,10 @@ import { Dialog } from "@/components/molecules/Dialog";
 import { PredictionForm } from "@/app/prediction/components/PredictionForm";
 import { PredictionResultCard } from "@/app/prediction/components/PredictionResultCard";
 import { usePredictionRunner } from "@/app/prediction/hooks/usePredictionRunner";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { fetchDiagnosisCatalog } from "@/lib/recordsApi";
+import type { DiagnosisOption } from "@/lib/predictionDiagnoses";
 
 interface PredictionRecordDialogProps {
   open: boolean;
@@ -21,7 +25,26 @@ export function PredictionRecordDialog({
   onSaved,
 }: PredictionRecordDialogProps) {
   const runner = usePredictionRunner({ onSuccess: onSaved });
+  const { token } = useAuth();
+  const [diagnosisOptions, setDiagnosisOptions] = useState<DiagnosisOption[]>(
+    [],
+  );
+  const [diagnosisLoading, setDiagnosisLoading] = useState(true);
   const { loadingPredict, prediction } = runner;
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    void fetchDiagnosisCatalog(token)
+      .then((items) => {
+        setDiagnosisOptions(
+          items.map(({ id, name }) => ({ value: String(id), label: name })),
+        );
+      })
+      .catch(() => setDiagnosisOptions([]))
+      .finally(() => setDiagnosisLoading(false));
+  }, [token]);
 
   return (
     <Dialog
@@ -47,6 +70,8 @@ export function PredictionRecordDialog({
             setTiempoVam={runner.setTiempoVam}
             loading={loadingPredict}
             onPredict={() => void runner.handlePredict()}
+            diagnosisOptions={diagnosisOptions}
+            diagnosisLoading={diagnosisLoading}
           />
         </section>
 

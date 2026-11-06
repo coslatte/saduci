@@ -7,12 +7,12 @@ from shared_core.security import SECRET_KEY
 
 
 PLATFORM_FEATURE_ORDER = [
-    ("edad", "Edad", "Age"),
-    ("diag_ing1", "Diag.Ing1", "Adm.Diag1"),
-    ("diag_ing2", "Diag.Ing2", "Adm.Diag2"),
-    ("diag_egr2", "Diag.Egr2", "Dis.Diag2"),
-    ("apache", "APACHE", "APACHE"),
-    ("tiempo_vam", "TiempoVAM", "VentilatorTime"),
+    ("edad", "Edad", "Edad"),
+    ("diag_ing1", "Diag.Ing1", "Diag. ingreso 1"),
+    ("diag_ing2", "Diag.Ing2", "Diag. ingreso 2"),
+    ("diag_egr2", "Diag.Egr2", "Diag. egreso 2"),
+    ("apache", "APACHE", "APACHE II"),
+    ("tiempo_vam", "TiempoVAM", "Tiempo de ventilación"),
 ]
 
 PLATFORM_FEATURE_NAMES = [feature_name for _, _, feature_name in PLATFORM_FEATURE_ORDER]
@@ -28,13 +28,6 @@ PLATFORM_LIMITS = {
     "diag_egr2": (18, 40),
     "apache": (18, 40),
     "tiempo_vam": (18, 40),
-}
-
-EXPLANATION_METHOD_SCALE = {
-    "LIME": 1.00,
-    "SHAP": 1.10,
-    "Gradientes Integrados": 0.90,
-    "Mapas de Saliencia": 1.05,
 }
 
 DIAGNOSIS_CODE_DATA = """
@@ -106,7 +99,7 @@ HUGGINGFACE_TIMEOUT_SECONDS = float(os.getenv("HUGGINGFACE_TIMEOUT_SECONDS", "30
 GATEWAY_URL = os.getenv("GATEWAY_URL", "http://api-gateway:7000")
 INTERNAL_EVENT_TOKEN = os.getenv("INTERNAL_EVENT_TOKEN", SECRET_KEY)
 
-SUPPORTED_NARRATIVE_PROVIDERS = {"stub", "local", "gemini", "huggingface"}
+SUPPORTED_NARRATIVE_PROVIDERS = {"stub", "embedded", "local", "gemini", "huggingface"}
 
 
 def parse_diagnosis_map(raw_mapping: str) -> dict[int, str]:

@@ -2,6 +2,7 @@ import type React from "react";
 import { Input } from "@/components/atoms/Input";
 import { Label } from "@/components/atoms/Label";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface NumberInputFieldProps {
   id: string;
@@ -18,6 +19,8 @@ interface NumberInputFieldProps {
   fullWidth?: boolean;
   disabled?: boolean;
   associateLabelWithInput?: boolean;
+  suffix?: string;
+  description?: string;
 }
 
 /**
@@ -62,8 +65,26 @@ export function NumberInputField({
   fullWidth = true,
   disabled,
   associateLabelWithInput = false,
+  suffix,
+  description,
 }: NumberInputFieldProps) {
   const labelId = `${id}-label`;
+  const [draft, setDraft] = useState(String(value));
+
+  function commitDraft() {
+    if (draft.trim() === "") {
+      setDraft(String(value));
+      return;
+    }
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(value));
+      return;
+    }
+    const bounded = Math.min(max, Math.max(min, parsed));
+    setDraft(String(bounded));
+    onChange(bounded);
+  }
 
   return (
     <div className={cn("flex flex-col gap-1.5", containerClassName)}>
@@ -82,19 +103,45 @@ export function NumberInputField({
       <Input
         id={id}
         type="number"
+        clampNumberToRange={false}
         min={min}
         max={max}
-        step={step}
-        value={value}
+        step={step ?? 1}
+        value={draft}
         aria-labelledby={associateLabelWithInput ? undefined : labelId}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-          onChange(Number(event.target.value))
-        }
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+          const next = event.target.value;
+          setDraft(next);
+          if (next !== "" && Number.isFinite(Number(next)))
+            onChange(Number(next));
+        }}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          } else if (event.key === "Escape") {
+            setDraft(String(value));
+            event.currentTarget.blur();
+          }
+        }}
         help={help}
         fullWidth={fullWidth}
-        className={inputClassName}
+        className={cn(
+          "h-11 rounded-xl text-base font-medium tabular-nums",
+          inputClassName,
+        )}
         disabled={disabled}
       />
+      <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+        <span>
+          {description ??
+            `Rango permitido: ${min.toLocaleString("es-ES")}–${max.toLocaleString("es-ES")}`}
+        </span>
+        {suffix && <span className="font-medium text-slate-600">{suffix}</span>}
+      </div>
     </div>
   );
 }

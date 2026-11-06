@@ -4,7 +4,7 @@ export const SIMULATION_LIMITS = {
   vamTime: { min: 24, max: 700, default: 24 },
   utiStay: { min: 0, max: 200, default: 24 },
   preutiStay: { min: 0, max: 34, default: 10 },
-  simRuns: { min: 50, max: 100_000, default: 200, step: 50 },
+  simRuns: { min: 50, max: 100_000, default: 5_000, step: 50 },
   simPercent: { min: 3, max: 10, default: 3 },
 } as const;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Buttons";
 import { Table } from "@/components/molecules/Table";
@@ -11,7 +12,6 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { normalizeRole } from "@/entities/user";
 import {
   getRecordPermissions,
-  getRecordRoleHint,
   type RecordPermissions,
 } from "@/lib/recordPermissions";
 import {
@@ -84,6 +84,7 @@ function buildStatisticsRows(
 }
 
 export default function StatisticsRecordsPage() {
+  const embedded = usePathname() === "/statistics";
   const { user, token, isLoading: authLoading } = useAuth();
   const [records, setRecords] = useState<StatisticsRecord[]>([]);
   const [query, setQuery] = useState("");
@@ -256,9 +257,15 @@ export default function StatisticsRecordsPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-7xl min-w-0">
+    <section className="mx-auto w-full max-w-7xl min-w-0">
       <RecordsPageHeader
-        title="Registro de Pruebas Estadísticas"
+        title={
+          embedded
+            ? "Historial de pruebas estadísticas"
+            : "Historial de registros"
+        }
+        showNavigation={!embedded}
+        embedded={embedded}
         search={{
           query,
           onChange: setQuery,
@@ -266,7 +273,6 @@ export default function StatisticsRecordsPage() {
           total: records.length,
           loading: loading || authLoading,
         }}
-        roleHint={getRecordRoleHint(normalizeRole(user?.role))}
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 pb-4">
@@ -357,6 +363,6 @@ export default function StatisticsRecordsPage() {
             : "No hay pruebas estadísticas registradas."
         }
       />
-    </main>
+    </section>
   );
 }

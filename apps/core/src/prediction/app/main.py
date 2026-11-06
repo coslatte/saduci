@@ -10,6 +10,8 @@ from shared_core.database import Base, engine
 from app.models.database import get_db
 from app.models.entities import PredictionRecord
 from app.services.ml_model import load_platform_model
+from app.services.config import DEFAULT_NARRATIVE_PROVIDER
+from app.services.narrative_model import load_narrative_model
 from app.api.predictions_router import router as predictions_router
 from app.api.health_router import router as health_router
 
@@ -17,6 +19,8 @@ from app.api.health_router import router as health_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     load_platform_model()
+    if DEFAULT_NARRATIVE_PROVIDER == "embedded":
+        load_narrative_model()
     yield
 
 

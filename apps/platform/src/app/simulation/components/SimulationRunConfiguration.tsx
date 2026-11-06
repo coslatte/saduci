@@ -44,23 +44,31 @@ export function SimulationRunConfiguration({
   });
 
   return (
-    <section className="flex flex-col gap-6 p-5 bg-white border rounded-2xl border-slate-200">
-      <h2 className="text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
-        {"Configuración de Simulación"}
-      </h2>
+    <section className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <header className="border-b border-slate-200 pb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-700">
+          Ejecución
+        </p>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+          Configurar simulación
+        </h2>
+        <p className="mt-1 text-sm leading-5 text-slate-600">
+          Defina cuántas iteraciones realizará el modelo.
+        </p>
+      </header>
 
       <div className="flex flex-col items-center justify-between gap-6">
-        <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+        <div className="flex w-full flex-col gap-1.5 md:max-w-sm">
           <NumberInputField
             id="sim-runs"
-            label={"Corridas de la Simulación"}
+            label="Número de corridas"
             min={SIMULATION_LIMITS.simRuns.min}
             max={SIMULATION_LIMITS.simRuns.max}
             step={SIMULATION_LIMITS.simRuns.step}
             value={simRuns}
             onChange={setSimRuns}
             help={
-              "Cantidad de corridas de la simulación. Un número mayor mejora la precisión pero incrementa el tiempo de procesamiento. Se recomienda 200 corridas como punto de partida."
+              "Cantidad de corridas de la simulación. Un número mayor mejora la precisión pero incrementa el tiempo de procesamiento."
             }
             labelClassName="text-center md:text-left"
             fullWidth

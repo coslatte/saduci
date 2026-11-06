@@ -68,27 +68,29 @@ const ROUTE_BREADCRUMB_SEGMENTS: Record<
  * Detail views intentionally have no sidebar entry, but they do extend the
  * header breadcrumb under their parent registro.
  */
-const RECORD_DETAIL_ROUTES: Record<
-  string,
-  { parentHref: string; label: string }
-> = {
+const RECORD_DETAIL_ROUTES: Record<string, { parentHref: string }> = {
   "/records/simulations": {
     parentHref: "/records/simulations",
-    label: "Detalles de Simulación",
   },
   "/records/predictions": {
     parentHref: "/records/predictions",
-    label: "Detalles de Predicción",
   },
 };
 
 function matchRecordDetail(
   pathname: string,
-): { parentHref: string; label: string } | null {
+): { parentHref: string; identifier: string } | null {
   for (const [base, config] of Object.entries(RECORD_DETAIL_ROUTES)) {
-    if (pathname.startsWith(`${base}/`) && pathname.length > base.length + 1) {
-      return config;
+    if (!pathname.startsWith(`${base}/`)) continue;
+    const segment = pathname.slice(base.length + 1).split("/")[0];
+    if (!segment) continue;
+    let identifier = segment;
+    try {
+      identifier = decodeURIComponent(segment);
+    } catch {
+      // Preserve the raw URL segment if it contains malformed escaping.
     }
+    return { ...config, identifier };
   }
   return null;
 }
@@ -128,6 +130,10 @@ export const APP_NAVIGATION_SECTIONS: NavigationSectionConfig[] =
     ...section,
     items: section.items.map(mapNavigationSectionItem),
   }));
+
+export function getSidebarSectionsForUser(_isAdministrator: boolean) {
+  return APP_NAVIGATION_SECTIONS;
+}
 
 export function isRouteActive(itemHref: string, pathname: string) {
   if (itemHref === "/") return pathname === "/";
@@ -170,6 +176,7 @@ export function collectActiveNavigationKeys(
 
 function isCurrentRoute(itemHref: string, pathname: string) {
   if (pathname === itemHref) return true;
+  if (itemHref === "/records" && pathname.startsWith("/records/")) return true;
   // A detail view highlights its parent registro without adding a sub-entry.
   const detail = matchRecordDetail(pathname);
   return detail !== null && detail.parentHref === itemHref;
@@ -181,7 +188,7 @@ export function getRouteNameForPath(pathname: string) {
   }
 
   const detail = matchRecordDetail(pathname);
-  if (detail) return detail.label;
+  if (detail) return detail.identifier;
 
   const bestMatch = flattenNavigation(APP_NAVIGATION_SECTIONS)
     .filter((item) => isRouteActive(item.href, pathname))
@@ -194,10 +201,7 @@ export function getBreadcrumbSegments(pathname: string) {
   const detail = matchRecordDetail(pathname);
   if (detail) {
     const parentLabel = ROUTE_NAMES_MAP[detail.parentHref] ?? detail.parentHref;
-    return [
-      { label: parentLabel, href: detail.parentHref },
-      { label: detail.label, href: pathname },
-    ];
+    return [{ label: parentLabel, href: detail.parentHref }];
   }
 
   const allItems = APP_NAVIGATION_SECTIONS.flatMap((s) => s.items);

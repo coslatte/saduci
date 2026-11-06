@@ -11,46 +11,16 @@ export interface RecordPermissions {
 
 export function getRecordPermissions(
   role: Role | undefined,
-  resource: RecordResource,
+  _resource: RecordResource,
 ): RecordPermissions {
-  const normalizedRole = role ?? "Médico";
-
-  if (normalizedRole === "Administrador") {
-    return {
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-      canDelete: true,
-    };
-  }
-
-  if (normalizedRole === "Especialista") {
-    return {
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-      canDelete: resource !== "simulations",
-    };
-  }
-
   return {
     canView: true,
-    canCreate: false,
-    canEdit: false,
+    canCreate: true,
+    canEdit: role === "Administrador" || role === "Especialista",
     canDelete: false,
   };
 }
 
-export function getRecordRoleHint(role: Role | undefined): string {
-  const normalizedRole = role ?? "Médico";
-
-  if (normalizedRole === "Administrador") {
-    return "Acceso completo: puede eliminar cualquier registro.";
-  }
-
-  if (normalizedRole === "Especialista") {
-    return "Puede crear y editar registros. No puede eliminar simulaciones.";
-  }
-
-  return "Solo lectura: puede consultar las tablas de registros.";
+export function getRecordRoleHint(_role: Role | undefined): string {
+  return "Los registros no se pueden eliminar.";
 }

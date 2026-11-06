@@ -2,26 +2,33 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
+import { Button } from "@/components/atoms/Buttons";
+import { normalizeRole } from "@/entities/user";
+import { getRecordPermissions } from "@/lib/recordPermissions";
+import { downloadCsv, downloadPdf } from "@/lib/recordDownloads";
+import { RecordDateForm } from "../../components/RecordDateForm";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Alert } from "@/components/molecules/Alert";
 import { ErrorState } from "@/components/molecules/ErrorState";
 import { showToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/lib/auth";
+import { useBreadcrumbLabel } from "@/context/breadcrumb";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import {
   fetchPredictionDetail,
   formatRecordDate,
+  updatePredictionRecord,
   type PredictionDetail,
 } from "@/lib/recordsApi";
 import type { PredictionRecordStatus } from "@/lib/recordsMockData";
 import {
   EXPLANATION_METHODS,
   runExplicacion,
-  type ExplicacionResponse,
   type ExplanationMethod,
+  type ExplicacionResponse,
   type PredictionRequest,
 } from "@/lib/prediction";
 import { PredictionResultCard } from "@/app/prediction/components/PredictionResultCard";
@@ -85,16 +92,30 @@ export default function PredictionDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user, token, isLoading: authLoading } = useAuth();
+  const pathname = usePathname();
+  const { setCurrentLabel } = useBreadcrumbLabel();
   const [detail, setDetail] = useState<PredictionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [method, setMethod] = useState<ExplanationMethod>(
-    EXPLANATION_METHODS[0],
-  );
   const [loadingExplain, setLoadingExplain] = useState(false);
   const [explicacion, setExplicacion] = useState<ExplicacionResponse | null>(
     null,
   );
+  const [explanationMethod, setExplanationMethod] = useState<ExplanationMethod>(
+    EXPLANATION_METHODS[0],
+  );
+  const [editing, setEditing] = useState(false);
+  const permissions = getRecordPermissions(
+    normalizeRole(user?.role),
+    "predictions",
+  );
+
+  useEffect(() => {
+    const patientSku = detail?.record.patientId.trim();
+    if (!pathname || !patientSku) return;
+    setCurrentLabel(pathname, patientSku);
+    return () => setCurrentLabel(pathname, null);
+  }, [detail?.record.patientId, pathname, setCurrentLabel]);
 
   const loadDetail = useCallback(async () => {
     if (!token || !id) return;
@@ -129,14 +150,18 @@ export default function PredictionDetailPage() {
     void loadDetail();
   }, [authLoading, token, loadDetail]);
 
-  async function handleExplain(): Promise<void> {
+  async function handleExplain(method: ExplanationMethod): Promise<void> {
     if (!detail) return;
     const request = toPredictionRequest(detail.features);
     if (!request) return;
     setExplicacion(null);
     setLoadingExplain(true);
     try {
-      const result = await runExplicacion({ ...request, method });
+      const result = await runExplicacion({
+        ...request,
+        method,
+        include_narrative: false,
+      });
       setExplicacion(result);
     } catch (err) {
       const message = friendlyErrorMessage(
@@ -155,12 +180,29 @@ export default function PredictionDetailPage() {
 
   const featureEntries = detail ? Object.entries(detail.features) : [];
   const explainRequest = detail ? toPredictionRequest(detail.features) : null;
+  const exportRows: [string, string][] = detail
+    ? [
+        ["Paciente", detail.record.patientId],
+        ["Resultado", detail.record.outcome],
+        ["Probabilidad", `${(detail.record.probability * 100).toFixed(1)}%`],
+        ["Estado", STATUS_LABELS[detail.record.status]],
+        ["Creado por", detail.record.createdBy],
+        ["Fecha", formatRecordDate(detail.record.createdAt)],
+        ...featureEntries.map(
+          ([key, value]) =>
+            [FEATURE_LABELS[key] ?? key, featureValue(key, value)] as [
+              string,
+              string,
+            ],
+        ),
+      ]
+    : [];
 
   return (
     <main className="mx-auto w-full max-w-7xl min-w-0">
       <Link
         href="/records/predictions"
-        className="mb-4 inline-flex items-center gap-1.5 text-(length:--font-size-sm) text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-primary-600"
+        className="mb-2 inline-flex items-center gap-1.5 text-(length:--font-size-sm) text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         <FiArrowLeft className="size-4" />
         Volver a registros
@@ -180,6 +222,93 @@ export default function PredictionDetailPage() {
         }
       />
 
+      {detail && !loading && !error && (
+        <div className="mb-3 flex flex-wrap justify-center gap-2 print:hidden">
+          {permissions.canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              Editar
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadPdf("Informe de predicción", [
+                {
+                  title: "Datos y resultado",
+                  rows: [
+                    ...exportRows.slice(0, 6),
+                    ["Modelo", detail.modelName || "No disponible"],
+                  ],
+                },
+                {
+                  title: "Datos clínicos de entrada",
+                  rows: exportRows.slice(6),
+                },
+                ...(explicacion
+                  ? [
+                      {
+                        title: "Explicación del modelo local",
+                        rows: explicacion.rows.map(
+                          (row) =>
+                            [
+                              row.feature_name,
+                              `Valor: ${row.patient_value_display} · Contribución: ${row.contribution.toFixed(3)}`,
+                            ] as [string, string],
+                        ),
+                      },
+                    ]
+                  : []),
+              ])
+            }
+          >
+            Descargar PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadCsv(`prediccion-${detail.record.id}.csv`, exportRows)
+            }
+          >
+            Descargar CSV
+          </Button>
+        </div>
+      )}
+      {editing && detail && token && (
+        <RecordDateForm
+          kind="prediction"
+          recordId={detail.record.id}
+          token={token}
+          createdAt={detail.record.createdAt}
+          submitting={false}
+          error={null}
+          onSubmit={async (createdAt) => {
+            try {
+              await updatePredictionRecord(token, detail.record.id, {
+                createdAt,
+              });
+              setEditing(false);
+              await loadDetail();
+            } catch (err) {
+              showToast({
+                title: "Error al guardar",
+                description: friendlyErrorMessage(
+                  err,
+                  "No se pudo guardar la predicción.",
+                ),
+                type: "error",
+              });
+            }
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
+
       {loading || authLoading ? (
         <div className="flex flex-col gap-4">
           <Skeleton className="h-32 w-full" />
@@ -193,17 +322,17 @@ export default function PredictionDetailPage() {
           onRetry={() => void loadDetail()}
         />
       ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-2">
-          <section className="lg:col-span-2 border border-slate-300 bg-white p-5 sm:p-6">
-            <h2 className="mb-5 border-b border-slate-200 pb-3 text-base font-semibold text-slate-900">
+        <div className="grid w-full items-start gap-3 lg:grid-cols-2">
+          <section className="lg:col-span-2 border border-slate-300 bg-white p-3 sm:p-4">
+            <h2 className="mb-3 border-b border-slate-200 pb-2 text-base font-semibold text-slate-900">
               Resumen
             </h2>
-            <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
               <div>
                 <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Paciente
                 </dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
+                <dd className="break-words font-medium text-slate-900">
                   {detail.record.patientId}
                 </dd>
               </div>
@@ -211,7 +340,7 @@ export default function PredictionDetailPage() {
                 <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Resultado
                 </dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
+                <dd className="break-words font-medium text-slate-900">
                   {detail.record.outcome}
                 </dd>
               </div>
@@ -219,7 +348,7 @@ export default function PredictionDetailPage() {
                 <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Probabilidad
                 </dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
+                <dd className="break-words font-medium text-slate-900">
                   {(detail.record.probability * 100).toFixed(1)}%
                 </dd>
               </div>
@@ -237,7 +366,7 @@ export default function PredictionDetailPage() {
                 <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Creado por
                 </dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
+                <dd className="break-words font-medium text-slate-900">
                   {detail.record.createdBy}
                 </dd>
               </div>
@@ -245,29 +374,29 @@ export default function PredictionDetailPage() {
                 <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                   Fecha
                 </dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
+                <dd className="break-words font-medium text-slate-900">
                   {formatRecordDate(detail.record.createdAt)}
                 </dd>
               </div>
             </dl>
           </section>
 
-          <section className="border border-slate-300 bg-white p-5 sm:p-6">
+          <section className="border border-slate-300 bg-white p-3 sm:p-4 lg:col-span-2">
             <PredictionResultCard probability={detail.record.probability} />
           </section>
 
-          <section className="border border-slate-300 bg-white p-5 sm:p-6">
-            <h2 className="mb-5 border-b border-slate-200 pb-3 text-base font-semibold text-slate-900">
+          <section className="border border-slate-300 bg-white p-3 sm:p-4 lg:col-span-2">
+            <h2 className="mb-3 border-b border-slate-200 pb-2 text-base font-semibold text-slate-900">
               Datos de entrada
             </h2>
             {featureEntries.length > 0 ? (
-              <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
                 {featureEntries.map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-(length:--font-size-xs) uppercase tracking-wider text-slate-500">
                       {FEATURE_LABELS[key] ?? key}
                     </dt>
-                    <dd className="mt-1 break-words font-medium text-slate-900">
+                    <dd className="break-words font-medium text-slate-900">
                       {featureValue(key, value)}
                     </dd>
                   </div>
@@ -280,13 +409,16 @@ export default function PredictionDetailPage() {
             )}
           </section>
 
-          <section className="lg:col-span-2 border border-slate-300 bg-white p-5 sm:p-6">
+          <section className="lg:col-span-2 border border-slate-300 bg-white p-3 sm:p-4">
             <ExplicacionPanel
               hasPrediction={explainRequest !== null}
-              method={method}
-              setMethod={setMethod}
               loading={loadingExplain}
-              onExplain={() => void handleExplain()}
+              onExplain={(method) => void handleExplain(method)}
+              method={explanationMethod}
+              onMethodChange={(method) => {
+                setExplanationMethod(method);
+                setExplicacion(null);
+              }}
               result={explicacion}
             />
           </section>

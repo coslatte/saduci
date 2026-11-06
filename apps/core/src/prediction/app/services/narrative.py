@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 from fastapi import HTTPException
 
+from app.services.narrative_model import generate_local_narrative
 from app.services.config import (
     DEFAULT_NARRATIVE_MODEL,
     DEFAULT_NARRATIVE_PROVIDER,
@@ -19,35 +20,59 @@ from app.services.config import (
     LOCAL_LLM_API_URL,
     LOCAL_LLM_MODEL,
     LOCAL_LLM_TIMEOUT_SECONDS,
+    PREDICTION_THRESHOLD,
     SUPPORTED_NARRATIVE_PROVIDERS,
 )
 from shared_core.schemas import PlatformExplanationRequest
+from shared_core.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 def build_narrative_prompt(
     probability: float,
     predicted_label: str,
     rows: list[dict[str, Any]],
-    method: str,
+    threshold: float,
 ) -> str:
-    rows_context = ", ".join(
+    ordered = sorted(rows, key=lambda row: abs(float(row["contribution"])), reverse=True)
+    rows_context = "\n".join(
         (
-            f"({row['feature_name']}, {row['patient_value_display']}, "
-            f"{row['contribution']})"
+            f"- {row['feature_name']}: valor actual {row['patient_value_display']}; "
+            f"referencia {row['baseline_value']}; diferencia estimada "
+            f"{float(row['contribution']) * 100:+.2f} puntos porcentuales en probabilidad de muerte."
         )
-        for row in rows
-    )
+        for row in ordered[:4]
+    ) or "- No hay diferencias locales disponibles."
 
     return (
-        "You are a specialist in Intensive Care Medicine and clinical data science. "
-        "Explain hidden mortality risk in ICU patients in clear clinical Spanish. "
-        f"Current mortality probability: {probability:.2%}. "
-        f"Binary model output: {predicted_label}. "
-        f"Attribution method: {method}. "
-        "Input format is (Clinical Parameter, Observed Value, Feature Importance Score). "
-        f"Input Data: {rows_context}. "
-        "Provide ONLY one paragraph beginning with 'Narrativa:'."
+        f"Probabilidad estimada por el modelo de muerte: {probability:.1%}. "
+        f"Umbral de clasificación: {threshold:.1%}. "
+        f"Etiqueta del modelo: {predicted_label}.\n"
+        "Las diferencias siguientes se calcularon cambiando una variable por vez a su valor de "
+        "referencia y volviendo a ejecutar el mismo modelo predictivo. No son causas clínicas ni "
+        "efectos causales.\n"
+        f"Variables con mayor cambio absoluto:\n{rows_context}"
     )
+
+
+async def call_embedded_narrative(
+    prompt: str,
+    temperature: float,
+) -> str | None:
+    narrative = await generate_local_narrative(
+        system_prompt=(
+            "Redactas explicaciones breves de resultados de un modelo estadístico en español. "
+            "Describe únicamente la probabilidad, el umbral y las diferencias de variables "
+            "incluidas en los datos. No diagnostiques, no infieras causas médicas, no recomiendes "
+            "tratamientos y no inventes relaciones fisiológicas. Aclara que el resultado es una "
+            "estimación del modelo, no una certeza sobre el desenlace del paciente. Devuelve un "
+            "solo párrafo de máximo tres frases."
+        ),
+        user_prompt=prompt,
+        temperature=temperature,
+    )
+    return narrative.replace("Narrativa:", "").strip() if narrative else None
 
 
 def normalize_narrative_provider(provider: str | None) -> str:
@@ -55,7 +80,7 @@ def normalize_narrative_provider(provider: str | None) -> str:
     if normalized_provider not in SUPPORTED_NARRATIVE_PROVIDERS:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported ai_provider. Use one of: stub, local, gemini, huggingface.",
+            detail="Unsupported ai_provider. Use one of: stub, embedded, local, gemini, huggingface.",
         )
 
     return normalized_provider
@@ -340,25 +365,23 @@ def build_stub_narrative(
     probability: float,
     predicted_label: str,
     rows: list[dict[str, Any]],
+    threshold: float,
 ) -> str:
     ordered = sorted(rows, key=lambda row: abs(float(row["contribution"])), reverse=True)
-    positive = [row for row in ordered if float(row["contribution"]) > 0][:2]
-    negative = [row for row in ordered if float(row["contribution"]) < 0][:2]
-
-    positive_txt = ", ".join(
-        f"{row['feature_name']}={row['patient_value_display']}" for row in positive
-    ) or "sin factores claros de aumento"
-
-    negative_txt = ", ".join(
-        f"{row['feature_name']}={row['patient_value_display']}" for row in negative
-    ) or "sin factores claros de reduccion"
+    most_relevant = ordered[:2]
+    changes = "; ".join(
+        f"{row['feature_name']} ({row['patient_value_display']}) cambió la probabilidad estimada "
+        f"{float(row['contribution']) * 100:+.2f} puntos porcentuales frente al valor de referencia"
+        for row in most_relevant
+    ) or "no hay diferencias locales disponibles"
+    label = "supervivencia" if predicted_label == "vive" else "mortalidad"
+    threshold_position = "por debajo" if probability < threshold else "igual o por encima"
 
     return (
-        f"Probabilidad estimada de no sobrevida: {probability:.2%} "
-        f"(salida binaria: {predicted_label}). "
-        f"Factores que aumentan riesgo: {positive_txt}. "
-        f"Factores que reducen riesgo: {negative_txt}. "
-        "Interpretar junto al juicio clinico y evolucion temporal del paciente."
+        f"El modelo estima una probabilidad de muerte de {probability:.1%}, {threshold_position} del umbral "
+        f"de {threshold:.1%}, por lo que clasifica el resultado como {label}. {changes}. "
+        "Es una explicación de la sensibilidad del modelo, no una causa médica ni una certeza "
+        "sobre la evolución del paciente."
     )
 
 
@@ -378,8 +401,28 @@ async def generate_narrative(
         probability=probability,
         predicted_label=predicted_label,
         rows=rows,
-        method=request.method,
+        threshold=PREDICTION_THRESHOLD,
     )
+
+    if provider == "embedded":
+        try:
+            narrative = await call_embedded_narrative(
+                prompt=prompt,
+                temperature=request.temperature,
+            )
+        except Exception as exc:
+            logger.warning("Local narrative generation failed: %s", exc)
+            narrative = None
+
+        if narrative:
+            return narrative, provider, model_name or None
+
+        logger.warning("Using deterministic narrative because the local model is unavailable")
+        return (
+            build_stub_narrative(probability, predicted_label, rows, PREDICTION_THRESHOLD),
+            "stub",
+            "template-clinical-v1",
+        )
 
     if provider == "local":
         narrative = await call_local_narrative(
@@ -406,6 +449,9 @@ async def generate_narrative(
         return narrative, provider, model_name or None
 
     narrative = build_stub_narrative(
-        probability=probability, predicted_label=predicted_label, rows=rows
+        probability=probability,
+        predicted_label=predicted_label,
+        rows=rows,
+        threshold=PREDICTION_THRESHOLD,
     )
     return narrative, "stub", "template-clinical-v1"

@@ -14,42 +14,45 @@ import {
 import { FiInfo } from "react-icons/fi";
 import { Button } from "@/components/atoms/Buttons";
 import { Alert } from "@/components/molecules/Alert";
-import { Label } from "@/components/atoms/Label";
-import { AccessibleSelect } from "@/components/atoms/AccessibleSelect";
 import { Spinner } from "@/components/atoms/Spinner";
 import { EXPLANATION_LOADING_PHASES } from "@/constants/loading";
 import { useProgressiveStatus } from "@/hooks/useProgressiveStatus";
-import type { ExplanationMethod, ExplicacionResponse } from "@/lib/prediction";
-import { EXPLANATION_METHODS } from "@/lib/prediction";
+import {
+  EXPLANATION_METHODS,
+  type ExplanationMethod,
+  type ExplicacionResponse,
+} from "@/lib/prediction";
 
 interface ExplicacionPanelProps {
   hasPrediction: boolean;
-  method: ExplanationMethod;
-  setMethod: (m: ExplanationMethod) => void;
   loading: boolean;
-  onExplain: () => void;
+  onExplain: (method: ExplanationMethod) => void;
+  method: ExplanationMethod;
+  onMethodChange: (method: ExplanationMethod) => void;
   result: ExplicacionResponse | null;
 }
 
 interface ChartEntry {
   feature: string;
   importance: number;
+  patientValue: string;
+  referenceValue: number;
 }
 
 function formatChartValue(
   value: number | string | readonly (number | string)[] | undefined,
 ) {
-  if (typeof value === "number") return value.toFixed(4);
+  if (typeof value === "number") return `${value.toFixed(2)} p.p.`;
   if (Array.isArray(value)) return value.join(", ");
   return value ?? "";
 }
 
 export function ExplicacionPanel({
   hasPrediction,
-  method,
-  setMethod,
   loading,
   onExplain,
+  method,
+  onMethodChange,
   result,
 }: ExplicacionPanelProps) {
   const { message: loadingMessage } = useProgressiveStatus(loading, {
@@ -59,7 +62,9 @@ export function ExplicacionPanel({
     ? result.feature_names
         .map((name, i) => ({
           feature: name,
-          importance: result.importances[i] ?? 0,
+          importance: (result.importances[i] ?? 0) * 100,
+          patientValue: result.rows[i]?.patient_value_display ?? "—",
+          referenceValue: result.rows[i]?.baseline_value ?? 0,
         }))
         .sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance))
     : [];
@@ -67,7 +72,7 @@ export function ExplicacionPanel({
   return (
     <section
       aria-labelledby="prediction-explain-section-title"
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-4"
     >
       <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
         <FiInfo className="size-5 text-primary-600" />
@@ -86,26 +91,37 @@ export function ExplicacionPanel({
           </Alert>
         )}
 
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex w-full flex-col gap-2 sm:w-auto">
-            <Label htmlFor="pred-method">Seleccionar método</Label>
-            <AccessibleSelect
-              id="pred-method"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <label
+              htmlFor="prediction-explanation-method"
+              className="text-sm font-medium text-slate-700"
+            >
+              Método de explicabilidad
+            </label>
+            <select
+              id="prediction-explanation-method"
               value={method}
-              onChange={(value) => setMethod(value as ExplanationMethod)}
-              options={EXPLANATION_METHODS.map((m) => ({
-                value: m,
-                label: m,
-              }))}
-              fullWidth={false}
-              className="w-full sm:w-[220px]"
-            />
+              disabled={loading}
+              onChange={(event) => {
+                const selected = EXPLANATION_METHODS.find(
+                  (item) => item === event.currentTarget.value,
+                );
+                if (selected) onMethodChange(selected);
+              }}
+              className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-primary-600 disabled:opacity-60"
+            >
+              {EXPLANATION_METHODS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </div>
-
           <Button
             variant="secondary"
             disabled={!hasPrediction || loading}
-            onClick={onExplain}
+            onClick={() => onExplain(method)}
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -129,49 +145,70 @@ export function ExplicacionPanel({
         )}
 
         {result && (
-          <div className="flex flex-col w-full gap-3">
-            <h3 className="font-medium text-zinc-700">
-              {`Explicación con ${method}`}
-            </h3>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 bg-primary-500 rounded-sm" />
-                Positiva (aumenta probabilidad)
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 bg-slate-400 rounded-sm" />
-                Negativa (disminuye probabilidad)
-              </span>
+          <div className="flex w-full flex-col gap-4">
+            <div className="flex w-full flex-col gap-2">
+              <h3 className="font-medium text-zinc-700">
+                Factores asociados al resultado · {result.method}
+              </h3>
+              <p className="text-xs leading-5 text-slate-600">
+                Cada barra muestra cómo cambia la probabilidad estimada de
+                muerte al reemplazar una variable por su referencia y volver a
+                ejecutar el modelo.
+              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-3 w-3 rounded-sm bg-primary-500" />
+                  Aumenta probabilidad de muerte
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-3 w-3 rounded-sm bg-slate-400" />
+                  Reduce probabilidad de muerte
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={chartData}
+                  layout="vertical"
+                  margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(value: number) => value.toFixed(1)}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="feature"
+                    width={112}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip
+                    formatter={formatChartValue}
+                    labelFormatter={(label, payload) => {
+                      const point = payload[0]?.payload as
+                        | ChartEntry
+                        | undefined;
+                      return point
+                        ? `${label} · actual: ${point.patientValue}; referencia: ${point.referenceValue}`
+                        : String(label);
+                    }}
+                  />
+                  <ReferenceLine x={0} stroke="#ef4444" strokeDasharray="4 2" />
+                  <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.importance >= 0 ? "#14b8a6" : "#94a3b8"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-slate-500">
+                Cambios expresados en puntos porcentuales frente al valor de
+                referencia; no representan causas ni efectos causales.
+              </p>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={chartData}
-                layout="vertical"
-                margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis
-                  type="number"
-                  tickFormatter={(v: number) => v.toFixed(2)}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="feature"
-                  width={96}
-                  tick={{ fontSize: 11 }}
-                />
-                <Tooltip formatter={formatChartValue} />
-                <ReferenceLine x={0} stroke="#ef4444" strokeDasharray="4 2" />
-                <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.importance >= 0 ? "#14b8a6" : "#94a3b8"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         )}
       </div>

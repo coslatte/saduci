@@ -6,6 +6,21 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
 
 ## [Unreleased]
 
+### Changed — Valor inicial de corridas de simulación
+
+- La nueva simulación comienza con 5000 corridas tanto en el formulario como
+  en el valor por defecto del esquema de plataforma.
+
+### Changed — Diagnóstico de servicios para administradores
+
+- Las tarjetas de estado del dashboard abren el historial reciente de
+  comprobaciones, con latencia promedio y cantidad de fallos observados.
+- El historial conserva hasta 20 comprobaciones por servicio durante la sesión;
+  el gateway sigue exigiendo rol ADMIN y ahora devuelve la latencia de cada
+  microservicio.
+- El panel informa actividad de salud HTTP; la composición no expone métricas
+  de CPU/memoria ni logs de Docker.
+
 ### Fixed — Sesión del frontend: la entrada al sistema se quedaba en blanco
 
 - Nadie escribía la cookie `auth-token`, pero tres capas la leían: `middleware.ts`,

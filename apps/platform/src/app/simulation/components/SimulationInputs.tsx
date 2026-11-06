@@ -1,5 +1,12 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import {
+  fetchDiagnosisCatalog,
+  fetchRespiratoryInsufficiencyCatalog,
+} from "@/lib/recordsApi";
+import type { DiagnosisOption } from "@/lib/predictionDiagnoses";
 import { SimulationDiagnosesSection } from "./SimulationDiagnosesSection";
 import { SimulationMetricGroups } from "./SimulationMetricGroups";
 import { SimulationPatientSection } from "./SimulationPatientSection";
@@ -13,6 +20,79 @@ type Props = { runner: ReturnType<typeof useSimulationRunner> };
  * Receives the simulation controller and composes its input sections.
  */
 export default function SimulationInputs({ runner }: Props) {
+  const { token } = useAuth();
+  const [diagnosisOptions, setDiagnosisOptions] = useState<DiagnosisOption[]>(
+    [],
+  );
+  const [respiratoryOptions, setRespiratoryOptions] = useState<
+    DiagnosisOption[]
+  >([]);
+  const [catalogsLoading, setCatalogsLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogRetry, setCatalogRetry] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    void Promise.all([
+      fetchDiagnosisCatalog(token).then(
+        (diagnoses) => ({ diagnoses, error: null as string | null }),
+        (error: unknown) => ({
+          diagnoses: [],
+          error:
+            error instanceof Error
+              ? `Diagnósticos: ${error.message}`
+              : "No se pudo cargar el catálogo de diagnósticos.",
+        }),
+      ),
+      fetchRespiratoryInsufficiencyCatalog(token).then(
+        (respiratoryTypes) => ({
+          respiratoryTypes,
+          error: null as string | null,
+        }),
+        (error: unknown) => ({
+          respiratoryTypes: [],
+          error:
+            error instanceof Error
+              ? `Insuficiencia respiratoria: ${error.message}`
+              : "No se pudo cargar el catálogo de insuficiencia respiratoria.",
+        }),
+      ),
+    ])
+      .then(([diagnosisResult, respiratoryResult]) => {
+        if (cancelled) return;
+        setDiagnosisOptions(
+          diagnosisResult.diagnoses.map(({ id, name }) => ({
+            value: String(id),
+            label: name,
+          })),
+        );
+        setRespiratoryOptions(
+          respiratoryResult.respiratoryTypes.map(({ id, name }) => ({
+            value: String(id),
+            label: name,
+          })),
+        );
+        setCatalogError(
+          [diagnosisResult.error, respiratoryResult.error]
+            .filter(Boolean)
+            .join(" "),
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, catalogRetry]);
+
+  function retryCatalogs() {
+    setCatalogError(null);
+    setCatalogsLoading(true);
+    setCatalogRetry((attempt) => attempt + 1);
+  }
+
   const {
     patientId,
     setPatientId,
@@ -57,14 +137,14 @@ export default function SimulationInputs({ runner }: Props) {
   } = runner;
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <SimulationPatientSection
         patientId={patientId}
         setPatientId={setPatientId}
         handleNewPatient={handleNewPatient}
       />
 
-      <section className="p-5 bg-white border rounded-2xl border-slate-200">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <SimulationMetricGroups
           age={age}
           setAge={setAge}
@@ -96,6 +176,11 @@ export default function SimulationInputs({ runner }: Props) {
         setRespInsuf={setRespInsuf}
         ventType={ventType}
         setVentType={setVentType}
+        diagnosisOptions={diagnosisOptions}
+        respiratoryOptions={respiratoryOptions}
+        catalogsLoading={catalogsLoading}
+        catalogError={catalogError}
+        onRetryCatalogs={retryCatalogs}
       />
 
       <SimulationRunConfiguration

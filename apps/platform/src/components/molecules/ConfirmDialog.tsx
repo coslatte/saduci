@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog } from "@/components/molecules/Dialog";
 import { Button } from "@/components/atoms/Buttons";
 import { Text } from "@/components/atoms/Text";
@@ -16,6 +17,7 @@ interface ConfirmDialogProps {
   hint?: string | null;
   /** Shows a spinner on the confirm button and blocks both actions. */
   loading?: boolean;
+  confirmationText?: string;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -38,9 +40,11 @@ export function ConfirmDialog({
   tone = "danger",
   hint = "Esta acción no se puede deshacer.",
   loading = false,
+  confirmationText,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  const [confirmation, setConfirmation] = useState("");
   return (
     <Dialog
       open={open}
@@ -58,12 +62,24 @@ export function ConfirmDialog({
             variant={tone === "danger" ? "danger" : "primary"}
             onClick={onConfirm}
             loading={loading}
+            disabled={!!confirmationText && confirmation !== confirmationText}
           >
             {confirmLabel}
           </Button>
         </>
       }
     >
+      {confirmationText && (
+        <label className="block mb-3 text-sm text-slate-700">
+          Escribe «{confirmationText}» para confirmar.
+          <input
+            className="mt-2 block w-full rounded border border-slate-300 p-2 focus-visible:outline-2 focus-visible:outline-primary-600"
+            value={confirmation}
+            onInput={(event) => setConfirmation(event.currentTarget.value)}
+            autoComplete="off"
+          />
+        </label>
+      )}
       {hint && (
         <Text as="p" size="sm" className="text-slate-600">
           {hint}

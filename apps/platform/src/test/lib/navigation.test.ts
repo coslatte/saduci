@@ -4,6 +4,8 @@ import {
   APP_NAVIGATION_SECTIONS,
   collectActiveNavigationKeys,
   getNavigationItemKey,
+  getSidebarSectionsForUser,
+  resolveSidebarSections,
 } from "@/lib/navigation";
 import { SIDEBAR_SECTIONS } from "@/lib/mockData";
 import type { NavItemType } from "@/lib/types";
@@ -103,27 +105,32 @@ describe("configuracion del sidebar", () => {
       "/simulation",
       "/prediction",
       "/statistics",
-      "/records",
-      "/records/simulations",
-      "/records/predictions",
-      "/records/statistics",
       "/admin/users",
+      "/records",
     ]) {
       expect(hrefs.has(required)).toBe(true);
     }
   });
 
-  it("deja los listados de registros en un unico sitio", () => {
-    const registros = SIDEBAR_ENTRIES.find((e) => e.href === "/records");
-    expect(registros).toBeDefined();
-    const registrosChildren = SIDEBAR_ENTRIES.filter(
-      (e) => e.depth === 1 && e.href.startsWith("/records/"),
-    );
-    expect(registrosChildren.map((e) => e.href).sort()).toEqual([
-      "/records/predictions",
+  it("incluye un acceso central al panel de registros", () => {
+    expect(
+      SIDEBAR_ENTRIES.filter((entry) => entry.href === "/records"),
+    ).toHaveLength(1);
+  });
+
+  it("mantiene activo Registros al cambiar entre sus módulos", () => {
+    for (const path of [
       "/records/simulations",
+      "/records/predictions",
       "/records/statistics",
-    ]);
+    ]) {
+      const items = resolveSidebarSections(path).flatMap(
+        (section) => section.items,
+      );
+      expect(items.find((item) => item.href === "/records")?.current).toBe(
+        true,
+      );
+    }
   });
 
   it("expone las mismas entradas en la configuracion ya resuelta", () => {
@@ -147,31 +154,31 @@ describe("configuracion del sidebar", () => {
   it("mantiene el orden de lectura del menú", () => {
     const raiz = SIDEBAR_SECTIONS.flatMap((section) => section.items);
     expect(raiz.map((item) => item.href)).toEqual([
+      "/admin/users",
       "/home",
       "/simulation",
-      "/statistics",
       "/prediction",
+      "/statistics",
       "/records",
-      "/admin/users",
     ]);
     expect(raiz.map((item) => item.label)).toEqual([
+      "Administración",
       "Dashboard",
       "Simulación",
+      "Predicciones",
       "Pruebas estadísticas",
-      "Predicción",
       "Registros",
-      "Administración",
     ]);
   });
-
-  it("mantiene Registros como grupo desplegable de los tres listados", () => {
-    const registros = SIDEBAR_SECTIONS.flatMap((s) => s.items).find(
-      (i) => i.href === "/records",
+  it("muestra Administración a todos los usuarios", () => {
+    const adminItems = getSidebarSectionsForUser(true).flatMap(
+      (section) => section.items,
     );
-    expect(registros?.children?.map((c) => c.href)).toEqual([
-      "/records/simulations",
-      "/records/predictions",
-      "/records/statistics",
-    ]);
+    const userItems = getSidebarSectionsForUser(false).flatMap(
+      (section) => section.items,
+    );
+    expect(adminItems[0]?.href).toBe("/admin/users");
+    expect(userItems.some((item) => item.href === "/admin/users")).toBe(true);
+    expect(userItems[0]?.href).toBe("/admin/users");
   });
 });

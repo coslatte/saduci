@@ -9,6 +9,7 @@ export const PREDICTION_LIMITS = {
 } as const;
 
 export type ExplanationMethod =
+  | "Impacto local por referencia"
   | "LIME"
   | "SHAP"
   | "Gradientes Integrados"
@@ -40,15 +41,22 @@ export interface PredictionResponse {
 
 export interface ExplicacionRequest extends PredictionRequest {
   method: ExplanationMethod;
+  include_narrative?: boolean;
+  ai_provider?: "stub" | "embedded" | "local" | "gemini" | "huggingface";
 }
 
 export interface ExplicacionResponse {
+  method: string;
   feature_names: string[];
   importances: number[];
   probability: number;
+  threshold: number;
   predicted_class: number;
   predicted_label: string;
   rows: ExplicacionRow[];
+  narrative?: string | null;
+  narrative_provider?: string | null;
+  narrative_model?: string | null;
 }
 
 export interface ExplicacionRow {

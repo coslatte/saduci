@@ -44,6 +44,11 @@ Client Component → cliente de dominio / lib/http.ts → Route Handler /api/* �
 - Literales visibles centralizados en `src/constants/` (por dominio).
 - Los Route Handlers `/api/*` son un BFF server-side hacia el API Gateway (`API_URL`); el navegador nunca llama a los servicios internos (puertos 7001–7004).
 - Rutas de URL y claves de navegación en inglés; textos visibles en español.
+- **Breadcrumbs de detalle**: registra la ruta base en `RECORD_DETAIL_ROUTES`.
+  La última miga identifica el registro con el nombre legible (en registros de
+  pacientes, usa su SKU) y deja el ID de la URL como respaldo mientras carga.
+  No repitas títulos genéricos como «Detalles de Simulación» en la miga actual;
+  el título completo del módulo queda en el encabezado de la página.
 - **Nuevas capas**: `src/entities/`, `src/features/`, `src/providers/`, `src/hooks/`, `src/shared/`.
 
 ## Estilos (Tailwind v4)

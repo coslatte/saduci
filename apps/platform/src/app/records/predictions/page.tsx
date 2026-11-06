@@ -1,22 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Buttons";
 import { Table } from "@/components/molecules/Table";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { showToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/lib/auth";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { normalizeRole } from "@/entities/user";
 import {
   getRecordPermissions,
-  getRecordRoleHint,
   type RecordPermissions,
 } from "@/lib/recordPermissions";
 import {
-  deletePredictionRecord,
   fetchPredictionRecords,
   formatRecordDate,
   updatePredictionRecord,
@@ -27,13 +25,11 @@ import type {
 } from "@/lib/recordsMockData";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
 import { RECORD_WORKSPACE_COPY } from "@/constants/recordHistory";
+import { MODULE_DESCRIPTIONS } from "@/constants/moduleDescriptions";
 import { RecordsPageHeader } from "../components/RecordsPageHeader";
 import { RecordActionsCell } from "../components/RecordActionsCell";
+import { RecordDateForm } from "../components/RecordDateForm";
 import { PredictionRecordDialog } from "../components/PredictionRecordDialog";
-import {
-  PredictionRecordForm,
-  type PredictionFormValues,
-} from "../components/PredictionRecordForm";
 
 const STATUS_LABELS: Record<PredictionRecordStatus, string> = {
   activa: "Activa",
@@ -48,13 +44,17 @@ const STATUS_BADGE: Record<PredictionRecordStatus, "success" | "default"> = {
 function buildPredictionRows(
   records: PredictionRecord[],
   permissions: RecordPermissions,
-  deletingId: string | null,
-  handleDelete: (record: PredictionRecord) => void,
   openDetail: (recordId: string) => void,
-  startEdit: (record: PredictionRecord) => void,
 ) {
   return records.map((record) => ({
-    patientId: <span className="text-center block">{record.patientId}</span>,
+    patientId: (
+      <Link
+        href={`/records/predictions/${encodeURIComponent(record.id)}`}
+        className="block text-center font-medium text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+      >
+        {record.patientId}
+      </Link>
+    ),
     outcome: <span className="text-center block">{record.outcome}</span>,
     probability: (
       <span className="text-center block">
@@ -78,9 +78,6 @@ function buildPredictionRows(
       <RecordActionsCell
         permissions={permissions}
         onView={() => openDetail(record.id)}
-        onEdit={() => startEdit(record)}
-        onDelete={() => handleDelete(record)}
-        isDeleting={deletingId === record.id}
       />
     ),
   }));
@@ -92,13 +89,8 @@ export default function PredictionsRecordsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<PredictionRecord | null>(
-    null,
-  );
   // "+ Nuevo" runs the full prediction form in a popout; inline form is edit-only.
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"edit" | null>(null);
   const [editingRecord, setEditingRecord] = useState<PredictionRecord | null>(
     null,
   );
@@ -109,6 +101,7 @@ export default function PredictionsRecordsPage() {
     "predictions",
   );
   const router = useRouter();
+  const isRecordsPanel = usePathname().startsWith("/records");
   const fallbackUser = user?.username ?? "";
 
   const loadRecords = useCallback(async () => {
@@ -176,57 +169,26 @@ export default function PredictionsRecordsPage() {
     }
   }
 
-  const handleDelete = useCallback(
-    async (record: PredictionRecord) => {
-      if (!token) return;
-
-      setDeletingId(record.id);
-      try {
-        await deletePredictionRecord(token, record.id);
-        setRecords((current) =>
-          current.filter((item) => item.id !== record.id),
-        );
-        showToast({
-          title: "Predicción eliminada",
-          description: "El registro se eliminó correctamente.",
-          type: "success",
-        });
-      } catch (err) {
-        showToast({
-          title: "Error al eliminar",
-          description: friendlyErrorMessage(
-            err,
-            "No se pudo eliminar la predicción.",
-          ),
-          type: "error",
-        });
-      } finally {
-        setDeletingId(null);
-        setPendingDelete(null);
-      }
-    },
-    [token],
-  );
-
   const closeForm = useCallback(() => {
-    setFormMode(null);
     setEditingRecord(null);
     setFormError(null);
   }, []);
 
   const handleFormSubmit = useCallback(
-    async (values: PredictionFormValues) => {
+    async (createdAt: string) => {
       if (!token || !editingRecord) return;
       setFormSubmitting(true);
       setFormError(null);
       try {
         await updatePredictionRecord(token, editingRecord.id, {
-          patientId: values.patientId,
-          outcome: values.outcome,
-          probability: values.probability,
+          createdAt,
         });
         closeForm();
-        await loadRecords();
+        setRecords((current) =>
+          current.map((item) =>
+            item.id === editingRecord.id ? { ...item, createdAt } : item,
+          ),
+        );
         showToast({
           title: "Registro guardado",
           description: "La predicción se guardó correctamente.",
@@ -240,7 +202,7 @@ export default function PredictionsRecordsPage() {
         setFormSubmitting(false);
       }
     },
-    [token, editingRecord, closeForm, loadRecords],
+    [token, editingRecord, closeForm],
   );
 
   const normalizedQuery = query.trim().toLocaleLowerCase("es");
@@ -252,22 +214,18 @@ export default function PredictionsRecordsPage() {
   const tableRows = buildPredictionRows(
     visibleRecords,
     permissions,
-    deletingId,
-    (record) => setPendingDelete(record),
     (recordId) =>
       router.push(`/records/predictions/${encodeURIComponent(recordId)}`),
-    (record) => {
-      setEditingRecord(record);
-      setFormMode("edit");
-      setFormError(null);
-    },
   );
 
   return (
     <main className="mx-auto w-full max-w-7xl min-w-0">
       <RecordsPageHeader
-        title="Registros de predicciones"
-        description="Consulta las predicciones del modelo clínico."
+        title={isRecordsPanel ? "Historial de registros" : "Predicciones"}
+        expandableDescription={
+          isRecordsPanel ? undefined : MODULE_DESCRIPTIONS.prediction
+        }
+        showNavigation={isRecordsPanel}
         search={{
           query,
           onChange: setQuery,
@@ -275,7 +233,6 @@ export default function PredictionsRecordsPage() {
           total: records.length,
           loading: loading || authLoading,
         }}
-        roleHint={getRecordRoleHint(normalizeRole(user?.role))}
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 pb-4">
@@ -286,7 +243,7 @@ export default function PredictionsRecordsPage() {
             onClick={() => setDialogOpen(true)}
           >
             <FiPlus className="mr-1.5" />
-            Nuevo
+            Nueva predicción
           </Button>
         )}
         <Button
@@ -310,35 +267,17 @@ export default function PredictionsRecordsPage() {
         />
       )}
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Eliminar predicción"
-        description={
-          pendingDelete
-            ? `¿Eliminar la predicción de ${pendingDelete.patientId}?`
-            : undefined
-        }
-        confirmLabel="Eliminar"
-        loading={deletingId !== null}
-        onConfirm={() => {
-          if (pendingDelete) void handleDelete(pendingDelete);
-        }}
-        onClose={() => setPendingDelete(null)}
-      />
-
-      {formMode && editingRecord && (
-        <PredictionRecordForm
+      {editingRecord && token && (
+        <RecordDateForm
           key={editingRecord.id}
-          mode={formMode}
-          initialValues={{
-            patientId: editingRecord.patientId,
-            outcome: editingRecord.outcome,
-            probability: editingRecord.probability,
-          }}
+          kind="prediction"
+          recordId={editingRecord.id}
+          token={token}
+          createdAt={editingRecord.createdAt}
           submitting={formSubmitting}
           error={formError}
-          onSubmit={(values) => void handleFormSubmit(values)}
-          onCancel={closeForm}
+          onSubmit={(value) => void handleFormSubmit(value)}
+          onCancel={() => setEditingRecord(null)}
         />
       )}
 

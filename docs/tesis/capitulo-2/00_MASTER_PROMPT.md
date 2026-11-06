@@ -8,7 +8,7 @@ Este documento es el punto de partida para que un agente de IA genere el conteni
 
 ## Información del Proyecto
 
-- **Plataforma:** SADUCI (Sistema de Apoyo a Decisiones en Unidad de Cuidados Intensivos)
+- **Plataforma:** SADUCI (Sistema de Ayuda a la Decisión en la Unidad de Cuidados Intensivos)
 - **Institución:** Hospital Universitario Arnaldo Milián Castro
 - **Tipo de documento:** Capítulo de tesis de grado
 - **Tono:** Académico, técnico y propositivo (APA 7)

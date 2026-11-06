@@ -17,14 +17,19 @@ import { PredictionResultCard } from "./PredictionResultCard";
 import { ExplicacionPanel } from "./ExplicacionPanel";
 import { useAuth } from "@/lib/auth";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { fetchPredictionRecords, formatRecordDate } from "@/lib/recordsApi";
+import {
+  fetchDiagnosisCatalog,
+  fetchPredictionRecords,
+  formatRecordDate,
+} from "@/lib/recordsApi";
+import type { DiagnosisOption } from "@/lib/predictionDiagnoses";
 import type { PredictionRecord } from "@/lib/recordsMockData";
 import { FiRefreshCw } from "react-icons/fi";
 import {
   EXPLANATION_METHODS,
   runExplicacion,
-  type ExplicacionResponse,
   type ExplanationMethod,
+  type ExplicacionResponse,
 } from "@/lib/prediction";
 import { usePredictionRunner } from "../hooks/usePredictionRunner";
 
@@ -47,6 +52,10 @@ export function PredictionPageContent() {
   const [savedPredictionsError, setSavedPredictionsError] = useState<
     string | null
   >(null);
+  const [diagnosisOptions, setDiagnosisOptions] = useState<DiagnosisOption[]>(
+    [],
+  );
+  const [diagnosisLoading, setDiagnosisLoading] = useState(true);
 
   const fallbackUser = user?.username ?? "";
 
@@ -92,7 +101,7 @@ export function PredictionPageContent() {
   const [explicacion, setExplicacion] = useState<ExplicacionResponse | null>(
     null,
   );
-  const [method, setMethod] = useState<ExplanationMethod>(
+  const [explanationMethod, setExplanationMethod] = useState<ExplanationMethod>(
     EXPLANATION_METHODS[0],
   );
 
@@ -101,12 +110,32 @@ export function PredictionPageContent() {
     void loadSavedPredictions();
   }, [token, loadSavedPredictions]);
 
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    void fetchDiagnosisCatalog(token)
+      .then((diagnoses) => {
+        setDiagnosisOptions(
+          diagnoses.map(({ id, name }) => ({ value: String(id), label: name })),
+        );
+      })
+      .catch(() => {
+        showToast({
+          title: "Error al cargar diagnósticos",
+          description: "No se pudo obtener el catálogo de diagnósticos.",
+          type: "error",
+        });
+      })
+      .finally(() => setDiagnosisLoading(false));
+  }, [token]);
+
   // A new run invalidates the previous explanation.
   useEffect(() => {
     setExplicacion(null);
   }, [prediction]);
 
-  async function handleExplain(): Promise<void> {
+  async function handleExplain(method: ExplanationMethod): Promise<void> {
     if (!prediction) return;
 
     setExplicacion(null);
@@ -121,6 +150,7 @@ export function PredictionPageContent() {
         apache,
         tiempo_vam: tiempoVam,
         method,
+        include_narrative: false,
       });
 
       setExplicacion(result);
@@ -142,7 +172,7 @@ export function PredictionPageContent() {
   return (
     <PageLayout
       title="Predicción de Supervivencia"
-      description="Herramienta de apoyo para la predicción de supervivencia de pacientes en UCI."
+      description="Herramienta de ayuda para estimar la supervivencia de pacientes en UCI."
       main={
         <section className="border border-slate-300 bg-white p-5 sm:p-6">
           <PredictionForm
@@ -160,6 +190,8 @@ export function PredictionPageContent() {
             setTiempoVam={setTiempoVam}
             loading={loadingPredict}
             onPredict={() => void runner.handlePredict()}
+            diagnosisOptions={diagnosisOptions}
+            diagnosisLoading={diagnosisLoading}
           />
         </section>
       }
@@ -190,10 +222,13 @@ export function PredictionPageContent() {
           <section className="border border-slate-300 bg-white p-5 sm:p-6">
             <ExplicacionPanel
               hasPrediction={prediction !== null}
-              method={method}
-              setMethod={setMethod}
               loading={loadingExplain}
-              onExplain={handleExplain}
+              onExplain={(method) => void handleExplain(method)}
+              method={explanationMethod}
+              onMethodChange={(method) => {
+                setExplanationMethod(method);
+                setExplicacion(null);
+              }}
               result={explicacion}
             />
           </section>

@@ -9,6 +9,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   help?: string;
   info?: string;
   showNumberControls?: boolean;
+  clampNumberToRange?: boolean;
   /** Node rendered in the right adornment area (e.g. a password toggle). */
   trailing?: React.ReactNode;
 }
@@ -25,6 +26,7 @@ export function Input({
   help,
   info,
   showNumberControls = true,
+  clampNumberToRange = true,
   trailing,
   type,
   ...props
@@ -146,14 +148,14 @@ export function Input({
         )}
         disabled={disabled}
         onChange={(event) => {
-          clampToRange(event.currentTarget);
+          if (clampNumberToRange) clampToRange(event.currentTarget);
           updateOutOfRangeState(event.currentTarget);
           forwardChange(event);
         }}
         onInput={(event) => {
           const changeEvent =
             event as unknown as React.ChangeEvent<HTMLInputElement>;
-          clampToRange(changeEvent.currentTarget);
+          if (clampNumberToRange) clampToRange(changeEvent.currentTarget);
           updateOutOfRangeState(changeEvent.currentTarget);
           forwardChange(changeEvent);
         }}

@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db
+from app.services.diagnoses import list_diagnoses, list_respiratory_insufficiency_types
+from shared_core.schemas.diagnosis import DiagnosisResponse
 from app.services.prediction_service import (
     create_prediction,
     create_platform_prediction,
@@ -13,7 +15,6 @@ from app.services.prediction_service import (
     count_predictions,
     get_patient_predictions,
     update_prediction,
-    delete_prediction,
     list_models,
 )
 from shared_core.schemas import (
@@ -84,12 +85,6 @@ async def list_all_predictions_api(
     return list_all_predictions(db, skip=skip, limit=limit)
 
 
-@router.get("/api/predictions/{patient_id}")
-async def get_patient_predictions_api(patient_id: str, db: Session = Depends(get_db)):
-    """Get all predictions for a patient."""
-    return get_patient_predictions(db, patient_id)
-
-
 @router.get("/api/predictions/models")
 async def list_models_api():
     """List available prediction models."""
@@ -102,6 +97,12 @@ async def count_predictions_api(db: Session = Depends(get_db)):
     return count_predictions(db)
 
 
+@router.get("/api/predictions/{patient_id}")
+async def get_patient_predictions_api(patient_id: str, db: Session = Depends(get_db)):
+    """Get all predictions for a patient."""
+    return get_patient_predictions(db, patient_id)
+
+
 @router.put("/api/predictions/{prediction_id}")
 async def update_prediction_api(
     prediction_id: int,
@@ -111,6 +112,11 @@ async def update_prediction_api(
     return update_prediction(db, prediction_id, payload)
 
 
-@router.delete("/api/predictions/{prediction_id}")
-async def delete_prediction_api(prediction_id: int, db: Session = Depends(get_db)):
-    return delete_prediction(db, prediction_id)
+@router.get("/api/diagnoses", response_model=list[DiagnosisResponse])
+async def list_diagnoses_api(db: Session = Depends(get_db)):
+    return list_diagnoses(db)
+
+
+@router.get("/api/respiratory-insufficiency-types", response_model=list[DiagnosisResponse])
+async def list_respiratory_insufficiency_types_api(db: Session = Depends(get_db)):
+    return list_respiratory_insufficiency_types(db)

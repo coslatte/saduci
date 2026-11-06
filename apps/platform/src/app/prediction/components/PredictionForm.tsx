@@ -1,14 +1,8 @@
-import AccessibleSelect from "@/components/atoms/AccessibleSelect";
-import { Label } from "@/components/atoms/Label";
+import { CatalogDropdown } from "@/app/simulation/components/SimulationDiagnosesSection";
 import { FormField } from "@/components/molecules/FormField";
 import { Button } from "@/components/atoms/Buttons";
 import { FiActivity } from "react-icons/fi";
 import { PREDICTION_LIMITS } from "@/lib/prediction";
-import {
-  PREDICTION_DIAG_EGR2_OPTIONS,
-  PREDICTION_DIAG_ING1_OPTIONS,
-  PREDICTION_DIAG_ING2_OPTIONS,
-} from "@/lib/predictionDiagnoses";
 import type { DiagnosisOption } from "@/lib/predictionDiagnoses";
 
 interface PredictionFormProps {
@@ -26,6 +20,8 @@ interface PredictionFormProps {
   setTiempoVam: (v: number) => void;
   loading: boolean;
   onPredict: () => void;
+  diagnosisOptions: DiagnosisOption[];
+  diagnosisLoading: boolean;
 }
 
 interface DiagnosisSelectFieldProps {
@@ -35,6 +31,7 @@ interface DiagnosisSelectFieldProps {
   onChange: (value: number) => void;
   options: DiagnosisOption[];
   help: string;
+  loading: boolean;
 }
 
 /**
@@ -58,18 +55,19 @@ function DiagnosisSelectField({
   onChange,
   options,
   help,
+  loading,
 }: DiagnosisSelectFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <AccessibleSelect
+      <CatalogDropdown
         id={id}
+        label={label}
         value={value}
-        onChange={(next) => onChange(Number(next))}
+        onChange={onChange}
         options={options}
-        fullWidth
-        help={help}
+        loading={loading}
       />
+      <p className="text-xs text-slate-500">{help}</p>
     </div>
   );
 }
@@ -93,6 +91,8 @@ export function PredictionForm({
   setTiempoVam,
   loading,
   onPredict,
+  diagnosisOptions,
+  diagnosisLoading,
 }: PredictionFormProps) {
   const { edad: edadL, apache: apL, tiempoVam: tvL } = PREDICTION_LIMITS;
 
@@ -162,7 +162,12 @@ export function PredictionForm({
           }
           value={diagIng1}
           onChange={setDiagIng1}
-          options={PREDICTION_DIAG_ING1_OPTIONS}
+          options={diagnosisOptions.filter(
+            (option) =>
+              Number(option.value) >= PREDICTION_LIMITS.diagIng1.min &&
+              Number(option.value) <= PREDICTION_LIMITS.diagIng1.max,
+          )}
+          loading={diagnosisLoading}
         />
         <DiagnosisSelectField
           id="pred-diag-ing2"
@@ -172,7 +177,12 @@ export function PredictionForm({
           }
           value={diagIng2}
           onChange={setDiagIng2}
-          options={PREDICTION_DIAG_ING2_OPTIONS}
+          options={diagnosisOptions.filter(
+            (option) =>
+              Number(option.value) >= PREDICTION_LIMITS.diagIng2.min &&
+              Number(option.value) <= PREDICTION_LIMITS.diagIng2.max,
+          )}
+          loading={diagnosisLoading}
         />
         <DiagnosisSelectField
           id="pred-diag-egr2"
@@ -182,7 +192,12 @@ export function PredictionForm({
           }
           value={diagEgr2}
           onChange={setDiagEgr2}
-          options={PREDICTION_DIAG_EGR2_OPTIONS}
+          options={diagnosisOptions.filter(
+            (option) =>
+              Number(option.value) >= PREDICTION_LIMITS.diagEgr2.min &&
+              Number(option.value) <= PREDICTION_LIMITS.diagEgr2.max,
+          )}
+          loading={diagnosisLoading}
         />
       </div>
       <div className="mt-3 flex justify-end border-t border-slate-200 pt-5">

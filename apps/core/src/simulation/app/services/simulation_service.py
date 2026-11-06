@@ -127,15 +127,7 @@ def update_simulation(db: Session, simulation_id: int, payload: SimulationUpdate
     if not record:
         raise_not_found("Simulación")
 
-    fields = payload.model_dump(exclude_unset=True)
-    if "patient_id" in fields:
-        record.patient_id = fields["patient_id"]
-    if "scenario" in fields:
-        record.scenario = fields["scenario"]
-    if "parameters" in fields:
-        record.parameters = fields["parameters"]
-    if "results" in fields:
-        record.results = fields["results"]
+    record.created_at = payload.created_at
 
     db.add(record)
     db.commit()
@@ -150,14 +142,3 @@ def update_simulation(db: Session, simulation_id: int, payload: SimulationUpdate
         "created_by": record.created_by,
         "created_at": record.created_at.isoformat(),
     }
-
-
-def delete_simulation(db: Session, simulation_id: int) -> Dict[str, str]:
-    """Delete a simulation record."""
-    record = db.get(SimulationRecord, simulation_id)
-    if not record:
-        raise_not_found("Simulación")
-
-    db.delete(record)
-    db.commit()
-    return {"message": "Simulación eliminada correctamente."}

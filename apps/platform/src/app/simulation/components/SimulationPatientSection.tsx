@@ -20,18 +20,23 @@ export function SimulationPatientSection({
   handleNewPatient,
 }: SimulationPatientSectionProps) {
   return (
-    <section className="flex flex-col gap-4 p-5 bg-white border rounded-2xl border-slate-200">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="min-w-0 text-(length:--font-size-sm) font-semibold uppercase tracking-widest text-slate-700">
-          {"Datos del Paciente"}
-        </h2>
-        <span className="font-mono text-(length:--font-size-xs) uppercase text-slate-700">
+    <section className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-700">
+            Identificación
+          </p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+            Datos del paciente
+          </h2>
+        </div>
+        <span className="rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs font-medium text-slate-600">
           ID: {patientId}
         </span>
       </div>
 
       <div className="flex flex-col items-stretch gap-4 md:flex-row md:items-end">
-        <div className="flex w-full flex-col gap-1.5 md:w-1/3">
+        <div className="flex w-full flex-col gap-2 md:max-w-sm">
           <Label htmlFor="patient-id">{"ID Paciente"}</Label>
           <Input
             id="patient-id"

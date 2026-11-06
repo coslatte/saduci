@@ -86,7 +86,7 @@ class TestEsquemas:
             resp_insuf=2,
         )
         assert payload.age == 60
-        assert payload.n_runs == 200  # valor por defecto
+        assert payload.n_runs == 5000  # valor por defecto
 
     def test_platform_simulation_rechaza_edad_fuera_de_rango(self):
         from shared_core.schemas import PlatformSimulationRequest

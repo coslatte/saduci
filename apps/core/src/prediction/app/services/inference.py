@@ -8,7 +8,6 @@ from fastapi import HTTPException
 
 from app.services.config import (
     DIAGNOSIS_BY_CODE,
-    EXPLANATION_METHOD_SCALE,
     PLATFORM_FEATURE_ORDER,
     PLATFORM_LIMITS,
     PREDICTION_THRESHOLD,
@@ -66,15 +65,14 @@ def feature_display_value(feature_key: str, value: float) -> str:
 
 def feature_baseline(feature_key: str) -> float:
     lower, upper = PLATFORM_LIMITS[feature_key]
-    return float((lower + upper) / 2.0)
+    return float(round((lower + upper) / 2.0))
 
 
 def platform_feature_importances(
     request: PlatformPredictionRequest,
-    method: str,
+    _method: str,
 ) -> list[dict[str, Any]]:
-    """Compute local, signed feature attributions for saduci-platform."""
-    scale = EXPLANATION_METHOD_SCALE[method]
+    """Compare the model output with one input replaced by a reference value."""
 
     original_frame = platform_request_to_dataframe(request)
     original_probability = predict_probability_from_dataframe(original_frame)
@@ -88,7 +86,7 @@ def platform_feature_importances(
         perturbed.at[0, feature_column] = baseline_value
         perturbed_probability = predict_probability_from_dataframe(perturbed)
 
-        contribution = (original_probability - perturbed_probability) * scale
+        contribution = original_probability - perturbed_probability
         if contribution > 1e-6:
             direction = "increase_risk"
         elif contribution < -1e-6:

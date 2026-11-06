@@ -42,6 +42,27 @@ describe("ConfirmDialog", () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it("exige escribir eliminar antes de confirmar", () => {
+    const onConfirm = mock(() => {});
+    render(
+      <ConfirmDialog
+        open
+        title="Eliminar usuario"
+        confirmationText="eliminar"
+        onConfirm={onConfirm}
+        onClose={() => {}}
+      />,
+    );
+    const button = bodyScope().getByRole("button", { name: /Confirmar/ });
+    fireEvent.click(button);
+    expect(onConfirm).toHaveBeenCalledTimes(0);
+    fireEvent.input(bodyScope().getByRole("textbox"), {
+      target: { value: "eliminar" },
+    });
+    fireEvent.click(button);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
   it("calls onClose when cancelling", () => {
     const onClose = mock(() => {});
     render(

@@ -7,8 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.controllers.auth import (
     get_current_user,
     get_current_user_optional,
-    require_admin,
-    require_especialista_or_admin,
     _optional_user_headers,
 )
 from app.controllers.config import logger, simulation_client
@@ -32,7 +30,7 @@ router = APIRouter(tags=["simulations"])
 @router.post("/api/simulations")
 async def create_simulation(
     simulation_data: SimulationRequest,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     result = await _proxy_with_user(
         simulation_client, "/api/simulations", simulation_data.model_dump(mode="json"), current_user
@@ -87,7 +85,7 @@ async def get_simulation_history(
 async def update_simulation_record(
     simulation_id: int,
     payload: SimulationUpdate,
-    _current_user: TokenUser = Depends(require_especialista_or_admin),
+    _current_user: TokenUser = Depends(get_current_user),
 ):
     try:
         return await simulation_client.put(
@@ -102,25 +100,10 @@ async def update_simulation_record(
         raise HTTPException(status_code=502, detail="Simulation service unavailable")
 
 
-@router.delete("/api/simulations/{simulation_id}")
-async def delete_simulation_record(
-    simulation_id: int,
-    _current_user: TokenUser = Depends(require_admin),
-):
-    try:
-        return await simulation_client.delete(f"/api/simulations/{simulation_id}")
-    except httpx.HTTPStatusError as e:
-        detail = _extract_upstream_detail(e)
-        raise HTTPException(status_code=e.response.status_code, detail=detail)
-    except Exception as e:
-        logger.error("Simulation service unavailable: %s", e)
-        raise HTTPException(status_code=502, detail="Simulation service unavailable")
-
-
 @router.post("/api/simulations/icu")
 async def create_icu_simulation(
     simulation_data: ICUPatientSimulationRequest,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     result = await _proxy_with_user(
         simulation_client, "/api/simulations/icu", simulation_data.model_dump(mode="json"), current_user

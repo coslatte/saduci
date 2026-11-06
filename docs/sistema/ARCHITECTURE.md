@@ -1,6 +1,6 @@
 # SADUCI — Arquitectura unificada
 
-SADUCI es un sistema de apoyo a la decisión clínica en UCI. Vive en un **monorepo**
+SADUCI es un sistema de ayuda a la decisión clínica en UCI. Vive en un **monorepo**
 con dos aplicaciones y una capa de infraestructura compartida. El backend sigue
 siendo un conjunto de **microservicios con Database per Service**; el monorepo no
 implica monolito.

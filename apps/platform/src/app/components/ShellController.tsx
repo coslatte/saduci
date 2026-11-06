@@ -8,6 +8,7 @@ import { AppShellSkeleton } from "@/components/layout/AppShellSkeleton";
 import { SESSION_LOADING_PHASES } from "@/constants/loading";
 import { useProgressiveStatus } from "@/hooks/useProgressiveStatus";
 import { useAuth } from "@/lib/auth";
+import { isAdmin } from "@/lib/adminGuard";
 import { resolvePostLoginTarget } from "@/lib/postLoginTarget";
 
 interface Props {
@@ -91,6 +92,7 @@ export default function ShellController({ children }: Props) {
 
   return (
     <AppShell
+      isAdministrator={isAdmin(user)}
       userName={user?.name}
       userRole={user?.role}
       userAvatar={user?.avatar ?? undefined}

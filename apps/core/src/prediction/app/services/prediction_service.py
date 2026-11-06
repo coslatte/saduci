@@ -140,7 +140,7 @@ async def create_platform_prediction(
 
     try:
         db_prediction = PredictionRecord(
-            patient_id=f"PRED-{request.edad}-{request.apache}",
+            patient_id="PRED-PENDING",
             model_name="platform_mortality",
             features=request.model_dump(mode="json"),
             prediction=response.model_dump(mode="json"),
@@ -149,6 +149,8 @@ async def create_platform_prediction(
             created_by=x_user_username,
         )
         db.add(db_prediction)
+        db.flush()
+        db_prediction.patient_id = f"PRED-{db_prediction.id:06d}"
         db.commit()
         await _notify_gateway("prediction_created")
     except Exception as exc:
@@ -165,16 +167,21 @@ async def explain_platform_prediction(
     predicted_class, predicted_label = prediction_class_and_label(probability)
     rows = platform_feature_importances(request, request.method)
 
-    narrative, narrative_provider, narrative_model = await generate_narrative(
-        request=request,
-        probability=probability,
-        predicted_label=predicted_label,
-        rows=rows,
-    )
+    narrative = None
+    narrative_provider = None
+    narrative_model = None
+    if request.include_narrative:
+        narrative, narrative_provider, narrative_model = await generate_narrative(
+            request=request,
+            probability=probability,
+            predicted_label=predicted_label,
+            rows=rows,
+        )
 
     return PlatformExplanationResponse(
         method=request.method,
         probability=probability,
+        threshold=PREDICTION_THRESHOLD,
         predicted_class=predicted_class,
         predicted_label=predicted_label,
         feature_names=PLATFORM_FEATURE_NAMES,
@@ -247,17 +254,7 @@ def update_prediction(db: Session, prediction_id: int, payload: PredictionUpdate
     if not record:
         raise_not_found("Predicción")
 
-    fields = payload.model_dump(exclude_unset=True)
-    if "patient_id" in fields:
-        record.patient_id = fields["patient_id"]
-    if "model_name" in fields:
-        record.model_name = fields["model_name"]
-    if "features" in fields:
-        record.features = fields["features"]
-    if "prediction" in fields:
-        record.prediction = fields["prediction"]
-    if "confidence" in fields:
-        record.confidence = fields["confidence"]
+    record.created_at = payload.created_at
 
     db.add(record)
     db.commit()
@@ -273,16 +270,6 @@ def update_prediction(db: Session, prediction_id: int, payload: PredictionUpdate
         "created_by": record.created_by,
         "created_at": record.created_at.isoformat(),
     }
-
-
-def delete_prediction(db: Session, prediction_id: int) -> dict[str, str]:
-    record = db.get(PredictionRecord, prediction_id)
-    if not record:
-        raise_not_found("Predicción")
-
-    db.delete(record)
-    db.commit()
-    return {"message": "Predicción eliminada correctamente."}
 
 
 def list_models() -> dict[str, Any]:

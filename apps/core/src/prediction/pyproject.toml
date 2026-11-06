@@ -23,6 +23,7 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
     "simuci>=0.0.0",
     "alembic>=1.13.0",
+    "llama-cpp-python==0.3.36",
 ]
 
 [tool.ruff]

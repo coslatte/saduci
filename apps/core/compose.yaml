@@ -161,7 +161,11 @@ services:
       - LOG_LEVEL=INFO
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - DATABASE_URL=postgresql+psycopg2://prediction_user:${PREDICTION_DB_PASSWORD:?PREDICTION_DB_PASSWORD is required}@prediction-db:5432/prediction_db
-      - PREDICTION_NARRATIVE_PROVIDER=${PREDICTION_NARRATIVE_PROVIDER:-stub}
+      - PREDICTION_NARRATIVE_PROVIDER=${PREDICTION_NARRATIVE_PROVIDER:-embedded}
+      - PREDICTION_NARRATIVE_MODEL=${PREDICTION_NARRATIVE_MODEL:-qwen2.5-1.5b-instruct-q4_k_m}
+      - PREDICTION_NARRATIVE_MODEL_PATH=/app/models/llm/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      - PREDICTION_LLM_THREADS=${PREDICTION_LLM_THREADS:-4}
+      - PREDICTION_LLM_MAX_TOKENS=${PREDICTION_LLM_MAX_TOKENS:-120}
       - PREDICTION_LOCAL_LLM_URL=${PREDICTION_LOCAL_LLM_URL:-}
       - PREDICTION_LOCAL_LLM_MODEL=${PREDICTION_LOCAL_LLM_MODEL:-}
       - PREDICTION_LOCAL_LLM_TOKEN=${PREDICTION_LOCAL_LLM_TOKEN:-}
@@ -169,12 +173,13 @@ services:
       - PREDICTION_GEMINI_API_KEY=${PREDICTION_GEMINI_API_KEY:-}
       - PREDICTION_GEMINI_MODEL=${PREDICTION_GEMINI_MODEL:-gemini-2.5-flash}
       - PREDICTION_GEMINI_TIMEOUT_SECONDS=${PREDICTION_GEMINI_TIMEOUT_SECONDS:-60}
-      - PREDICTION_NARRATIVE_MODEL=${PREDICTION_NARRATIVE_MODEL:-}
       - HUGGINGFACE_API_URL=${HUGGINGFACE_API_URL:-}
       - HUGGINGFACE_API_TOKEN=${HUGGINGFACE_API_TOKEN:-}
       - HUGGINGFACE_TIMEOUT_SECONDS=${HUGGINGFACE_TIMEOUT_SECONDS:-30}
       - PREDICTION_MODEL_PATH=/app/models/v1/new_workflow.joblib
       - GATEWAY_URL=http://api-gateway:7000
+    volumes:
+      - prediction-narrative-model:/app/models/llm
     depends_on:
       prediction-db:
         condition: service_healthy
@@ -283,4 +288,5 @@ volumes:
   user-db-data:
   patient-db-data:
   prediction-db-data:
+  prediction-narrative-model:
   simulation-db-data:

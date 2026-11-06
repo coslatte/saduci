@@ -28,10 +28,10 @@ interface MetricSectionProps {
  */
 function MetricSection({ title, children }: MetricSectionProps) {
   return (
-    <section className="grid gap-4 sm:grid-cols-2">
-      <p className="sm:col-span-2 border-b border-slate-200 pb-3 text-sm font-semibold text-slate-900">
+    <section className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+      <h3 className="sm:col-span-2 border-b border-slate-200 pb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
         {title}
-      </p>
+      </h3>
       {children}
     </section>
   );
@@ -56,8 +56,8 @@ export function SimulationMetricGroups({
   setSimPercent,
 }: SimulationMetricGroupsProps) {
   return (
-    <div className="grid gap-7">
-      <MetricSection title={"Demográficos & Tiempos"}>
+    <div className="grid gap-8">
+      <MetricSection title="Datos demográficos y estancia">
         <NumberInputField
           id="age"
           label={"Edad"}
@@ -82,7 +82,7 @@ export function SimulationMetricGroups({
         />
       </MetricSection>
 
-      <MetricSection title={"Puntajes Clínicos"}>
+      <MetricSection title="Gravedad clínica">
         <NumberInputField
           id="apache"
           label={"APACHE"}
@@ -94,7 +94,7 @@ export function SimulationMetricGroups({
         />
         <NumberInputField
           id="sim-percent"
-          label={"Porciento Tiempo UCI"}
+          label="Proporción de tiempo en UCI (%)"
           min={SIMULATION_LIMITS.simPercent.min}
           max={SIMULATION_LIMITS.simPercent.max}
           value={simPercent}
@@ -105,10 +105,10 @@ export function SimulationMetricGroups({
         />
       </MetricSection>
 
-      <MetricSection title={"Ventilación Mecánica"}>
+      <MetricSection title="Ventilación y estancia en UCI">
         <NumberInputField
           id="vam-time"
-          label={"Tiempo en VA (h)"}
+          label="Tiempo con ventilación asistida (h)"
           min={SIMULATION_LIMITS.vamTime.min}
           max={SIMULATION_LIMITS.vamTime.max}
           value={vamTime}

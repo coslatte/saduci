@@ -8,6 +8,7 @@ no se exponen públicamente.
 
 ### Health
 - `GET /health` - Health check
+- `GET /api/admin/services/health` - Estado de salud y latencia de los cuatro microservicios internos (solo ADMIN). La respuesta conserva el estado de cada servicio y añade `latency_ms` con la duración de cada comprobación.
 
 ### Autenticación
 - `POST /auth/login` - Inicio de sesión (rate-limited: 5 intentos/60s)
@@ -17,52 +18,52 @@ no se exponen públicamente.
 - `PUT /api/user/profile` - Actualizar perfil propio (JWT)
 
 ### Gestión de Usuarios
-- `POST /api/users` - Crear usuario (ADMIN)
-- `GET /api/users` - Listar usuarios con filtro `?role=` (ADMIN)
+- `POST /api/users` - Crear usuario (JWT)
+- `GET /api/users` - Listar usuarios con filtro `?role=` (JWT)
 - `GET /api/users/{user_id}` - Obtener usuario (JWT)
-- `PUT /api/users/{user_id}` - Actualizar usuario (ADMIN)
-- `DELETE /api/users/{user_id}` - Eliminar usuario (ADMIN)
-- `GET /admin/users` - Listar todos los usuarios (SUPERUSER)
-- `POST /admin/users` - Crear usuario (SUPERUSER)
-- `PUT /admin/users/{user_id}` - Actualizar `username`, `email`, `role` y/o `is_active` (SUPERUSER)
-- `DELETE /admin/users/{user_id}` - Eliminar usuario, sin autoborrado (SUPERUSER)
+- `PUT /api/users/{user_id}` - Actualizar usuario (JWT)
+- `DELETE /api/users/{user_id}` - Eliminar usuario (JWT)
+- `GET /admin/users` - Listar todos los usuarios (JWT)
+- `POST /admin/users` - Crear usuario (JWT)
+- `PUT /admin/users/{user_id}` - Actualizar `username`, `email`, `role` y/o `is_active` (JWT)
+- `DELETE /admin/users/{user_id}` - Eliminar usuario, sin autoborrado (JWT)
 
 ### Pacientes
-- `POST /api/patients` - Crear paciente (ADMIN/ESPECIALISTA)
+- `POST /api/patients` - Crear paciente (JWT)
 - `GET /api/patients/{mrn}` - Obtener paciente (JWT)
-- `PUT /api/patients/{mrn}` - Actualizar paciente (ADMIN/ESPECIALISTA)
+- `PUT /api/patients/{mrn}` - Actualizar paciente (JWT)
+
+### Diagnósticos
+- `GET /api/diagnoses` - Catálogo ordenado por código, con `id` y `name` (JWT). El código 0 representa un diagnóstico vacío.
 
 ### Predicciones
-- `POST /api/predictions` - Crear predicción (ADMIN/ESPECIALISTA)
+- `POST /api/predictions` - Crear predicción (JWT)
 - `GET /api/predictions` - Listar predicciones (JWT)
 - `GET /api/predictions/count` - Total de predicciones (JWT)
 - `GET /api/predictions/models` - Listar modelos disponibles (JWT)
 - `GET /api/predictions/{patient_id}` - Historial por paciente (JWT)
-- `PUT /api/predictions/{prediction_id}` - Actualizar registro (ADMIN/ESPECIALISTA)
-- `DELETE /api/predictions/{prediction_id}` - Eliminar registro (ADMIN/ESPECIALISTA)
+- `PUT /api/predictions/{prediction_id}` - Actualizar únicamente `created_at` (JWT)
 - `POST /prediction` - Predicción de plataforma (público)
 - `POST /prediction/explain` - Explicación de predicción (público)
 - `POST /prediccion` - Alias español de `/prediction` (público)
 - `POST /prediccion/explain` - Alias español de `/prediction/explain` (público)
 
 ### Simulaciones
-- `POST /api/simulations` - Crear simulación (ADMIN/ESPECIALISTA)
+- `POST /api/simulations` - Crear simulación (JWT)
 - `GET /api/simulations` - Listar simulaciones (JWT)
 - `GET /api/simulations/count` - Total de simulaciones (JWT)
 - `GET /api/simulations/scenarios` - Listar escenarios (JWT)
 - `GET /api/simulations/{patient_id}` - Historial por paciente (JWT)
-- `PUT /api/simulations/{simulation_id}` - Actualizar registro (ADMIN/ESPECIALISTA)
-- `DELETE /api/simulations/{simulation_id}` - Eliminar registro (ADMIN)
-- `POST /api/simulations/icu` - Simulación de paciente UCI (ADMIN/ESPECIALISTA)
-- `POST /simulation` - Simulación de plataforma (público)
+- `PUT /api/simulations/{simulation_id}` - Actualizar únicamente `created_at` (JWT)
+- `POST /api/simulations/icu` - Simulación de paciente UCI (JWT)
+- `POST /simulation` - Simulación de plataforma (público). `n_runs` es opcional y su valor por defecto es 5000.
 
 ### Estadísticas
 - `POST /statistics/wilcoxon` - Test de Wilcoxon (público)
 - `POST /statistics/friedman` - Test de Friedman (público)
 - `GET /api/statistical-tests` - Listar resultados persistidos (JWT)
-- `POST /api/statistical-tests` - Crear resultado (ADMIN/ESPECIALISTA)
-- `PUT /api/statistical-tests/{test_id}` - Actualizar resultado (ADMIN/ESPECIALISTA)
-- `DELETE /api/statistical-tests/{test_id}` - Eliminar resultado (ADMIN/ESPECIALISTA)
+- `POST /api/statistical-tests` - Crear resultado (JWT)
+- `PUT /api/statistical-tests/{test_id}` - Actualizar resultado (JWT)
 
 ### Tiempo real
 - `WS /ws/events` - Eventos en vivo
@@ -78,6 +79,7 @@ el BFF y este reenvía al API Gateway.
 - `GET /api/health` - Sondeo de disponibilidad del backend
   (`{ reachable: true }`, o `{ reachable: false }` con 502). Timeout corto
   (2s); lo usa la política de reintento incremental del login.
+- `GET /api/admin/services/health` - Proxy de diagnóstico de servicios (solo ADMIN).
 - `GET /api/simulations/[id]` - Detalle de simulación por id (JWT). El
   gateway no expone get-by-id, así que el BFF lista y resuelve el registro
   en servidor, devolviendo 404 si no existe.
@@ -90,17 +92,17 @@ el BFF y este reenvía al API Gateway.
 - `POST /prediction`, `POST /prediccion`, `POST /prediction/explain`, `POST /prediccion/explain`
 - `POST /predictions` (histórico/legacy)
 - `GET /api/predictions`, `GET /api/predictions/count`, `GET /api/predictions/models`
-- `GET /api/predictions/{patient_id}`, `PUT /api/predictions/{id}`, `DELETE /api/predictions/{id}`
+- `GET /api/predictions/{patient_id}`, `PUT /api/predictions/{id}`
 
 ## Simulation Service (:7004)
 
 - `GET /health`, `POST /simulation`
 - `POST /api/simulations`, `GET /api/simulations`, `GET /api/simulations/count`
 - `GET /api/simulations/scenarios`, `GET /api/simulations/{patient_id}`
-- `PUT /api/simulations/{id}`, `DELETE /api/simulations/{id}`, `POST /api/simulations/icu`
+- `PUT /api/simulations/{id}`, `POST /api/simulations/icu`
 - `POST /statistics/wilcoxon`, `POST /statistics/friedman`
 - `GET /api/statistical-tests`, `POST /api/statistical-tests`
-- `PUT /api/statistical-tests/{id}`, `DELETE /api/statistical-tests/{id}`
+- `PUT /api/statistical-tests/{id}`
 
 ## User Service (:7001)
 

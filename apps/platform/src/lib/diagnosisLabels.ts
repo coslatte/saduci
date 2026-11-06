@@ -17,14 +17,9 @@ export function diagnosisOptionLabel(code: number): string | null {
   return PREUCI_DIAG[code] ?? null;
 }
 
-/**
- * Diagnosis rendering for a record detail: code plus title.
- *
- * The code is kept here on purpose. This is the one screen where the value
- * actually sent to the model must be verifiable.
- */
+/** Diagnosis rendering for a record detail: clinical title without its internal code. */
 export function diagnosisDetailLabel(value: unknown): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   const title = PREUCI_DIAG[value];
-  return title ? `${value} — ${title}` : String(value);
+  return title ?? String(value);
 }

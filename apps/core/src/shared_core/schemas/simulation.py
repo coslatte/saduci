@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from typing import Dict, Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TimeStats(BaseModel):
@@ -27,7 +29,7 @@ class PlatformSimulationRequest(BaseModel):
     preuti_stay: int = Field(..., ge=0, le=34, description="Pre-ICU stay time in hours")
     resp_insuf: int = Field(..., ge=0, le=5, description="Respiratory insufficiency cause")
     percent: int = Field(3, ge=0, le=10, description="Simulation percentage parameter")
-    n_runs: int = Field(200, ge=50, le=100000, description="Number of simulation runs")
+    n_runs: int = Field(5000, ge=50, le=100000, description="Number of simulation runs")
 
 
 class SimulationRequest(BaseModel):
@@ -45,10 +47,9 @@ class SimulationResponse(BaseModel):
 
 
 class SimulationUpdate(BaseModel):
-    patient_id: str | None = None
-    scenario: str | None = None
-    parameters: Dict[str, Any] | None = None
-    results: List[Dict[str, Any]] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    created_at: datetime
 
 
 class ICUPatientSimulationRequest(BaseModel):

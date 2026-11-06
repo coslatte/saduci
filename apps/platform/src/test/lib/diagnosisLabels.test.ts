@@ -80,13 +80,9 @@ describe("listado de diagnósticos de simulación", () => {
 });
 
 describe("detalle del registro", () => {
-  /**
-   * El código solo debe verse aquí, donde hay que poder auditar qué valor
-   * entró al modelo. Es el comportamiento que ya tenía el detalle de
-   * simulación y que ahora también aplica al de predicción.
-   */
-  it("muestra código y título", () => {
-    expect(diagnosisDetailLabel(12)).toBe(`12 — ${PREUCI_DIAG[12]}`);
+  it("muestra el título sin el código interno", () => {
+    expect(diagnosisDetailLabel(12)).toBe(PREUCI_DIAG[12]);
+    expect(diagnosisDetailLabel(0)).toBe("Vacío");
   });
 
   it("degrada con elegancia ante valores inválidos", () => {

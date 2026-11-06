@@ -1,18 +1,18 @@
 ﻿"use client";
 
 import { useState } from "react";
+import StatisticsRecordsPage from "@/app/records/statistics/page";
 import {
   EXPERIMENT_VARIABLE_LABELS,
   runWilcoxonTest,
   runFriedmanTest,
   type StatisticalTestResult,
 } from "@/lib/statistics";
+import { Button } from "@/components/atoms/Buttons";
+import { Dialog } from "@/components/molecules/Dialog";
 
 import { StatisticsPageHeader } from "./components/StatisticsPageHeader";
 import { WilcoxonSection, FriedmanSection } from "./components/StatTestSection";
-import { StatisticsTabPanel } from "./components/StatisticsTabPanel";
-import { StatisticsTabs } from "./components/StatisticsTabs";
-import type { ActiveStatisticsTab } from "./components/types";
 import { readCSVFile, extractNumericColumn, adjustArraySizes } from "./helpers";
 
 function formatAvailableColumns(csv: Record<string, string[]>): string {
@@ -21,7 +21,9 @@ function formatAvailableColumns(csv: Record<string, string[]>): string {
 }
 
 export default function StatisticsPage() {
-  const [activeTab, setActiveTab] = useState<ActiveStatisticsTab>("wilcoxon");
+  const [openTest, setOpenTest] = useState<"wilcoxon" | "friedman" | null>(
+    null,
+  );
 
   const defaultColumn = EXPERIMENT_VARIABLE_LABELS[0];
 
@@ -162,52 +164,88 @@ export default function StatisticsPage() {
     <>
       <StatisticsPageHeader />
 
-      <div className="flex flex-col gap-6">
-        <StatisticsTabs activeTab={activeTab} onChange={setActiveTab} />
+      <StatisticsRecordsPage />
 
-        <StatisticsTabPanel
-          panelId="panel-wilcoxon"
-          labelledBy="tab-wilcoxon"
-          hidden={activeTab !== "wilcoxon"}
+      <section
+        aria-labelledby="statistics-execution-heading"
+        className="mt-10 border-t border-slate-200 pt-8"
+      >
+        <h2
+          id="statistics-execution-heading"
+          className="mb-2 text-xl font-semibold text-slate-900"
         >
-          <WilcoxonSection
-            file1={wxFile1}
-            file2={wxFile2}
-            selectedColumn={wxColumn}
-            loading={wxLoading}
-            result={wxResult}
-            error={wxError}
-            warning={wxWarning}
-            onFile1Change={setWxFile1}
-            onFile2Change={setWxFile2}
-            onColumnChange={setWxColumn}
-            onRun={handleRunWilcoxon}
-            runLabel="Realizar prueba de Wilcoxon"
-            uploadLabel1="Experimento 1 (CSV)"
-            uploadLabel2="Experimento 2 (CSV)"
-          />
-        </StatisticsTabPanel>
+          Realizar una prueba estadística
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col items-start gap-3 border border-slate-200 bg-white p-4">
+            <div>
+              <h3 className="font-semibold text-slate-900">Wilcoxon</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Compara dos muestras relacionadas.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => setOpenTest("wilcoxon")}>
+              Nueva prueba de Wilcoxon
+            </Button>
+          </div>
+          <div className="flex flex-col items-start gap-3 border border-slate-200 bg-white p-4">
+            <div>
+              <h3 className="font-semibold text-slate-900">Friedman</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Compara tres o más muestras relacionadas.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => setOpenTest("friedman")}>
+              Nueva prueba de Friedman
+            </Button>
+          </div>
+        </div>
 
-        <StatisticsTabPanel
-          panelId="panel-friedman"
-          labelledBy="tab-friedman"
-          hidden={activeTab !== "friedman"}
+        <Dialog
+          open={openTest !== null}
+          onClose={() => setOpenTest(null)}
+          title={
+            openTest === "wilcoxon"
+              ? "Prueba de Wilcoxon"
+              : "Prueba de Friedman"
+          }
+          description="Completa el formulario para ejecutar y guardar el resultado."
+          busy={wxLoading || fmLoading}
         >
-          <FriedmanSection
-            files={fmFiles}
-            selectedColumn={fmColumn}
-            loading={fmLoading}
-            result={fmResult}
-            error={fmError}
-            warning={fmWarning}
-            onFilesChange={setFmFiles}
-            onColumnChange={setFmColumn}
-            onRun={handleRunFriedman}
-            runLabel="Realizar prueba de Friedman"
-            uploadLabel="Experimentos (CSV)"
-          />
-        </StatisticsTabPanel>
-      </div>
+          {openTest === "wilcoxon" ? (
+            <WilcoxonSection
+              file1={wxFile1}
+              file2={wxFile2}
+              selectedColumn={wxColumn}
+              loading={wxLoading}
+              result={wxResult}
+              error={wxError}
+              warning={wxWarning}
+              onFile1Change={setWxFile1}
+              onFile2Change={setWxFile2}
+              onColumnChange={setWxColumn}
+              onRun={handleRunWilcoxon}
+              runLabel="Realizar prueba de Wilcoxon"
+              uploadLabel1="Experimento 1 (CSV)"
+              uploadLabel2="Experimento 2 (CSV)"
+            />
+          ) : openTest === "friedman" ? (
+            <FriedmanSection
+              files={fmFiles}
+              selectedColumn={fmColumn}
+              loading={fmLoading}
+              result={fmResult}
+              error={fmError}
+              warning={fmWarning}
+              onFilesChange={setFmFiles}
+              onColumnChange={setFmColumn}
+              onRun={handleRunFriedman}
+              runLabel="Realizar prueba de Friedman"
+              uploadLabel="Experimentos (CSV)"
+            />
+          ) : null}
+        </Dialog>
+      </section>
     </>
   );
 }

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from typing import Dict, Any, Optional, List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PredictionRequest(BaseModel):
@@ -21,11 +23,9 @@ class PredictionResponse(BaseModel):
 
 
 class PredictionUpdate(BaseModel):
-    patient_id: str | None = None
-    model_name: str | None = None
-    features: Dict[str, Any] | None = None
-    prediction: Any | None = None
-    confidence: float | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    created_at: datetime
 
 
 class PlatformPredictionRequest(BaseModel):
@@ -57,9 +57,15 @@ class PlatformFeatureExplanationRow(BaseModel):
 
 
 class PlatformExplanationRequest(PlatformPredictionRequest):
-    method: Literal["LIME", "SHAP", "Gradientes Integrados", "Mapas de Saliencia"]
+    method: Literal[
+        "Impacto local por referencia",
+        "LIME",
+        "SHAP",
+        "Gradientes Integrados",
+        "Mapas de Saliencia",
+    ]
     include_narrative: bool = False
-    ai_provider: Optional[Literal["stub", "local", "gemini", "huggingface"]] = None
+    ai_provider: Optional[Literal["stub", "embedded", "local", "gemini", "huggingface"]] = None
     ai_model: Optional[str] = None
     temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
@@ -67,6 +73,7 @@ class PlatformExplanationRequest(PlatformPredictionRequest):
 class PlatformExplanationResponse(BaseModel):
     method: str
     probability: float
+    threshold: float = 0.5
     predicted_class: int
     predicted_label: Literal["vive", "muere"]
     feature_names: List[str]

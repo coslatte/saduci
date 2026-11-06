@@ -251,14 +251,3 @@ def update_statistical_test(
         "created_by": record.created_by,
         "created_at": record.created_at.isoformat(),
     }
-
-
-def delete_statistical_test(db: Session, test_id: int) -> Dict[str, str]:
-    """Delete a statistical test record."""
-    record = db.get(StatisticalTestRecord, test_id)
-    if not record:
-        raise_not_found("Prueba estadística")
-
-    db.delete(record)
-    db.commit()
-    return {"message": "Prueba estadística eliminada correctamente."}

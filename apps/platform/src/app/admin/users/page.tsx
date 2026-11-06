@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { isAdmin } from "@/lib/adminGuard";
 import { createUser, deleteUser, getUsers, updateUser } from "@/lib/apiClients";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { showToast } from "@/components/molecules/Toast";
@@ -92,7 +91,7 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    if (!user || !isAdmin(user)) {
+    if (!user) {
       router.replace("/home");
       return;
     }
@@ -240,7 +239,7 @@ export default function UsersPage() {
     }
   }, []);
 
-  if (!user || !isAdmin(user)) {
+  if (!user) {
     return null;
   }
 
@@ -468,6 +467,8 @@ export default function UsersPage() {
       )}
 
       <ConfirmDialog
+        key={pendingDelete?.id ?? "closed"}
+        confirmationText="eliminar"
         open={pendingDelete !== null}
         title="Eliminar usuario"
         description={

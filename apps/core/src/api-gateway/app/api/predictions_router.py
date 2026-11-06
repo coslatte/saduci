@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.controllers.auth import (
     get_current_user,
     get_current_user_optional,
-    require_especialista_or_admin,
     _optional_user_headers,
 )
 from app.controllers.config import logger, prediction_client
@@ -18,6 +17,7 @@ from app.controllers.proxy import (
     _translate_upstream_error,
 )
 from app.schemas.auth import TokenUser
+from shared_core.schemas.diagnosis import DiagnosisResponse
 from app.websocket.manager import manager
 from shared_core.schemas import (
     PlatformExplanationRequest,
@@ -32,7 +32,7 @@ router = APIRouter(tags=["predictions"])
 @router.post("/api/predictions")
 async def create_prediction(
     prediction_data: PredictionRequest,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     result = await _proxy_with_user(
         prediction_client, "/predictions", prediction_data.model_dump(mode="json"), current_user
@@ -87,27 +87,12 @@ async def get_prediction_history(
 async def update_prediction_record(
     prediction_id: int,
     payload: PredictionUpdate,
-    _current_user: TokenUser = Depends(require_especialista_or_admin),
+    _current_user: TokenUser = Depends(get_current_user),
 ):
     try:
         return await prediction_client.put(
             f"/api/predictions/{prediction_id}", payload.model_dump(mode="json", exclude_unset=True)
         )
-    except httpx.HTTPStatusError as e:
-        detail = _extract_upstream_detail(e)
-        raise HTTPException(status_code=e.response.status_code, detail=detail)
-    except Exception as e:
-        logger.error("Prediction service unavailable: %s", e)
-        raise HTTPException(status_code=502, detail="Prediction service unavailable")
-
-
-@router.delete("/api/predictions/{prediction_id}")
-async def delete_prediction_record(
-    prediction_id: int,
-    _current_user: TokenUser = Depends(require_especialista_or_admin),
-):
-    try:
-        return await prediction_client.delete(f"/api/predictions/{prediction_id}")
     except httpx.HTTPStatusError as e:
         detail = _extract_upstream_detail(e)
         raise HTTPException(status_code=e.response.status_code, detail=detail)
@@ -166,3 +151,21 @@ async def run_platform_prediction_explain_es(
     current_user: TokenUser | None = Depends(get_current_user_optional),
 ):
     return await run_platform_prediction_explain(explain_data, current_user)
+
+
+@router.get("/api/diagnoses", response_model=list[DiagnosisResponse])
+async def list_diagnoses(_current_user: TokenUser = Depends(get_current_user)):
+    try:
+        return await prediction_client.get("/api/diagnoses")
+    except Exception as e:
+        logger.error("Error forwarding diagnosis catalog: %s", e)
+        raise _translate_upstream_error(e, "Prediction service unavailable") from e
+
+
+@router.get("/api/respiratory-insufficiency-types", response_model=list[DiagnosisResponse])
+async def list_respiratory_insufficiency_types(_current_user: TokenUser = Depends(get_current_user)):
+    try:
+        return await prediction_client.get("/api/respiratory-insufficiency-types")
+    except Exception as e:
+        logger.error("Error forwarding respiratory insufficiency catalog: %s", e)
+        raise _translate_upstream_error(e, "Prediction service unavailable") from e

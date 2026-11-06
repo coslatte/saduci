@@ -6,6 +6,7 @@ import { cn, dataDisabledProps } from "@/lib/utils";
 import { NavBreadcrumb, NavbarProfile } from "@/components/molecules";
 import { getBreadcrumbSegments, getRouteNameForPath } from "@/lib/navigation";
 import { routes } from "@/lib/routes";
+import { useBreadcrumbLabel } from "@/context/breadcrumb";
 
 /**
  * Props for the `Navbar` component.
@@ -49,7 +50,11 @@ export function Navbar({
 }: NavbarProps) {
   const pathnameFromHook = usePathname();
   const detectedPath = pathname ?? pathnameFromHook ?? "/";
-  const currentPage = getRouteNameForPath(detectedPath) ?? "Saduci";
+  const { currentLabel } = useBreadcrumbLabel();
+  const currentPage =
+    (currentLabel?.pathname === detectedPath && currentLabel.label) ||
+    getRouteNameForPath(detectedPath) ||
+    "Saduci";
   const breadcrumbSegments = getBreadcrumbSegments(detectedPath);
   const showProfile = typeof userName === "string" && userName.length > 0;
   const roleLabel = userRole || "Sesión activa";

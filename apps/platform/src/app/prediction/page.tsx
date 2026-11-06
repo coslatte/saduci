@@ -1,5 +1,1 @@
-import { PredictionPageContent } from "./components/PredictionPageContent";
-
-export default function PredictionPage() {
-  return <PredictionPageContent />;
-}
+export { default } from "@/app/records/predictions/page";

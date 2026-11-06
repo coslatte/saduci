@@ -8,7 +8,7 @@
 
 ### 1.1 Propósito
 
-Este documento establece la especificación completa de requisitos para el sistema **SADUCI** (Sistema de Apoyo a Decisiones en Unidad de Cuidados Intensivos), desarrollado para el Hospital Universitario Arnaldo Milián Castro. El sistema proporciona herramientas de predicción clínica y simulación basadas en modelos de inteligencia artificial para asistir al personal médico en la toma de decisiones en la UCI.
+Este documento establece la especificación completa de requisitos para el sistema **SADUCI** (Sistema de Ayuda a la Decisión en la Unidad de Cuidados Intensivos), desarrollado para el Hospital Universitario Arnaldo Milián Castro. El sistema proporciona herramientas de predicción clínica y simulación basadas en modelos de inteligencia artificial que ayudan al personal médico en la valoración clínica y la toma de decisiones en la UCI.
 
 ### 1.2 Alcance
 
@@ -21,7 +21,7 @@ SADUCI es una plataforma web modular que permite:
 
 | Término | Definición |
 |---------|-----------|
-| SADUCI | Sistema de Apoyo a Decisiones en Unidad de Cuidados Intensivos |
+| SADUCI | Sistema de Ayuda a la Decisión en la Unidad de Cuidados Intensivos |
 | UCI | Unidad de Cuidados Intensivos |
 | MLSS | Medical Learning & Simulation Service |
 | CDSS | Clinical Decision Support System |

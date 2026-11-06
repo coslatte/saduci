@@ -22,3 +22,19 @@ class PredictionRecord(Base):
     user_id = Column(Integer, nullable=True, index=True)
     created_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Diagnosis(Base):
+    """Clinical diagnosis catalog entry."""
+
+    __tablename__ = "diagnoses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+
+
+class RespiratoryInsufficiencyType(Base):
+    __tablename__ = "respiratory_insufficiency_types"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)

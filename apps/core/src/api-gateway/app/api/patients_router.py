@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.controllers.auth import get_current_user, require_especialista_or_admin, _user_auth_headers
+from app.controllers.auth import get_current_user, _user_auth_headers
 from app.controllers.config import logger, patient_client
 from app.controllers.proxy import _translate_upstream_error
 from app.schemas.auth import TokenUser
@@ -14,7 +14,7 @@ router = APIRouter(tags=["patients"])
 @router.post("/api/patients")
 async def create_patient(
     patient_data: dict,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     try:
         return await patient_client.post(
@@ -38,7 +38,7 @@ async def get_patient(mrn: str, _current_user: TokenUser = Depends(get_current_u
 async def update_patient(
     mrn: str,
     patient_data: dict,
-    current_user: TokenUser = Depends(require_especialista_or_admin),
+    current_user: TokenUser = Depends(get_current_user),
 ):
     try:
         return await patient_client.put(
