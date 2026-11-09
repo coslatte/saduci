@@ -44,7 +44,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7000/health', timeout=5)"]
       interval: 30s
@@ -75,7 +74,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7001/health', timeout=5)"]
       interval: 30s
@@ -93,7 +91,6 @@ services:
       - user-db-data:/var/lib/postgresql/data
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_user -d user_db"]
       interval: 10s
@@ -121,7 +118,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7002/health', timeout=5)"]
       interval: 30s
@@ -139,7 +135,6 @@ services:
       - patient-db-data:/var/lib/postgresql/data
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U patient_user -d patient_db"]
       interval: 10s
@@ -185,7 +180,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7003/health', timeout=5)"]
       interval: 30s
@@ -203,7 +197,6 @@ services:
       - prediction-db-data:/var/lib/postgresql/data
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U prediction_user -d prediction_db"]
       interval: 10s
@@ -231,7 +224,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7004/health', timeout=5)"]
       interval: 30s
@@ -249,7 +241,6 @@ services:
       - simulation-db-data:/var/lib/postgresql/data
     networks:
       - saduci-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U simulation_user -d simulation_db"]
       interval: 10s
@@ -278,7 +269,6 @@ services:
         condition: service_healthy
     networks:
       - saduci-network
-    restart: unless-stopped
 
 networks:
   saduci-network:
