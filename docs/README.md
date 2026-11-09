@@ -11,11 +11,12 @@ does not replace professional judgment or institutional clinical protocols.
 
 ## Architecture
 
-The [interactive Archify architecture diagram](sistema/diagramas/arquitectura-saduci.html)
-shows the path from the web platform through the API Gateway to the backend
-services and their databases. The
-[architecture reference](sistema/ARCHITECTURE.md) documents the system in more
-detail.
+The preview below is visible directly in GitHub. Click it to open the interactive
+Archify diagram, or [download the PNG](sistema/diagramas/arquitectura-saduci.png)
+for presentations. The [architecture reference](sistema/ARCHITECTURE.md)
+documents the system in more detail.
+
+[![SADUCI architecture diagram](sistema/diagramas/arquitectura-saduci.png)](sistema/diagramas/arquitectura-saduci.html)
 
 ## Services
 

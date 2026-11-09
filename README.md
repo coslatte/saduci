@@ -14,40 +14,12 @@ de backend independientes.
 
 ## Arquitectura
 
-El siguiente diagrama muestra el recorrido principal. [Abre el diagrama
-interactivo de Archify](docs/sistema/diagramas/arquitectura-saduci.html) para
-explorar sus componentes y fuentes. Consulta también la
-[documentación técnica de arquitectura](docs/sistema/ARCHITECTURE.md).
+La vista previa estática aparece aquí mismo en GitHub. Haz clic en la imagen
+para abrir el diagrama interactivo de Archify y explorar sus componentes y
+fuentes. También puedes [descargar la imagen PNG](docs/sistema/diagramas/arquitectura-saduci.png)
+para presentaciones. Consulta la [documentación técnica de arquitectura](docs/sistema/ARCHITECTURE.md).
 
-```mermaid
-flowchart TB
-    clinician([Personal clínico])
-
-    subgraph stack["SADUCI · Docker Compose"]
-        platform["SADUCI Platform<br/>Next.js · interfaz y BFF"]
-        gateway["API Gateway<br/>JWT · proxy · :7000"]
-        user["User Service · :7001"]
-        patient["Patient Service · :7002"]
-        prediction["Prediction Service · :7003"]
-        simulation["Simulation Service · :7004"]
-        userdb[(user-db)]
-        patientdb[(patient-db)]
-        predictiondb[(prediction-db)]
-        simulationdb[(simulation-db)]
-
-        platform -->|"API_URL · :7000"| gateway
-        gateway --> user
-        gateway --> patient
-        gateway --> prediction
-        gateway --> simulation
-        user --> userdb
-        patient --> patientdb
-        prediction --> predictiondb
-        simulation --> simulationdb
-    end
-
-    clinician --> platform
-```
+[![Diagrama de arquitectura de SADUCI](docs/sistema/diagramas/arquitectura-saduci.png)](docs/sistema/diagramas/arquitectura-saduci.html)
 
 ## Servicio
 
