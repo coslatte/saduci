@@ -44,7 +44,7 @@ describe("edición de fecha", () => {
     expect(patient.hasAttribute("readonly")).toBe(true);
     expect(content.getByDisplayValue("53").hasAttribute("readonly")).toBe(true);
     expect(
-      content.getByDisplayValue("12 — Insuficiencia cardiaca descompensada"),
+      content.getByDisplayValue("Insuficiencia cardiaca descompensada"),
     ).toBeTruthy();
     expect(
       content.getByLabelText("Fecha del registro").hasAttribute("readonly"),

@@ -5,6 +5,7 @@ Revises: b50153ae8382
 """
 from __future__ import annotations
 
+import re
 from typing import Sequence, Union
 
 from alembic import op
@@ -23,11 +24,21 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("next_value", sa.Integer(), nullable=False),
     )
+    patients = op.get_bind().execute(sa.text("SELECT id, mrn FROM patients")).all()
+    highest_patient_id = max((patient.id for patient in patients), default=0)
+    highest_numeric_sku = max(
+        (
+            int(match.group(1))
+            for patient in patients
+            if (match := re.fullmatch(r"PRED-(\d+)", patient.mrn))
+        ),
+        default=0,
+    )
     op.execute(
         sa.text(
             "INSERT INTO patient_sku_sequence (id, next_value) "
-            "SELECT 1, COALESCE(MAX(id), 0) + 1 FROM patients"
-        )
+            "VALUES (1, :next_value)"
+        ).bindparams(next_value=max(highest_patient_id, highest_numeric_sku) + 1)
     )
 
 

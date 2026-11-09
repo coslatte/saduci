@@ -56,8 +56,12 @@ export interface SimulationInitialValues {
 export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
   const { onSuccess, initialValues, enabled = true } = options;
   const { token } = useAuth();
-  const [patientId, setPatientId] = useState<string>(initialValues?.patientId ?? "");
-  const [age, setAge] = useState<number>(initialValues?.age ?? SIMULATION_LIMITS.age.default);
+  const [patientId, setPatientId] = useState<string>(
+    initialValues?.patientId ?? "",
+  );
+  const [age, setAge] = useState<number>(
+    initialValues?.age ?? SIMULATION_LIMITS.age.default,
+  );
   const [apache, setApache] = useState<number>(
     initialValues?.apache ?? SIMULATION_LIMITS.apache.default,
   );
@@ -73,13 +77,27 @@ export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
   const [simPercent, setSimPercent] = useState<number>(
     initialValues?.simPercent ?? SIMULATION_LIMITS.simPercent.default,
   );
-  const [diagIng1, setDiagIng1] = useState<number>(initialValues?.diagIng1 ?? 2);
-  const [diagIng2, setDiagIng2] = useState<number>(initialValues?.diagIng2 ?? 0);
-  const [diagIng3, setDiagIng3] = useState<number>(initialValues?.diagIng3 ?? 0);
-  const [diagIng4, setDiagIng4] = useState<number>(initialValues?.diagIng4 ?? 0);
-  const [diagEgreso2, setDiagEgreso2] = useState<number>(initialValues?.diagEgreso2 ?? 2);
-  const [respInsuf, setRespInsuf] = useState<number>(initialValues?.respInsuf ?? 2);
-  const [ventType, setVentType] = useState<number>(initialValues?.ventType ?? 0);
+  const [diagIng1, setDiagIng1] = useState<number>(
+    initialValues?.diagIng1 ?? 2,
+  );
+  const [diagIng2, setDiagIng2] = useState<number>(
+    initialValues?.diagIng2 ?? 0,
+  );
+  const [diagIng3, setDiagIng3] = useState<number>(
+    initialValues?.diagIng3 ?? 0,
+  );
+  const [diagIng4, setDiagIng4] = useState<number>(
+    initialValues?.diagIng4 ?? 0,
+  );
+  const [diagEgreso2, setDiagEgreso2] = useState<number>(
+    initialValues?.diagEgreso2 ?? 2,
+  );
+  const [respInsuf, setRespInsuf] = useState<number>(
+    initialValues?.respInsuf ?? 2,
+  );
+  const [ventType, setVentType] = useState<number>(
+    initialValues?.ventType ?? 0,
+  );
 
   const [simRuns, setSimRuns] = useState<number>(
     initialValues?.simRuns ?? SIMULATION_LIMITS.simRuns.default,
@@ -179,7 +197,8 @@ export function useSimulationRunner(options: UseSimulationRunnerOptions = {}) {
     if (!patientId.trim()) {
       showToast({
         title: "SKU del paciente pendiente",
-        description: "Espere a que se genere el SKU antes de ejecutar la simulación.",
+        description:
+          "Espere a que se genere el SKU antes de ejecutar la simulación.",
         type: "error",
       });
       return;

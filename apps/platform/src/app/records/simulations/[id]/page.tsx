@@ -7,7 +7,12 @@ import { FiArrowLeft } from "react-icons/fi";
 import { Button } from "@/components/atoms/Buttons";
 import { normalizeRole } from "@/entities/user";
 import { getRecordPermissions } from "@/lib/recordPermissions";
-import { downloadCsv, downloadPdf } from "@/lib/recordDownloads";
+import {
+  downloadCsv,
+  downloadPdf,
+  downloadXlsx,
+  type SpreadsheetSheet,
+} from "@/lib/recordDownloads";
 import { RecordDateForm } from "../../components/RecordDateForm";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
@@ -130,7 +135,9 @@ function parameterNumber(
   key: string,
 ): number | undefined {
   const value = parameters[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 export default function SimulationDetailPage() {
@@ -265,6 +272,92 @@ export default function SimulationDetailPage() {
       ]
     : [];
 
+  async function handleDownloadXlsx(): Promise<void> {
+    if (!detail) return;
+    const sheets: SpreadsheetSheet[] = [
+      {
+        title: "Registro",
+        columns: ["Campo", "Valor"],
+        rows: exportRows.slice(0, 6),
+      },
+      {
+        title: "Datos clínicos",
+        columns: ["Variable", "Valor"],
+        rows: inputRows.map((row) => [
+          row.label,
+          row.value.replace(" horas", " h"),
+        ]),
+      },
+    ];
+    if (table) {
+      sheets.push({
+        title: "Resultados",
+        columns: [
+          "Variable",
+          "Media",
+          "Desviación estándar",
+          "Límite inferior",
+          "Límite superior",
+        ],
+        rows: TIME_KEYS.map((key) => [
+          TIME_VARIABLE_LABELS[key],
+          table[key].mean,
+          table[key].std,
+          table[key].ci_lower,
+          table[key].ci_upper,
+        ]),
+      });
+    }
+    if (iterations.length > 0) {
+      const iterationKeys = Object.keys(iterations[0]).filter(
+        (key) => key !== "iteration",
+      );
+      sheets.push({
+        title: "Iteraciones",
+        numberFormats: ["0", ...iterationKeys.map(() => "0.00")],
+        columns: [
+          "Iteración",
+          ...iterationKeys.map(
+            (key) =>
+              Object.entries(TIME_VARIABLE_LABELS).find(
+                ([variable]) => variable === key,
+              )?.[1] ?? key,
+          ),
+        ],
+        rows: iterations.map((iteration) => [
+          iteration.iteration,
+          ...iterationKeys.map((key) => iteration[key]),
+        ]),
+      });
+    }
+    if (prediction) {
+      sheets.push({
+        title: "Predicción",
+        columns: ["Dato", "Valor"],
+        rows: [
+          ["Clase predicha", String(prediction.class)],
+          [
+            "Probabilidad de fallecer",
+            `${(prediction.probability * 100).toFixed(1)}%`,
+          ],
+        ],
+      });
+    }
+    try {
+      await downloadXlsx(
+        `simulacion-${detail.record.id}.xlsx`,
+        "Informe de simulación",
+        sheets,
+      );
+    } catch {
+      showToast({
+        title: "Error al exportar",
+        description: "No se pudo generar el archivo XLSX.",
+        type: "error",
+      });
+    }
+  }
+
   return (
     <main className="w-full min-w-0">
       <Link
@@ -343,6 +436,9 @@ export default function SimulationDetailPage() {
           >
             Descargar PDF
           </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadXlsx}>
+            Descargar XLSX
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -389,26 +485,27 @@ export default function SimulationDetailPage() {
           open={resimulating}
           onClose={() => setResimulating(false)}
           onSaved={() => {
-            setResimulating(false);
             void loadDetail();
           }}
-          initialValues={{
-            patientId: detail.record.patientId,
-            age: parameterNumber(detail.parameters, "age"),
-            apache: parameterNumber(detail.parameters, "apache"),
-            preutiStay: parameterNumber(detail.parameters, "preuti_stay"),
-            vamTime: parameterNumber(detail.parameters, "vam_time"),
-            utiStay: parameterNumber(detail.parameters, "uti_stay"),
-            simPercent: parameterNumber(detail.parameters, "percent"),
-            diagIng1: parameterNumber(detail.parameters, "d1"),
-            diagIng2: parameterNumber(detail.parameters, "d2"),
-            diagIng3: parameterNumber(detail.parameters, "d3"),
-            diagIng4: parameterNumber(detail.parameters, "d4"),
-            diagEgreso2: parameterNumber(detail.parameters, "diag_egreso2"),
-            respInsuf: parameterNumber(detail.parameters, "resp_insuf"),
-            ventType: parameterNumber(detail.parameters, "artif_vent"),
-            simRuns: parameterNumber(detail.parameters, "n_runs"),
-          } satisfies SimulationInitialValues}
+          initialValues={
+            {
+              patientId: detail.record.patientId,
+              age: parameterNumber(detail.parameters, "age"),
+              apache: parameterNumber(detail.parameters, "apache"),
+              preutiStay: parameterNumber(detail.parameters, "preuti_stay"),
+              vamTime: parameterNumber(detail.parameters, "vam_time"),
+              utiStay: parameterNumber(detail.parameters, "uti_stay"),
+              simPercent: parameterNumber(detail.parameters, "percent"),
+              diagIng1: parameterNumber(detail.parameters, "d1"),
+              diagIng2: parameterNumber(detail.parameters, "d2"),
+              diagIng3: parameterNumber(detail.parameters, "d3"),
+              diagIng4: parameterNumber(detail.parameters, "d4"),
+              diagEgreso2: parameterNumber(detail.parameters, "diag_egreso2"),
+              respInsuf: parameterNumber(detail.parameters, "resp_insuf"),
+              ventType: parameterNumber(detail.parameters, "artif_vent"),
+              simRuns: parameterNumber(detail.parameters, "n_runs"),
+            } satisfies SimulationInitialValues
+          }
         />
       )}
       {loading || authLoading ? (

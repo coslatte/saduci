@@ -1,21 +1,152 @@
 export function downloadCsv(filename: string, rows: [string, string][]) {
+  downloadCsvTable(filename, [["Campo", "Valor"], ...rows]);
+}
+
+export function downloadCsvTable(
+  filename: string,
+  rows: readonly (readonly string[])[],
+) {
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
+  const isFormula =
+    /^[\s]*[=+@\t\r]/.test(value) ||
+    (/^[\s]*-/.test(value) && !/^\s*-\d+(?:[.,]\d+)?$/.test(value));
+  const safeValue = isFormula ? `'${value}` : value;
+  return `"${safeValue.replaceAll('"', '""')}"`;
 }
 
 export interface ReportSection {
   title: string;
   rows: [string, string][];
+}
+
+export interface SpreadsheetSheet {
+  title: string;
+  columns: readonly string[];
+  rows: readonly (readonly (string | number)[])[];
+  numberFormats?: readonly (string | undefined)[];
+}
+
+export async function downloadXlsx(
+  filename: string,
+  title: string,
+  sheets: readonly SpreadsheetSheet[],
+): Promise<void> {
+  const { Workbook } = await import("exceljs");
+  const workbook = new Workbook();
+  workbook.creator = "SADUCI";
+  workbook.created = new Date();
+
+  for (const sheetData of sheets) {
+    const sheet = workbook.addWorksheet(sheetData.title.slice(0, 31), {
+      views: [{ state: "frozen", ySplit: 4 }],
+      properties: { tabColor: { argb: "FF0F766E" } },
+    });
+    const lastColumn = sheetData.columns.length;
+    const titleCell = sheet.getCell(1, 1);
+    titleCell.value = `${title} · ${sheetData.title}`;
+    sheet.mergeCells(1, 1, 1, lastColumn);
+    titleCell.font = {
+      name: "Aptos Display",
+      size: 16,
+      bold: true,
+      color: { argb: "FF0F766E" },
+    };
+    titleCell.alignment = { vertical: "middle" };
+    sheet.getRow(1).height = 30;
+
+    const generatedCell = sheet.getCell(2, 1);
+    generatedCell.value = `Generado: ${new Date().toLocaleString("es-ES")}`;
+    sheet.mergeCells(2, 1, 2, lastColumn);
+    generatedCell.font = {
+      name: "Aptos",
+      size: 10,
+      color: { argb: "FF64748B" },
+    };
+    sheet.getRow(2).height = 20;
+
+    const headerRow = sheet.getRow(4);
+    headerRow.values = [undefined, ...sheetData.columns];
+    headerRow.height = 24;
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF0F766E" },
+      };
+      cell.font = { name: "Aptos", bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { vertical: "middle", wrapText: true };
+    });
+
+    sheetData.rows.forEach((values, index) => {
+      const row = sheet.getRow(index + 5);
+      row.values = [undefined, ...values];
+      row.eachCell((cell, columnNumber) => {
+        cell.font = { name: "Aptos", size: 11, color: { argb: "FF1E293B" } };
+        cell.alignment = { vertical: "top", wrapText: true };
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+        };
+        if (typeof cell.value === "number") {
+          cell.numFmt = sheetData.numberFormats?.[columnNumber - 1] ?? "0.00";
+        }
+        if (index % 2 === 1) {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8FAFC" },
+          };
+        }
+      });
+    });
+
+    sheet.columns = sheetData.columns.map((column, columnIndex) => {
+      const contentWidths = sheetData.rows.map((row) =>
+        String(row[columnIndex] ?? "")
+          .split(/\r?\n/)
+          .reduce((max, line) => Math.max(max, line.length), 0),
+      );
+      const width = Math.min(
+        56,
+        Math.max(14, column.length, ...contentWidths) + 2,
+      );
+      return { width };
+    });
+    sheet.autoFilter = {
+      from: { row: 4, column: 1 },
+      to: { row: Math.max(4, sheetData.rows.length + 4), column: lastColumn },
+    };
+    sheet.pageSetup = {
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    };
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadPdf(title: string, sections: ReportSection[]) {

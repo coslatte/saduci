@@ -11,12 +11,13 @@ interface SimulationResultsSectionProps {
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
   onDownload: () => void;
+  onDownloadXlsx?: () => void;
   onDownloadSvg?: () => void;
   loading?: boolean;
 }
 
 /**
- * Displays simulation results, prediction badge, and CSV download action.
+ * Displays simulation results, prediction badge, and export actions.
  * Used in X case: post-run results panel in the simulation workflow.
  */
 export function SimulationResultsSection({
@@ -24,6 +25,7 @@ export function SimulationResultsSection({
   activeIndex,
   onActiveIndexChange,
   onDownload,
+  onDownloadXlsx,
   onDownloadSvg,
   loading = false,
 }: SimulationResultsSectionProps) {
@@ -57,7 +59,7 @@ export function SimulationResultsSection({
         {showSkeleton ? (
           <Skeleton className="h-9 w-40 rounded-md" />
         ) : (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -68,6 +70,18 @@ export function SimulationResultsSection({
               <FiDownload className="size-4" />
               {"Descargar CSV"}
             </Button>
+            {onDownloadXlsx && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onDownloadXlsx}
+                aria-label="Descargar resultados en XLSX"
+                className="w-full sm:w-auto"
+              >
+                <FiDownload className="size-4" />
+                {"Descargar XLSX"}
+              </Button>
+            )}
             {onDownloadSvg && (
               <Button
                 variant="outline"

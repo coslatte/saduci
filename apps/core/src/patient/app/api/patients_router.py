@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import update
+from sqlalchemy import case, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.controllers.auth import get_current_user, require_especialista_or_admin
@@ -10,7 +10,7 @@ from app.controllers.auth import get_current_user, require_especialista_or_admin
 from app.models.database import get_db
 from app.schemas import PatientCreate, PatientUpdate, PatientResponse
 from app.services.patient_service import create_patient, get_by_mrn, update
-from app.models.patient import PatientSkuSequence
+from app.models.patient import PatientRecord, PatientSkuSequence
 
 router = APIRouter(tags=["patients"])
 
@@ -20,10 +20,17 @@ async def reserve_next_patient_sku(
     _current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    next_patient_value = (
+        select(func.coalesce(func.max(PatientRecord.id), 0) + 1).scalar_subquery()
+    )
+    next_value = case(
+        (PatientSkuSequence.next_value < next_patient_value, next_patient_value),
+        else_=PatientSkuSequence.next_value,
+    )
     result = await db.execute(
         update(PatientSkuSequence)
         .where(PatientSkuSequence.id == 1)
-        .values(next_value=PatientSkuSequence.next_value + 1)
+        .values(next_value=next_value + 1)
         .returning(PatientSkuSequence.next_value)
     )
     sequence_value = result.scalar_one() - 1

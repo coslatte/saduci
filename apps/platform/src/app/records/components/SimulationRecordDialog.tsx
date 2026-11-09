@@ -9,8 +9,10 @@ import {
 } from "@/app/simulation/hooks/useSimulationRunner";
 import {
   downloadSimulationCSV,
+  downloadSimulationXlsx,
   downloadSimulationSVG,
 } from "@/app/simulation/helpers/index";
+import { showToast } from "@/components/molecules/Toast";
 
 interface SimulationRecordDialogProps {
   open: boolean;
@@ -54,6 +56,18 @@ export function SimulationRecordDialog({
     downloadSimulationSVG(selectedResult, patientId);
   }
 
+  function handleDownloadXlsx(): void {
+    const selectedResult = resultHistory[activeResultIndex];
+    if (!selectedResult) return;
+    void downloadSimulationXlsx(selectedResult, patientId).catch(() => {
+      showToast({
+        title: "Error al exportar",
+        description: "No se pudo generar el archivo XLSX.",
+        type: "error",
+      });
+    });
+  }
+
   return (
     <Dialog
       open={open}
@@ -70,6 +84,7 @@ export function SimulationRecordDialog({
             activeIndex={activeResultIndex}
             onActiveIndexChange={setActiveResultIndex}
             onDownload={handleDownload}
+            onDownloadXlsx={handleDownloadXlsx}
             onDownloadSvg={handleDownloadSvg}
             loading={loading}
           />

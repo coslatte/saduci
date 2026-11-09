@@ -2,20 +2,7 @@ import {
   TIME_VARIABLE_LABELS,
   type SimulationResponse,
 } from "@/lib/simulation";
-
-const CSV_DELIMITER = ",";
-
-function escapeCSVValue(value: string): string {
-  if (
-    value.includes(CSV_DELIMITER) ||
-    value.includes('"') ||
-    value.includes("\n") ||
-    value.includes("\r")
-  ) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
+import { downloadCsvTable, downloadXlsx } from "@/lib/recordDownloads";
 
 export function downloadSimulationCSV(
   result: SimulationResponse,
@@ -31,14 +18,52 @@ export function downloadSimulationCSV(
     ["Límite Sup.", ...keys.map((k) => sim[k].ci_upper.toFixed(2))],
   ];
 
-  const csvRows = [header, ...statsRows].map((row) =>
-    row.map((value) => escapeCSVValue(String(value))).join(CSV_DELIMITER),
-  );
-  const csv = [`sep=${CSV_DELIMITER}`, ...csvRows].join("\r\n");
-  const csvWithBom = `\uFEFF${csv}`;
+  downloadCsvTable(`simulacion-paciente-${safePatientId(patientId)}.csv`, [
+    header,
+    ...statsRows,
+  ]);
+}
 
-  const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
-  downloadBlob(blob, `simulacion-paciente-${safePatientId(patientId)}.csv`);
+export function downloadSimulationXlsx(
+  result: SimulationResponse,
+  patientId: string,
+): Promise<void> {
+  const keys = Object.keys(
+    result.simulation,
+  ) as (keyof typeof result.simulation)[];
+  const columns = [
+    "Estadístico",
+    ...keys.map((key) => TIME_VARIABLE_LABELS[key]),
+  ];
+  const rows = [
+    ["Promedio", ...keys.map((key) => result.simulation[key].mean)],
+    ["Desviación estándar", ...keys.map((key) => result.simulation[key].std)],
+    ["Límite inferior", ...keys.map((key) => result.simulation[key].ci_lower)],
+    ["Límite superior", ...keys.map((key) => result.simulation[key].ci_upper)],
+  ];
+
+  return downloadXlsx(
+    `simulacion-paciente-${safePatientId(patientId)}.xlsx`,
+    "Informe de simulación",
+    [
+      { title: "Resultados", columns, rows },
+      {
+        title: "Predicción",
+        columns: ["Dato", "Valor"],
+        rows: [
+          ["Paciente", patientId],
+          [
+            "Clase predicha",
+            result.prediction.class === 1 ? "Fallece" : "No fallece",
+          ],
+          [
+            "Probabilidad de fallecer",
+            `${(result.prediction.probability * 100).toFixed(1)}%`,
+          ],
+        ],
+      },
+    ],
+  );
 }
 
 function safePatientId(patientId: string): string {

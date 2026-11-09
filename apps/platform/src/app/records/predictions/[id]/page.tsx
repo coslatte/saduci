@@ -7,7 +7,12 @@ import { FiArrowLeft } from "react-icons/fi";
 import { Button } from "@/components/atoms/Buttons";
 import { normalizeRole } from "@/entities/user";
 import { getRecordPermissions } from "@/lib/recordPermissions";
-import { downloadCsv, downloadPdf } from "@/lib/recordDownloads";
+import {
+  downloadCsv,
+  downloadPdf,
+  downloadXlsx,
+  type SpreadsheetSheet,
+} from "@/lib/recordDownloads";
 import { RecordDateForm } from "../../components/RecordDateForm";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
@@ -68,9 +73,14 @@ function featureValue(key: string, value: unknown): string {
   return "—";
 }
 
-function featureNumber(features: Record<string, unknown>, key: string): number | undefined {
+function featureNumber(
+  features: Record<string, unknown>,
+  key: string,
+): number | undefined {
   const value = features[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function toPredictionRequest(
@@ -86,7 +96,9 @@ function toPredictionRequest(
     apache: features.apache,
     tiempo_vam: features.tiempo_vam,
   };
-  const values = Object.values(request).filter((value) => typeof value !== "string");
+  const values = Object.values(request).filter(
+    (value) => typeof value !== "string",
+  );
   if (
     values.length !== 6 ||
     !values.every((v) => typeof v === "number" && Number.isFinite(v))
@@ -161,7 +173,10 @@ export default function PredictionDetailPage() {
 
   async function handleExplain(method: ExplanationMethod): Promise<void> {
     if (!detail) return;
-    const request = toPredictionRequest(detail.features, detail.record.patientId);
+    const request = toPredictionRequest(
+      detail.features,
+      detail.record.patientId,
+    );
     if (!request) return;
     setExplicacion(null);
     setLoadingExplain(true);
@@ -169,7 +184,7 @@ export default function PredictionDetailPage() {
       const result = await runExplicacion({
         ...request,
         method,
-        include_narrative: false,
+        include_narrative: true,
       });
       setExplicacion(result);
     } catch (err) {
@@ -208,6 +223,49 @@ export default function PredictionDetailPage() {
         ),
       ]
     : [];
+
+  async function handleDownloadXlsx(): Promise<void> {
+    if (!detail) return;
+    const sheets: SpreadsheetSheet[] = [
+      {
+        title: "Registro",
+        columns: ["Campo", "Valor"],
+        rows: [
+          ...exportRows.slice(0, 6),
+          ["Modelo", detail.modelName || "No disponible"],
+        ],
+      },
+      {
+        title: "Datos clínicos",
+        columns: ["Variable", "Valor"],
+        rows: exportRows.slice(6),
+      },
+    ];
+    if (explicacion) {
+      sheets.push({
+        title: "Explicación del modelo",
+        columns: ["Variable", "Valor del paciente", "Contribución"],
+        rows: explicacion.rows.map((row) => [
+          row.feature_name,
+          row.patient_value_display,
+          row.contribution,
+        ]),
+      });
+    }
+    try {
+      await downloadXlsx(
+        `prediccion-${detail.record.id}.xlsx`,
+        "Informe de predicción",
+        sheets,
+      );
+    } catch {
+      showToast({
+        title: "Error al exportar",
+        description: "No se pudo generar el archivo XLSX.",
+        type: "error",
+      });
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl min-w-0">
@@ -286,6 +344,9 @@ export default function PredictionDetailPage() {
           >
             Descargar PDF
           </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadXlsx}>
+            Descargar XLSX
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -332,7 +393,6 @@ export default function PredictionDetailPage() {
           open={resimulating}
           onClose={() => setResimulating(false)}
           onSaved={() => {
-            setResimulating(false);
             void loadDetail();
           }}
           initialValues={{
