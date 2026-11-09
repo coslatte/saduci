@@ -1,10 +1,4 @@
 {
   "version": 1,
-  "skills": {
-    "excalidraw-diagram": {
-      "source": "coleam00/excalidraw-diagram-skill",
-      "sourceUrl": "https://github.com/coleam00/excalidraw-diagram-skill",
-      "sourceType": "git"
-    }
-  }
+  "skills": {}
 }

@@ -127,7 +127,7 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
   (estado y acciones). Las acciones ya eran estables con `useCallback`, así que
   ahora un cambio de notificación no las invalida. Se exportan
   `useNotificationsState` y `useNotificationsActions`.
-- La vista de arquitectura de `README.md` usa un diagrama Excalidraw con vista previa PNG y archivo editable.
+- La vista de arquitectura de `README.md` usa una fuente declarativa D2, animada en orientación vertical, y diagramas separados para los flujos clave.
 
 ### Added — Skills del proyecto
 

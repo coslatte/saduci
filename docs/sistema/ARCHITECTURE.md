@@ -73,13 +73,14 @@ saduci-platform (Next.js)  --/api/*-->  Route Handlers (server-side)
                                          |-- /api/simulations*    --> Simulation :7004 --> simulation-db
 ```
 
-### Diagrama editable
+### Diagramas D2
 
-El diagrama de arquitectura se mantiene en formato Excalidraw. La vista previa
-PNG permite consultarlo sin abrir el editor; el archivo `.excalidraw` conserva
-los elementos editables.
+La fuente declarativa `diagramas/arquitectura-general.d2` produce una vista
+animada en orientación vertical. Los diagramas de módulo explican por separado
+autenticación y roles, predicción, simulación y estadísticas, y los historiales.
+Ejecuta `scripts/render_diagrams.sh` para regenerar las imágenes.
 
-[![Arquitectura de SADUCI](diagramas/arquitectura-saduci.png)](diagramas/arquitectura-saduci.excalidraw)
+![Arquitectura general de SADUCI](diagramas/arquitectura-general.gif)
 
 
 ## 3) Estructura interna de cada servicio

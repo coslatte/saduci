@@ -11,12 +11,21 @@ does not replace professional judgment or institutional clinical protocols.
 
 ## Architecture
 
-The architecture diagram is editable in Excalidraw. Its PNG preview is shown
-directly here on GitHub; click it to open the editable drawing. The
+The architecture is declared in D2 and animated vertically from the web
+interface down to the service databases. The
 [architecture reference](sistema/ARCHITECTURE.md) documents the system in more
 detail.
 
-[![SADUCI architecture diagram](sistema/diagramas/arquitectura-saduci.png)](sistema/diagramas/arquitectura-saduci.excalidraw)
+![SADUCI vertical architecture diagram](sistema/diagramas/arquitectura-general.gif)
+
+The editable source is
+[arquitectura-general.d2](sistema/diagramas/arquitectura-general.d2). The module
+diagrams explain authentication, prediction, simulation, and patient records.
+
+![Authentication and role checks](sistema/diagramas/autenticacion-roles.svg)
+![Clinical prediction flow](sistema/diagramas/prediccion-clinica.svg)
+![Simulation and statistical tests](sistema/diagramas/simulacion-estadistica.svg)
+![Patient records and history](sistema/diagramas/historiales-clinicos.svg)
 
 ## Services
 

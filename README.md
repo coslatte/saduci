@@ -14,11 +14,33 @@ de backend independientes.
 
 ## Arquitectura
 
-El diagrama editable está en formato Excalidraw. La vista previa PNG se muestra
-aquí mismo en GitHub; haz clic para abrir el archivo editable. Consulta la
+La arquitectura se define en D2 y se anima verticalmente desde la interfaz web
+hasta las bases de datos. Consulta también la
 [documentación técnica de arquitectura](docs/sistema/ARCHITECTURE.md).
 
-[![Diagrama de arquitectura de SADUCI](docs/sistema/diagramas/arquitectura-saduci.png)](docs/sistema/diagramas/arquitectura-saduci.excalidraw)
+![Arquitectura general de SADUCI en orientación vertical.](docs/sistema/diagramas/arquitectura-general.gif)
+
+El archivo [arquitectura-general.d2](docs/sistema/diagramas/arquitectura-general.d2)
+es la fuente editable. Ejecuta `scripts/render_diagrams.sh` para regenerar las
+vistas con D2 instalado.
+
+### Flujos de los módulos
+
+#### Autenticación y roles
+
+![Inicio de sesión, emisión de JWT y autorización según el rol.](docs/sistema/diagramas/autenticacion-roles.svg)
+
+#### Predicción clínica
+
+![Recorrido de una predicción desde el formulario hasta la explicación del resultado.](docs/sistema/diagramas/prediccion-clinica.svg)
+
+#### Simulación y pruebas estadísticas
+
+![Flujos de simulación ICU y pruebas estadísticas, incluido el fallback cuando SimUCI no está disponible.](docs/sistema/diagramas/simulacion-estadistica.svg)
+
+#### Pacientes e historiales
+
+![Consulta de registros clínicos a través de los servicios y bases correspondientes.](docs/sistema/diagramas/historiales-clinicos.svg)
 
 ## Servicio
 

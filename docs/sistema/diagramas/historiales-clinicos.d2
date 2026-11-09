@@ -1,0 +1,40 @@
+direction: right
+
+clinico: "Personal clínico" {shape: person}
+platform: "SADUCI Platform\nBúsqueda y filtros" {
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+bff: "Route Handlers\nBFF del mismo origen" {style.fill: "#e0f2fe"}
+gateway: "API Gateway\nJWT · rol · proxy" {style.fill: "#fef3c7"}
+servicios: "Servicios por dominio" {
+  style.fill: "#ecfdf5"
+  style.stroke: "#059669"
+  patients: "Patient Service\nDatos del paciente"
+  predictions: "Prediction Service\nResultados clínicos"
+  simulations: "Simulation Service\nSimulaciones y pruebas"
+}
+bases: "Bases independientes" {
+  style.fill: "#fdf2f8"
+  patientdb: "patient_db" {shape: cylinder}
+  predictiondb: "prediction_db" {shape: cylinder}
+  simulationdb: "simulation_db" {shape: cylinder}
+}
+history: "Historial consultable\nsegún permisos del rol" {
+  style.fill: "#f1f5f9"
+  style.stroke: "#475569"
+}
+
+clinico -> platform: "Consulta o filtra"
+platform -> bff: "GET /api/*"
+bff -> gateway: "API_URL"
+gateway -> servicios.patients: "Pacientes"
+gateway -> servicios.predictions: "Predicciones"
+gateway -> servicios.simulations: "Simulaciones y estadísticas"
+servicios.patients -> bases.patientdb
+servicios.predictions -> bases.predictiondb
+servicios.simulations -> bases.simulationdb
+servicios -> gateway: "Registros autorizados"
+gateway -> bff
+bff -> platform
+platform -> history: "Lista los resultados"

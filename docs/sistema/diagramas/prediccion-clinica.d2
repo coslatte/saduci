@@ -1,0 +1,36 @@
+direction: right
+
+clinico: "Personal clínico" {shape: person}
+formulario: "Datos del paciente\ny variables clínicas" {
+  style.fill: "#eff6ff"
+  style.stroke: "#2563eb"
+}
+platform: "SADUCI Platform\nFormulario y resultados" {
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+bff: "Route Handler\n/api/prediction" {style.fill: "#e0f2fe"}
+gateway: "API Gateway\nJWT y proxy" {style.fill: "#fef3c7"}
+prediction: "Prediction Service\nInferencia y explicación" {
+  style.fill: "#ecfdf5"
+  style.stroke: "#059669"
+}
+model: "Modelo de predicción\nnew_workflow.joblib" {shape: document}
+database: "prediction_db\nRegistro y resultado" {shape: cylinder; style.fill: "#fdf2f8"}
+decision: "Resultado para valoración\nclínica" {
+  style.fill: "#f0fdf4"
+  style.stroke: "#16a34a"
+}
+
+clinico -> formulario
+formulario -> platform
+platform -> bff: "Solicitud del mismo origen"
+bff -> gateway: "API_URL"
+gateway -> prediction: "Petición autorizada"
+prediction -> model: "Inferencia ML"
+model -> prediction: "Predicción y confianza"
+prediction -> database: "Persistir resultado"
+prediction -> gateway: "Resultado y explicación"
+gateway -> bff
+bff -> platform
+platform -> decision: "Presentación al personal"

@@ -1,0 +1,36 @@
+direction: right
+
+personal: "Personal clínico" {shape: person}
+frontend: "SADUCI Platform\nLogin y sesión" {
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+gateway: "API Gateway\nValida JWT y rol" {
+  style.fill: "#fef3c7"
+  style.stroke: "#d97706"
+}
+users: "User Service\nCredenciales y perfiles" {
+  style.fill: "#ecfdf5"
+  style.stroke: "#059669"
+}
+userdb: "user_db\nUsuarios" {shape: cylinder; style.fill: "#fdf2f8"}
+token: "JWT\nuid · role · expiración" {
+  shape: stored_data
+  style.fill: "#f3e8ff"
+  style.stroke: "#9333ea"
+}
+permisos: "Permisos por rol\nADMIN · ESPECIALISTA · MÉDICO" {
+  style.fill: "#f1f5f9"
+  style.stroke: "#475569"
+}
+
+personal -> frontend: "Credenciales"
+frontend -> gateway: "POST /auth/login"
+gateway -> users: "Autenticar"
+users -> userdb: "Verificar usuario"
+userdb -> users: "Perfil y hash"
+users -> gateway: "Identidad autenticada"
+gateway -> token: "Emite JWT"
+token -> frontend: "Cookie de sesión"
+frontend -> gateway: "API con sesión"
+gateway -> permisos: "Autorizar cada operación"

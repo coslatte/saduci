@@ -39,6 +39,11 @@ No pases de la petición a la edición. Entiende, busca, navega, traza, revisa e
 historial, evalúa el impacto, implementa y verifica. El flujo completo está en
 `docs/ai/workflow.md`.
 
+Al cambiar un caso de uso clínico clave (autenticación y roles, pacientes,
+predicción, simulación, estadísticas o historiales), sigue
+`.agents/skills/key-use-case-documentation/SKILL.md`: sincroniza la
+documentación técnica, las fuentes D2 y las imágenes generadas del README.
+
 ## Evidencia
 
 - Toda afirmación sobre el código se sostiene con evidencia; cita `ruta:línea`.

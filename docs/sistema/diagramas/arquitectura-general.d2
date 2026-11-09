@@ -1,0 +1,70 @@
+direction: down
+
+navegador: "Personal clínico\nNavegador web" {
+  shape: person
+  style.fill: "#dbeafe"
+  style.stroke: "#2563eb"
+}
+
+platform: "SADUCI Platform · Next.js :4000\nInterfaz clínica · App Router · Route Handlers" {
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+
+gateway: "API Gateway · FastAPI :7000\nJWT · permisos · enrutado" {
+  style.fill: "#fef3c7"
+  style.stroke: "#d97706"
+}
+
+servicios: "Servicios clínicos independientes" {
+  grid-columns: 2
+  grid-gap: 20
+  style.fill: "#f0fdf4"
+  style.stroke: "#059669"
+  user: "User :7001\nAutenticación y roles"
+  patient: "Patient :7002\nExpedientes clínicos"
+  prediction: "Prediction :7003\nInferencia y explicación"
+  simulation: "Simulation :7004\nSimulación y estadística"
+}
+
+datos: "Persistencia y modelos" {
+  grid-columns: 3
+  grid-gap: 16
+  style.fill: "#fdf2f8"
+  style.stroke: "#db2777"
+  userdb: "user_db\nPostgreSQL" {shape: cylinder}
+  patientdb: "patient_db\nPostgreSQL" {shape: cylinder}
+  predictiondb: "prediction_db\nPostgreSQL" {shape: cylinder}
+  simulationdb: "simulation_db\nPostgreSQL" {shape: cylinder}
+  mlmodel: "Modelo clínico\nnew_workflow.joblib" {shape: document}
+  simuci: "SimUCI\nOpcional · fallback disponible" {shape: hexagon}
+}
+
+navegador -> platform: "HTTPS"
+platform -> gateway: "API_URL"
+gateway -> servicios: "Identidad · pacientes · predicciones · simulaciones"
+servicios -> datos: "Persistencia · inferencia · simulación opcional"
+
+steps: {
+  1: {
+    navegador.style.fill: "#bfdbfe"
+    platform.style.fill: "#bae6fd"
+  }
+  2: {
+    gateway.style.fill: "#fde68a"
+  }
+  3: {
+    servicios.user.style.fill: "#bbf7d0"
+    servicios.patient.style.fill: "#bbf7d0"
+    servicios.prediction.style.fill: "#bbf7d0"
+    servicios.simulation.style.fill: "#bbf7d0"
+  }
+  4: {
+    datos.userdb.style.fill: "#fbcfe8"
+    datos.patientdb.style.fill: "#fbcfe8"
+    datos.predictiondb.style.fill: "#fbcfe8"
+    datos.simulationdb.style.fill: "#fbcfe8"
+    datos.mlmodel.style.fill: "#ddd6fe"
+    datos.simuci.style.fill: "#fecaca"
+  }
+}

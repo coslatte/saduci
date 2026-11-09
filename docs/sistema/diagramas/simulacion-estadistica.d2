@@ -1,0 +1,40 @@
+direction: right
+
+clinico: "Personal clínico" {shape: person}
+platform: "SADUCI Platform\nSimulaciones y estadísticas" {
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+bff: "Route Handlers\n/api/*" {style.fill: "#e0f2fe"}
+gateway: "API Gateway\nJWT y proxy" {style.fill: "#fef3c7"}
+simulation: "Simulation Service" {
+  style.fill: "#ecfdf5"
+  style.stroke: "#059669"
+  sim: "Simulación ICU\nparámetros y escenarios"
+  stats: "Pruebas estadísticas\nWilcoxon · Friedman"
+}
+engine: "SimUCI\nsi está instalado" {shape: hexagon}
+fallback: "Fallback estadístico\ndeterminista" {shape: document}
+database: "simulation_db\nsimulations · statistical_tests" {
+  shape: cylinder
+  style.fill: "#fdf2f8"
+}
+results: "Resultados\npara revisión clínica" {
+  style.fill: "#f0fdf4"
+  style.stroke: "#16a34a"
+}
+
+clinico -> platform: "Configura análisis"
+platform -> bff: "Solicitud del mismo origen"
+bff -> gateway: "API_URL"
+gateway -> simulation: "Petición autorizada"
+simulation.sim -> engine: "Motor externo opcional"
+engine -> simulation.sim: "Series simuladas"
+simulation.sim -> fallback: "Alternativa cuando falta SimUCI"
+fallback -> simulation.sim
+simulation.stats -> database: "Guardar resultados"
+simulation.sim -> database: "Guardar simulación"
+simulation -> gateway: "Resultados"
+gateway -> bff
+bff -> platform
+platform -> results
