@@ -15,32 +15,36 @@ logger = get_logger(__name__)
 _MODEL_PATH = Path(os.getenv("PREDICTION_NARRATIVE_MODEL_PATH", str(NARRATIVE_MODEL_PATH)))
 _MODEL_STATE: dict[str, Any] = {"model": None, "error": None}
 _MODEL_LOCK = Lock()
+_MODEL_LOAD_LOCK = Lock()
 
 
 def load_narrative_model() -> None:
-    if not _MODEL_PATH.is_file():
-        _MODEL_STATE["model"] = None
-        _MODEL_STATE["error"] = f"Narrative model not found at {_MODEL_PATH}"
-        logger.warning(_MODEL_STATE["error"])
-        return
+    with _MODEL_LOAD_LOCK:
+        if _MODEL_STATE["model"] is not None:
+            return
+        if not _MODEL_PATH.is_file():
+            _MODEL_STATE["model"] = None
+            _MODEL_STATE["error"] = f"Narrative model not found at {_MODEL_PATH}"
+            logger.warning(_MODEL_STATE["error"])
+            return
 
-    try:
-        from llama_cpp import Llama
+        try:
+            from llama_cpp import Llama
 
-        _MODEL_STATE["model"] = Llama(
-            model_path=str(_MODEL_PATH),
-            n_ctx=int(os.getenv("PREDICTION_LLM_CONTEXT_SIZE", "2048")),
-            n_threads=max(1, int(os.getenv("PREDICTION_LLM_THREADS", "4"))),
-            n_batch=128,
-            use_mmap=True,
-            verbose=False,
-        )
-        _MODEL_STATE["error"] = None
-        logger.info("Loaded local narrative model from %s", _MODEL_PATH)
-    except Exception as exc:
-        _MODEL_STATE["model"] = None
-        _MODEL_STATE["error"] = str(exc)
-        logger.exception("Could not load local narrative model: %s", exc)
+            _MODEL_STATE["model"] = Llama(
+                model_path=str(_MODEL_PATH),
+                n_ctx=int(os.getenv("PREDICTION_LLM_CONTEXT_SIZE", "2048")),
+                n_threads=max(1, int(os.getenv("PREDICTION_LLM_THREADS", "4"))),
+                n_batch=128,
+                use_mmap=True,
+                verbose=False,
+            )
+            _MODEL_STATE["error"] = None
+            logger.info("Loaded local narrative model from %s", _MODEL_PATH)
+        except Exception as exc:
+            _MODEL_STATE["model"] = None
+            _MODEL_STATE["error"] = str(exc)
+            logger.exception("Could not load local narrative model: %s", exc)
 
 
 async def generate_local_narrative(
@@ -48,6 +52,9 @@ async def generate_local_narrative(
     user_prompt: str,
     temperature: float,
 ) -> str | None:
+    if _MODEL_STATE["model"] is None and _MODEL_PATH.is_file():
+        await asyncio.to_thread(load_narrative_model)
+
     model = _MODEL_STATE["model"]
     if model is None:
         return None

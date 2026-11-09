@@ -153,7 +153,7 @@ export function PredictionPageContent() {
         apache,
         tiempo_vam: tiempoVam,
         method,
-        include_narrative: false,
+        include_narrative: true,
       });
 
       setExplicacion(result);

@@ -96,16 +96,17 @@ Atajos: `make up`, `make up-detach`, `make logs-follow`, `make down`.
 
 ## Modelo local para explicar predicciones
 
-El servicio de predicción puede funcionar sin descargar el modelo de lenguaje.
-Mientras no esté disponible, muestra una explicación de respaldo. Los pesos se
-guardan en el volumen `prediction-narrative-model` y no se descargan al construir
-la imagen ni al iniciar el servicio.
+Compose configura el proveedor `embedded` por defecto para generar una narrativa
+local al solicitar la explicación. Si el GGUF no está disponible o no se puede
+cargar, el predictor conserva sus resultados y usa una explicación de respaldo.
+Los pesos se guardan en el volumen `prediction-narrative-model`; no se descargan
+al construir la imagen ni al iniciar el servicio.
 
 Cuando haya ancho de banda disponible, desde la raíz del repositorio:
 
 ```bash
 docker compose -f apps/core/compose.yaml build prediction-service
-docker compose -f apps/core/compose.yaml run --rm --no-deps --no-build --entrypoint python prediction-service -m app.services.model_assets
+docker compose -f apps/core/compose.yaml run --rm --no-deps --entrypoint python prediction-service -m app.services.model_assets
 docker compose -f apps/core/compose.yaml restart prediction-service
 ```
 

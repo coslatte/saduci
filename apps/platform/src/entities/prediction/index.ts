@@ -7,17 +7,10 @@ export const PREDICTION_LIMITS = {
   tiempoVam: { min: 18, max: 40, default: 30 },
 } as const;
 
-export type ExplanationMethod =
-  | "LIME"
-  | "SHAP"
-  | "Gradientes Integrados"
-  | "Mapas de Saliencia";
+export type ExplanationMethod = "Impacto local por referencia";
 
 export const EXPLANATION_METHODS: ExplanationMethod[] = [
-  "LIME",
-  "SHAP",
-  "Gradientes Integrados",
-  "Mapas de Saliencia",
+  "Impacto local por referencia",
 ];
 
 export interface PredictionRequest {

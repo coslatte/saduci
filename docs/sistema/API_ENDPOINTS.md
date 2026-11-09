@@ -95,6 +95,28 @@ el BFF y este reenvía al API Gateway.
 - `GET /api/predictions`, `GET /api/predictions/count`, `GET /api/predictions/models`
 - `GET /api/predictions/{patient_id}`, `PUT /api/predictions/{id}`
 
+### Procedencia del predictor
+
+Las respuestas de `POST /prediction`, `/prediccion` y sus rutas `/explain`
+incluyen `model_version` y `artifact_sha256`, correspondientes al artefacto
+validado y cargado. El BFF y el gateway conservan esos campos; el cliente de
+plataforma exige una versión no vacía y un SHA-256 válido. Backend y frontend
+deben actualizarse juntos.
+
+Los registros nuevos de plataforma guardan ambos campos dentro de `prediction`.
+En el contrato histórico `POST /api/predictions` se incluyen dentro del objeto
+`prediction`, junto a `risk_score` y `risk_level`. Los registros anteriores no
+se modifican ni reciben procedencia supuesta.
+
+El servicio requiere `manifest.json` junto al artefacto. Una ruta explícita en
+`PREDICTION_MODEL_PATH` que falta o no supera la validación no se sustituye por
+otro modelo; `/health` y las operaciones predictivas responden 503. Una salida
+numérica no finita o fuera de `[0,1]` produce un error de inferencia, sin recorte.
+
+La procedencia de una explicación identifica el modelo usado para ese cálculo.
+Todavía no vincula la explicación al ID de una predicción histórica ni garantiza
+que use su versión original tras un cambio de artefacto.
+
 ## Simulation Service (:7004)
 
 - `GET /health`, `POST /simulation`

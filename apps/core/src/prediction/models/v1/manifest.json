@@ -1,0 +1,10 @@
+{
+  "manifest_version": 1,
+  "model_id": "platform_mortality",
+  "model_version": "v1",
+  "artifact_sha256": "b58bcf14ff4ad023c608861323bcabca5fa5d9250058af9f1ed1d0e1cf1923ad",
+  "feature_order": ["Edad", "Diag.Ing1", "Diag.Ing2", "Diag.Egr2", "APACHE", "TiempoVAM"],
+  "positive_class": 1,
+  "source_repository": "https://github.com/acferriol/Intensive-Care-Hidden-Mortality",
+  "source_commit": "2cf81403b3ce9390618df3cd2e7a43082506c5c3"
+}

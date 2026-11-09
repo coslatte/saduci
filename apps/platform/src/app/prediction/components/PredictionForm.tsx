@@ -112,7 +112,9 @@ export function PredictionForm({
         Características del Paciente
       </h2>
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-        <span className="text-sm font-medium text-slate-600">SKU del paciente</span>
+        <span className="text-sm font-medium text-slate-600">
+          SKU del paciente
+        </span>
         <span className="font-mono text-sm font-semibold text-primary-800">
           {patientSkuLoading ? "Generando…" : patientId || "No disponible"}
         </span>
@@ -211,7 +213,11 @@ export function PredictionForm({
         />
       </div>
       <div className="mt-3 flex justify-end border-t border-slate-200 pt-5">
-        <Button variant="primary" disabled={loading} onClick={onPredict}>
+        <Button
+          variant="primary"
+          disabled={loading || patientSkuLoading || !patientId}
+          onClick={onPredict}
+        >
           <FiActivity aria-hidden className="mr-2 inline size-4" />
           {loading ? "Prediciendo..." : "Predecir"}
         </Button>

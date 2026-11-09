@@ -108,9 +108,9 @@ class TestEsquemas:
         payload = PlatformExplanationRequest(
             edad=50, diag_ing1=5, diag_ing2=3, diag_egr2=25,
             apache=22, tiempo_vam=24,
-            method="SHAP",
+            method="Impacto local por referencia",
         )
-        assert payload.method == "SHAP"
+        assert payload.method == "Impacto local por referencia"
         assert payload.include_narrative is False
 
     def test_platform_explanation_rechaza_metodo_desconocido(self):
@@ -184,7 +184,7 @@ class TestExplicacion:
     def test_explicacion_devuelve_una_fila_por_variable(self, client):
         resp = client.post(
             "/prediccion/explain",
-            json={**CARGA_PLATAFORMA_VALIDA, "method": "SHAP"},
+            json={**CARGA_PLATAFORMA_VALIDA, "method": "Impacto local por referencia"},
         )
 
         assert resp.status_code == 200, resp.text

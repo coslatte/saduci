@@ -84,7 +84,8 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
     if (!patientId) {
       showToast({
         title: "SKU del paciente pendiente",
-        description: "Espere a que se genere el SKU antes de ejecutar la predicción.",
+        description:
+          "Espere a que se genere el SKU antes de ejecutar la predicción.",
         type: "error",
       });
       return;

@@ -6,6 +6,22 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
 
 ## [Unreleased]
 
+### Changed — Primera integración verificable del predictor original
+
+- Se conserva el artefacto `new_workflow.joblib` original y se añade un manifiesto
+  v1 con checksum, variables, clase positiva y referencia al repositorio de origen.
+- El servicio valida el paquete antes de usarlo. Una ruta explícita inválida o un
+  paquete incompatible deja el predictor no disponible, sin cargar otro modelo.
+- Predicciones y explicaciones devuelven versión y SHA-256. Los registros nuevos
+  conservan esos datos en su JSON; los históricos no se modifican. El cliente web
+  comprueba los campos aditivos del contrato.
+- La inferencia localiza la clase positiva por su etiqueta y rechaza probabilidades
+  no finitas o fuera de rango, en lugar de convertirlas en un resultado válido.
+- Las pruebas comparan cinco casos sintéticos con el artefacto original, ejercitan
+  ambos alias HTTP y verifican integridad, persistencia y contratos del cliente.
+- Se mantienen pendientes las decisiones sobre unidades, población y horizonte
+  del desenlace, y la integración de explicadores históricos y narrativa local.
+
 ### Changed — Valor inicial de corridas de simulación
 
 - La nueva simulación comienza con 5000 corridas tanto en el formulario como

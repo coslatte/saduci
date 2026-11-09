@@ -1,3 +1,7 @@
+import type { ExplanationMethod } from "@/entities/prediction";
+export { EXPLANATION_METHODS } from "@/entities/prediction";
+export type { ExplanationMethod } from "@/entities/prediction";
+
 export const PREDICTION_LIMITS = {
   edad: { min: 14, max: 61, default: 20 },
   diagIng1: { min: 1, max: 20, default: 1 },
@@ -7,20 +11,6 @@ export const PREDICTION_LIMITS = {
   apache: { min: 18, max: 40, default: 30 },
   tiempoVam: { min: 18, max: 40, default: 30 },
 } as const;
-
-export type ExplanationMethod =
-  | "Impacto local por referencia"
-  | "LIME"
-  | "SHAP"
-  | "Gradientes Integrados"
-  | "Mapas de Saliencia";
-
-export const EXPLANATION_METHODS: ExplanationMethod[] = [
-  "LIME",
-  "SHAP",
-  "Gradientes Integrados",
-  "Mapas de Saliencia",
-];
 
 export interface PredictionRequest {
   patient_id: string;
@@ -38,6 +28,8 @@ export interface PredictionResponse {
   predicted_class: number;
   predicted_label: string;
   threshold: number;
+  model_version: string;
+  artifact_sha256: string;
 }
 
 export interface ExplicacionRequest extends PredictionRequest {
@@ -47,7 +39,11 @@ export interface ExplicacionRequest extends PredictionRequest {
 }
 
 export interface ExplicacionResponse {
-  method: string;
+  method: ExplanationMethod;
+  explainer_version: string;
+  reference_strategy: string;
+  reference_warning: string;
+  narrative_status: "disabled" | "generated" | "template" | "fallback";
   feature_names: string[];
   importances: number[];
   probability: number;
@@ -55,6 +51,8 @@ export interface ExplicacionResponse {
   predicted_class: number;
   predicted_label: string;
   rows: ExplicacionRow[];
+  model_version: string;
+  artifact_sha256: string;
   narrative?: string | null;
   narrative_provider?: string | null;
   narrative_model?: string | null;
@@ -66,6 +64,8 @@ export interface ExplicacionRow {
   patient_value: number;
   patient_value_display: string;
   baseline_value: number;
+  baseline_value_display: string;
+  baseline_probability: number;
   contribution: number;
   direction: "increase_risk" | "decrease_risk" | "neutral";
 }
@@ -142,10 +142,22 @@ async function ensureOkResponse(
   );
 }
 
+function hasModelProvenance(value: object): boolean {
+  return (
+    "model_version" in value &&
+    typeof value.model_version === "string" &&
+    value.model_version.trim().length > 0 &&
+    "artifact_sha256" in value &&
+    typeof value.artifact_sha256 === "string" &&
+    /^[a-f0-9]{64}$/.test(value.artifact_sha256)
+  );
+}
+
 function isPredictionResponse(value: unknown): value is PredictionResponse {
   return (
     !!value &&
     typeof value === "object" &&
+    hasModelProvenance(value) &&
     "probability" in value &&
     typeof value.probability === "number" &&
     "predicted_label" in value &&
@@ -153,16 +165,78 @@ function isPredictionResponse(value: unknown): value is PredictionResponse {
   );
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isExplanationRow(value: unknown): value is ExplicacionRow {
+  if (!value || typeof value !== "object") return false;
+  return (
+    [
+      "feature_key",
+      "feature_name",
+      "patient_value_display",
+      "baseline_value_display",
+    ].every((key) => typeof Reflect.get(value, key) === "string") &&
+    ["patient_value", "baseline_value", "contribution"].every((key) =>
+      isFiniteNumber(Reflect.get(value, key)),
+    ) &&
+    "baseline_probability" in value &&
+    isFiniteNumber(value.baseline_probability) &&
+    value.baseline_probability >= 0 &&
+    value.baseline_probability <= 1 &&
+    "direction" in value &&
+    (value.direction === "increase_risk" ||
+      value.direction === "decrease_risk" ||
+      value.direction === "neutral")
+  );
+}
+
 function isExplicacionResponse(value: unknown): value is ExplicacionResponse {
   return (
     !!value &&
     typeof value === "object" &&
+    hasModelProvenance(value) &&
+    "method" in value &&
+    value.method === "Impacto local por referencia" &&
+    "explainer_version" in value &&
+    typeof value.explainer_version === "string" &&
+    "reference_strategy" in value &&
+    typeof value.reference_strategy === "string" &&
+    "reference_warning" in value &&
+    typeof value.reference_warning === "string" &&
+    "narrative_status" in value &&
+    (value.narrative_status === "disabled" ||
+      value.narrative_status === "generated" ||
+      value.narrative_status === "template" ||
+      value.narrative_status === "fallback") &&
     "feature_names" in value &&
     Array.isArray(value.feature_names) &&
+    value.feature_names.every((name) => typeof name === "string") &&
     "importances" in value &&
     Array.isArray(value.importances) &&
+    value.importances.every(isFiniteNumber) &&
+    "probability" in value &&
+    isFiniteNumber(value.probability) &&
+    value.probability >= 0 &&
+    value.probability <= 1 &&
+    "threshold" in value &&
+    isFiniteNumber(value.threshold) &&
+    value.threshold >= 0 &&
+    value.threshold <= 1 &&
+    "predicted_class" in value &&
+    (value.predicted_class === 0 || value.predicted_class === 1) &&
+    "predicted_label" in value &&
+    typeof value.predicted_label === "string" &&
+    ["narrative", "narrative_provider", "narrative_model"].every((key) => {
+      const field = Reflect.get(value, key);
+      return field == null || typeof field === "string";
+    }) &&
     "rows" in value &&
-    Array.isArray(value.rows)
+    Array.isArray(value.rows) &&
+    value.rows.every(isExplanationRow) &&
+    value.rows.length === value.feature_names.length &&
+    value.rows.length === value.importances.length
   );
 }
 

@@ -1,6 +1,7 @@
 """Probability, feature importance, and request→dataframe helpers."""
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pandas as pd
@@ -36,11 +37,14 @@ def predict_probability_from_dataframe(frame: pd.DataFrame) -> float:
     model = require_platform_model()
 
     try:
-        probability = float(model.predict_proba(frame)[0][1])
+        positive_class_index = list(model.classes_).index(1)
+        probability = float(model.predict_proba(frame)[0][positive_class_index])
+        if not math.isfinite(probability) or not 0.0 <= probability <= 1.0:
+            raise ValueError("El modelo devolvió una probabilidad inválida")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Model inference failed: {exc}") from exc
 
-    return min(1.0, max(0.0, probability))
+    return probability
 
 
 def platform_prediction_probability(request: PlatformPredictionRequest) -> float:
@@ -68,14 +72,12 @@ def feature_baseline(feature_key: str) -> float:
     return float(round((lower + upper) / 2.0))
 
 
-def platform_feature_importances(
+def reference_impact_rows(
     request: PlatformPredictionRequest,
-    _method: str,
+    original_frame: pd.DataFrame,
+    original_probability: float,
 ) -> list[dict[str, Any]]:
     """Compare the model output with one input replaced by a reference value."""
-
-    original_frame = platform_request_to_dataframe(request)
-    original_probability = predict_probability_from_dataframe(original_frame)
 
     rows: list[dict[str, Any]] = []
     for feature_key, feature_column, feature_name in PLATFORM_FEATURE_ORDER:
@@ -101,6 +103,8 @@ def platform_feature_importances(
                 "patient_value": patient_value,
                 "patient_value_display": feature_display_value(feature_key, patient_value),
                 "baseline_value": baseline_value,
+                "baseline_value_display": feature_display_value(feature_key, baseline_value),
+                "baseline_probability": perturbed_probability,
                 "contribution": round(contribution, 6),
                 "direction": direction,
             }

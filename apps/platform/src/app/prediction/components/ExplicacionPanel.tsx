@@ -36,7 +36,7 @@ interface ChartEntry {
   feature: string;
   importance: number;
   patientValue: string;
-  referenceValue: number;
+  referenceValue: string;
 }
 
 function formatChartValue(
@@ -64,7 +64,7 @@ export function ExplicacionPanel({
           feature: name,
           importance: (result.importances[i] ?? 0) * 100,
           patientValue: result.rows[i]?.patient_value_display ?? "—",
-          referenceValue: result.rows[i]?.baseline_value ?? 0,
+          referenceValue: result.rows[i]?.baseline_value_display ?? "—",
         }))
         .sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance))
     : [];
@@ -146,6 +146,35 @@ export function ExplicacionPanel({
 
         {result && (
           <div className="flex w-full flex-col gap-4">
+            {result.narrative && (
+              <div className="rounded-md border border-primary-200 bg-primary-50 p-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold text-zinc-800">
+                    Interpretación del resultado
+                  </h3>
+                  <span className="text-xs font-medium text-slate-600">
+                    {result.narrative_provider === "embedded"
+                      ? `Qwen local · ${result.narrative_model ?? "Qwen2.5 1.5B"}`
+                      : result.narrative_provider === "stub"
+                        ? "Plantilla de respaldo"
+                        : `Proveedor ${result.narrative_provider ?? "de narrativa"}`}
+                  </span>
+                </div>
+                <p className="text-sm leading-6 text-slate-700">
+                  {result.narrative}
+                </p>
+                {result.narrative_status === "fallback" && (
+                  <p role="status" className="mt-2 text-xs text-slate-600">
+                    No se pudo generar el texto con IA. Se muestra una plantilla
+                    basada en los mismos cálculos del predictor.
+                  </p>
+                )}
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  Es una explicación de señales del predictor, no una causa
+                  médica ni una certeza sobre el desenlace.
+                </p>
+              </div>
+            )}
             <div className="flex w-full flex-col gap-2">
               <h3 className="font-medium text-zinc-700">
                 Factores asociados al resultado · {result.method}
@@ -154,6 +183,9 @@ export function ExplicacionPanel({
                 Cada barra muestra cómo cambia la probabilidad estimada de
                 muerte al reemplazar una variable por su referencia y volver a
                 ejecutar el modelo.
+              </p>
+              <p className="text-xs leading-5 text-slate-600">
+                {result.reference_warning}
               </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
                 <span className="flex items-center gap-1">

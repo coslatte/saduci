@@ -1,17 +1,14 @@
-import { FiActivity, FiBarChart2, FiEye, FiShield } from "react-icons/fi";
+import { FiActivity } from "react-icons/fi";
 import { RiBrain2Line } from "react-icons/ri";
 import { Text } from "@/components/atoms/Text";
 
 const methodHints = [
   { method: "Predicción", info: "Riesgo mortalidad", icon: RiBrain2Line },
-  { method: "LIME", info: "Explicabilidad local", icon: FiEye },
-  { method: "SHAP", info: "Atribución global", icon: FiBarChart2 },
   {
-    method: "Gradientes Integrados",
-    info: "Sensibilidad por gradiente",
+    method: "Impacto local por referencia",
+    info: "Contrastes del mismo predictor",
     icon: FiActivity,
   },
-  { method: "Mapas de Saliencia", info: "Mapa de calor", icon: FiShield },
 ];
 
 export function PredictionModelInfo() {
@@ -22,8 +19,9 @@ export function PredictionModelInfo() {
           Modelos usados en esta pantalla
         </Text>
         <Text as="p" size="sm" className="text-zinc-500">
-          El flujo combina un modelo principal de predicción con varios métodos
-          de explicabilidad para interpretar el resultado.
+          El predictor calcula la probabilidad y los contrastes por referencia.
+          El modelo de lenguaje redacta esos resultados sin sustituir la
+          inferencia.
         </Text>
       </div>
 

@@ -7,13 +7,16 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.services.config import PLATFORM_FEATURE_NAMES, PREDICTION_THRESHOLD
+from app.services.config import PREDICTION_THRESHOLD
 from app.services.inference import (
-    platform_feature_importances,
+    platform_request_to_dataframe,
+    predict_probability_from_dataframe,
+    reference_impact_rows,
     platform_prediction_probability,
     prediction_class_and_label,
 )
 from app.services.narrative import generate_narrative
+from app.services.ml_model import platform_model_metadata
 from app.services.notify import notify_gateway
 from app.models.entities import PredictionRecord
 from shared_core.schemas import (
@@ -27,6 +30,7 @@ from shared_core.schemas import (
 )
 from shared_core.utils import get_logger
 from shared_core.exceptions import raise_not_found
+from shared_core.schemas.prediction import PlatformExplanationEvidence
 
 logger = get_logger(__name__)
 
@@ -74,6 +78,7 @@ def prediction_payload(
     return {
         "risk_score": probability,
         "risk_level": risk_level(probability),
+        **platform_model_metadata(),
     }, round(probability, 4)
 
 
@@ -137,6 +142,7 @@ async def create_platform_prediction(
         predicted_class=predicted_class,
         predicted_label=predicted_label,
         threshold=PREDICTION_THRESHOLD,
+        **platform_model_metadata(),
     )
 
     try:
@@ -162,33 +168,36 @@ async def create_platform_prediction(
 async def explain_platform_prediction(
     request: PlatformExplanationRequest,
 ) -> PlatformExplanationResponse:
-    probability = platform_prediction_probability(request)
+    frame = platform_request_to_dataframe(request)
+    raw_probability = predict_probability_from_dataframe(frame)
+    probability = round(raw_probability, 4)
     predicted_class, predicted_label = prediction_class_and_label(probability)
-    rows = platform_feature_importances(request, request.method)
-
-    narrative = None
-    narrative_provider = None
-    narrative_model = None
-    if request.include_narrative:
-        narrative, narrative_provider, narrative_model = await generate_narrative(
-            request=request,
-            probability=probability,
-            predicted_label=predicted_label,
-            rows=rows,
-        )
-
-    return PlatformExplanationResponse(
-        method=request.method,
+    rows = reference_impact_rows(request, frame, raw_probability)
+    evidence = PlatformExplanationEvidence(
+        method="Impacto local por referencia",
+        reference_warning=(
+            "Referencias técnicas obtenidas del punto medio de los límites del esquema; "
+            "no son valores normales ni una referencia clínica validada."
+        ),
         probability=probability,
         threshold=PREDICTION_THRESHOLD,
         predicted_class=predicted_class,
         predicted_label=predicted_label,
-        feature_names=PLATFORM_FEATURE_NAMES,
-        importances=[row["contribution"] for row in rows],
         rows=rows,
+        **platform_model_metadata(),
+    )
+    narrative, narrative_provider, narrative_model, narrative_status = await generate_narrative(
+        request=request,
+        evidence=evidence,
+    )
+    return PlatformExplanationResponse(
+        **evidence.model_dump(),
+        feature_names=[row.feature_name for row in evidence.rows],
+        importances=[row.contribution for row in evidence.rows],
         narrative=narrative,
         narrative_provider=narrative_provider,
         narrative_model=narrative_model,
+        narrative_status=narrative_status,
     )
 
 
