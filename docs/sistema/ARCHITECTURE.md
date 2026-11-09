@@ -73,6 +73,23 @@ saduci-platform (Next.js)  --/api/*-->  Route Handlers (server-side)
                                          |-- /api/simulations*    --> Simulation :7004 --> simulation-db
 ```
 
+### Vista interactiva
+
+[Explorar el diagrama interactivo de la arquitectura](diagramas/arquitectura-saduci.html) · [ver la especificación editable](diagramas/arquitectura-saduci.json).
+
+La vista muestra el recorrido desde el navegador, a través de Next.js y el API
+Gateway, hasta los microservicios y sus bases de datos. Corresponde al despliegue
+de Docker Compose con el perfil `platform` habilitado; las referencias del
+diagrama enlazan con las fuentes usadas para documentarlo.
+
+Para regenerar el HTML con la skill local de Archify, actualiza primero
+`meta.repository.revision` en la especificación al commit que quieras documentar
+y ejecuta desde la raíz del repositorio:
+
+```bash
+ARCHIFY_UPDATE_CHECK_DISABLED=1 node .agents/skills/archify/bin/archify.mjs finalize architecture docs/sistema/diagramas/arquitectura-saduci.json docs/sistema/diagramas/arquitectura-saduci.html --repo-root . --quality showcase --json
+```
+
 ## 3) Estructura interna de cada servicio
 
 Cada microservicio es un paquete raíz independiente bajo `src/` que expone
