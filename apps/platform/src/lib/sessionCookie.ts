@@ -9,7 +9,7 @@ import { SESSION_COOKIE } from "@/lib/session";
  * only), so the value has to be attached to the response being returned.
  */
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 const baseCookieOptions = {
   httpOnly: true,

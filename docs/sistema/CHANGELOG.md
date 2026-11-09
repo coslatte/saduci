@@ -6,6 +6,11 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
 
 ## [Unreleased]
 
+### Fixed — Duración de sesión y actualización del estado
+
+- La cookie de sesión del frontend dura 24 horas, alineada con la expiración predeterminada de 24 horas del JWT.
+- El botón «Actualizar estado» muestra «Actualizando…» y queda deshabilitado mientras consulta los servicios.
+
 ### Fixed — Vínculo entre el resultado y su explicación
 
 - La pantalla conserva la solicitud exacta de la última predicción y la usa al

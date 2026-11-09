@@ -122,7 +122,8 @@ config) y `app/websocket/manager.py`. El artefacto ML de prediction vive en
 | Editar/eliminar predicciones y estadísticas | ✓ | ✓ | ✗ |
 | Pruebas estadísticas | ✓ | ✓ | ✗ |
 
-Claims del JWT: `sub`, `uid`, `email`, `role`, `is_superuser`, `exp`.
+Claims del JWT: `sub`, `uid`, `email`, `role`, `is_superuser`, `exp`. El JWT
+y la cookie httpOnly de sesión duran 24 horas por defecto.
 El gateway reenvía `X-User-ID`, `X-User-Role` y `X-User-Username` a los servicios
 internos para el tracking de `user_id`/`created_by`.
 

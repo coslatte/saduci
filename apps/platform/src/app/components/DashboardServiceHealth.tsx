@@ -170,11 +170,13 @@ export function DashboardServiceHealth() {
   const [history, setHistory] = useState<CheckHistory>(emptyHistory);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceKey | null>(
     null,
   );
   const load = useCallback(async () => {
+    setIsRefreshing(true);
     const requestStartedAt = performance.now();
     const checkedAt = new Date();
     try {
@@ -221,6 +223,8 @@ export function DashboardServiceHealth() {
       setCheckedAt(checkedAt);
     } catch {
       setError(true);
+    } finally {
+      setIsRefreshing(false);
     }
   }, []);
   useEffect(() => {
@@ -261,9 +265,11 @@ export function DashboardServiceHealth() {
         <button
           type="button"
           onClick={() => void load()}
-          className="rounded border border-slate-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-primary-600"
+          disabled={isRefreshing}
+          aria-busy={isRefreshing}
+          className="rounded border border-slate-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-primary-600 disabled:cursor-wait disabled:opacity-60"
         >
-          Actualizar estado
+          {isRefreshing ? "Actualizando…" : "Actualizar estado"}
         </button>
       </div>
       {error && (
