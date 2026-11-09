@@ -14,12 +14,11 @@ de backend independientes.
 
 ## Arquitectura
 
-La vista previa estática aparece aquí mismo en GitHub. Haz clic en la imagen
-para abrir el diagrama interactivo de Archify y explorar sus componentes y
-fuentes. También puedes [descargar la imagen PNG](docs/sistema/diagramas/arquitectura-saduci.png)
-para presentaciones. Consulta la [documentación técnica de arquitectura](docs/sistema/ARCHITECTURE.md).
+El diagrama editable está en formato Excalidraw. La vista previa PNG se muestra
+aquí mismo en GitHub; haz clic para abrir el archivo editable. Consulta la
+[documentación técnica de arquitectura](docs/sistema/ARCHITECTURE.md).
 
-[![Diagrama de arquitectura de SADUCI](docs/sistema/diagramas/arquitectura-saduci.png)](docs/sistema/diagramas/arquitectura-saduci.html)
+[![Diagrama de arquitectura de SADUCI](docs/sistema/diagramas/arquitectura-saduci.png)](docs/sistema/diagramas/arquitectura-saduci.excalidraw)
 
 ## Servicio
 
@@ -83,16 +82,5 @@ repositorio sin autorización y revisión de privacidad.
 
 ## Licencia
 
-El proyecto comunica una clasificación de uso **"tipo 3"** y la intención de
-requerir autorización previa para usar SADUCI fuera de la institución de origen.
-En la práctica, contacta al titular de los derechos por sus canales
-institucionales y solicita autorización escrita antes de usarlo en otra
-institución.
-
-"Tipo 3" no identifica por sí solo una licencia de software universal. Este
-repositorio no contiene un archivo `LICENSE`, no identifica al titular legal de
-los derechos ni publica un contacto para solicitar permisos. Por eso, este
-apartado registra la intención comunicada para el proyecto, pero no reemplaza un
-texto formal que detalle los permisos y las restricciones. GitHub explica qué
-implica publicar un repositorio sin licencia en su
-[guía sobre licencias](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+Código disponible públicamente para consulta. No se concede una licencia para
+usar, modificar ni redistribuir SADUCI. Todos los derechos reservados.

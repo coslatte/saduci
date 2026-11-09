@@ -11,12 +11,12 @@ does not replace professional judgment or institutional clinical protocols.
 
 ## Architecture
 
-The preview below is visible directly in GitHub. Click it to open the interactive
-Archify diagram, or [download the PNG](sistema/diagramas/arquitectura-saduci.png)
-for presentations. The [architecture reference](sistema/ARCHITECTURE.md)
-documents the system in more detail.
+The architecture diagram is editable in Excalidraw. Its PNG preview is shown
+directly here on GitHub; click it to open the editable drawing. The
+[architecture reference](sistema/ARCHITECTURE.md) documents the system in more
+detail.
 
-[![SADUCI architecture diagram](sistema/diagramas/arquitectura-saduci.png)](sistema/diagramas/arquitectura-saduci.html)
+[![SADUCI architecture diagram](sistema/diagramas/arquitectura-saduci.png)](sistema/diagramas/arquitectura-saduci.excalidraw)
 
 ## Services
 
@@ -77,15 +77,5 @@ limitations in research materials.
 
 ## License
 
-The project describes its intended use classification as **"Type 3"** and
-intends to require prior authorization before SADUCI is used outside the
-originating institution. Contact the rights holder through the institution's
-official channels and obtain written authorization before using SADUCI at
-another institution.
-
-"Type 3" is not, by itself, a universal software-license identifier. This
-repository has no `LICENSE` file, does not identify the legal rights holder, and
-does not publish a licensing contact. This section records the project's stated
-intent; it does not replace formal terms defining the permissions and
-restrictions. GitHub explains the effect of publishing a repository without a
-license in its [licensing guide](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+The source code is publicly available for viewing. No license is granted to use,
+modify, or redistribute SADUCI. All rights reserved.
