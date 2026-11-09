@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Spinner } from "@/components/atoms/Spinner";
+import { Alert } from "@/components/molecules/Alert";
 import { showToast } from "@/components/molecules/Toast";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PREDICTION_LOADING_PHASES } from "@/constants/loading";
+import { PREDICTION_WORKFLOW_COPY } from "@/constants/prediction";
 import {
   RECORD_WORKSPACE_COPY,
   RECORD_HISTORY_COPY,
@@ -91,6 +93,7 @@ export function PredictionPageContent() {
     setTiempoVam,
     loadingPredict,
     prediction,
+    predictionInput,
     patientId,
     patientSkuLoading,
   } = runner;
@@ -106,6 +109,7 @@ export function PredictionPageContent() {
   const [explanationMethod, setExplanationMethod] = useState<ExplanationMethod>(
     EXPLANATION_METHODS[0],
   );
+  const explanationRequestSequence = useRef(0);
 
   useEffect(() => {
     if (!token) return;
@@ -134,30 +138,63 @@ export function PredictionPageContent() {
 
   // A new run invalidates the previous explanation.
   useEffect(() => {
+    explanationRequestSequence.current += 1;
     setExplicacion(null);
+    setLoadingExplain(false);
+    return () => {
+      explanationRequestSequence.current += 1;
+    };
   }, [prediction]);
 
-  async function handleExplain(method: ExplanationMethod): Promise<void> {
-    if (!prediction) return;
+  const predictionInputsChanged = Boolean(
+    predictionInput &&
+    (predictionInput.patient_id !== patientId ||
+      predictionInput.edad !== edad ||
+      predictionInput.diag_ing1 !== diagIng1 ||
+      predictionInput.diag_ing2 !== diagIng2 ||
+      predictionInput.diag_egr2 !== diagEgr2 ||
+      predictionInput.apache !== apache ||
+      predictionInput.tiempo_vam !== tiempoVam),
+  );
 
+  async function handlePredict(): Promise<void> {
+    explanationRequestSequence.current += 1;
+    setExplicacion(null);
+    setLoadingExplain(false);
+    await runner.handlePredict();
+  }
+
+  async function handleExplain(method: ExplanationMethod): Promise<void> {
+    if (!prediction || !predictionInput) return;
+
+    const requestSequence = ++explanationRequestSequence.current;
     setExplicacion(null);
     setLoadingExplain(true);
 
     try {
       const result = await runExplicacion({
-        patient_id: patientId,
-        edad,
-        diag_ing1: diagIng1,
-        diag_ing2: diagIng2,
-        diag_egr2: diagEgr2,
-        apache,
-        tiempo_vam: tiempoVam,
+        ...predictionInput,
         method,
         include_narrative: true,
       });
 
+      if (requestSequence !== explanationRequestSequence.current) return;
+      if (
+        result.model_version !== prediction.model_version ||
+        result.artifact_sha256 !== prediction.artifact_sha256
+      ) {
+        showToast({
+          title: "El modelo activo cambió",
+          description:
+            PREDICTION_WORKFLOW_COPY.activeModelChangedForCurrentResult,
+          type: "error",
+        });
+        return;
+      }
+
       setExplicacion(result);
     } catch (err) {
+      if (requestSequence !== explanationRequestSequence.current) return;
       const message = friendlyErrorMessage(
         err,
         "No se pudo generar la explicación.",
@@ -168,7 +205,9 @@ export function PredictionPageContent() {
         type: "error",
       });
     } finally {
-      setLoadingExplain(false);
+      if (requestSequence === explanationRequestSequence.current) {
+        setLoadingExplain(false);
+      }
     }
   }
 
@@ -194,7 +233,7 @@ export function PredictionPageContent() {
             tiempoVam={tiempoVam}
             setTiempoVam={setTiempoVam}
             loading={loadingPredict}
-            onPredict={() => void runner.handlePredict()}
+            onPredict={() => void handlePredict()}
             diagnosisOptions={diagnosisOptions}
             diagnosisLoading={diagnosisLoading}
           />
@@ -214,7 +253,14 @@ export function PredictionPageContent() {
               </p>
             </div>
           ) : prediction ? (
-            <PredictionResultCard probability={prediction.probability} />
+            <div className="flex flex-col gap-3">
+              {!prediction.persisted && (
+                <Alert variant="warning">
+                  {PREDICTION_WORKFLOW_COPY.notPersisted}
+                </Alert>
+              )}
+              <PredictionResultCard probability={prediction.probability} />
+            </div>
           ) : (
             <div className="flex h-full min-h-44 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-(length:--font-size-sm) text-slate-500">
               Realice una predicción para visualizar el resultado del modelo.
@@ -225,12 +271,19 @@ export function PredictionPageContent() {
       below={
         <>
           <section className="border border-slate-300 bg-white p-5 sm:p-6">
+            {predictionInputsChanged && (
+              <Alert variant="warning" className="mb-4">
+                {PREDICTION_WORKFLOW_COPY.changedInputs}
+              </Alert>
+            )}
             <ExplicacionPanel
               hasPrediction={prediction !== null}
               loading={loadingExplain}
               onExplain={(method) => void handleExplain(method)}
               method={explanationMethod}
               onMethodChange={(method) => {
+                explanationRequestSequence.current += 1;
+                setLoadingExplain(false);
                 setExplanationMethod(method);
                 setExplicacion(null);
               }}

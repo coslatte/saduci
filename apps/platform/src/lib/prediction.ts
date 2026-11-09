@@ -23,6 +23,7 @@ export interface PredictionRequest {
 }
 
 export interface PredictionResponse {
+  persisted: boolean;
   probability: number;
   probability_percent: number;
   predicted_class: number;
@@ -160,6 +161,8 @@ function isPredictionResponse(value: unknown): value is PredictionResponse {
     hasModelProvenance(value) &&
     "probability" in value &&
     typeof value.probability === "number" &&
+    "persisted" in value &&
+    typeof value.persisted === "boolean" &&
     "predicted_label" in value &&
     typeof value.predicted_label === "string"
   );

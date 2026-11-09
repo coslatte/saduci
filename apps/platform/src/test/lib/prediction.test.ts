@@ -22,6 +22,7 @@ const request = {
   tiempo_vam: 24,
 };
 const prediction = {
+  persisted: true,
   probability: 0.9246,
   probability_percent: 92.46,
   predicted_class: 1,

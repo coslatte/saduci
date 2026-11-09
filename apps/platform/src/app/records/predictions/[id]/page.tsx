@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
@@ -14,6 +14,7 @@ import {
   type SpreadsheetSheet,
 } from "@/lib/recordDownloads";
 import { RecordDateForm } from "../../components/RecordDateForm";
+import { PREDICTION_WORKFLOW_COPY } from "@/constants/prediction";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Alert } from "@/components/molecules/Alert";
@@ -60,6 +61,26 @@ const FEATURE_LABELS: Record<string, string> = {
   apache: "APACHE II",
   tiempo_vam: "Tiempo VAM",
 };
+
+interface PredictionModelProvenance {
+  model_version: string;
+  artifact_sha256: string;
+}
+
+function getPredictionModelProvenance(
+  prediction: Record<string, unknown>,
+): PredictionModelProvenance | null {
+  const { model_version, artifact_sha256 } = prediction;
+  if (
+    typeof model_version !== "string" ||
+    model_version.trim().length === 0 ||
+    typeof artifact_sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(artifact_sha256)
+  ) {
+    return null;
+  }
+  return { model_version, artifact_sha256 };
+}
 
 /** Fields whose value is a diagnosis code rather than a plain number. */
 const DIAGNOSIS_FEATURES = new Set(["diag_ing1", "diag_ing2", "diag_egr2"]);
@@ -121,6 +142,9 @@ export default function PredictionDetailPage() {
   const [explicacion, setExplicacion] = useState<ExplicacionResponse | null>(
     null,
   );
+  const [explanationUnavailableMessage, setExplanationUnavailableMessage] =
+    useState<string | null>(null);
+  const explanationRequestSequence = useRef(0);
   const [explanationMethod, setExplanationMethod] = useState<ExplanationMethod>(
     EXPLANATION_METHODS[0],
   );
@@ -142,6 +166,10 @@ export default function PredictionDetailPage() {
     if (!token || !id) return;
     setLoading(true);
     setError(null);
+    setExplicacion(null);
+    setExplanationUnavailableMessage(null);
+    setLoadingExplain(false);
+    explanationRequestSequence.current += 1;
     try {
       const data = await fetchPredictionDetail(token, id, user?.username ?? "");
       setDetail(data);
@@ -171,14 +199,24 @@ export default function PredictionDetailPage() {
     void loadDetail();
   }, [authLoading, token, loadDetail]);
 
+  useEffect(
+    () => () => {
+      explanationRequestSequence.current += 1;
+    },
+    [],
+  );
+
   async function handleExplain(method: ExplanationMethod): Promise<void> {
     if (!detail) return;
+    const sourceModel = getPredictionModelProvenance(detail.prediction);
     const request = toPredictionRequest(
       detail.features,
       detail.record.patientId,
     );
-    if (!request) return;
+    if (!request || !sourceModel) return;
+    const requestSequence = ++explanationRequestSequence.current;
     setExplicacion(null);
+    setExplanationUnavailableMessage(null);
     setLoadingExplain(true);
     try {
       const result = await runExplicacion({
@@ -186,8 +224,19 @@ export default function PredictionDetailPage() {
         method,
         include_narrative: true,
       });
+      if (requestSequence !== explanationRequestSequence.current) return;
+      if (
+        result.model_version !== sourceModel.model_version ||
+        result.artifact_sha256 !== sourceModel.artifact_sha256
+      ) {
+        setExplanationUnavailableMessage(
+          PREDICTION_WORKFLOW_COPY.activeModelChanged,
+        );
+        return;
+      }
       setExplicacion(result);
     } catch (err) {
+      if (requestSequence !== explanationRequestSequence.current) return;
       const message = friendlyErrorMessage(
         err,
         "No se pudo generar la explicación.",
@@ -198,7 +247,9 @@ export default function PredictionDetailPage() {
         type: "error",
       });
     } finally {
-      setLoadingExplain(false);
+      if (requestSequence === explanationRequestSequence.current) {
+        setLoadingExplain(false);
+      }
     }
   }
 
@@ -206,6 +257,16 @@ export default function PredictionDetailPage() {
   const explainRequest = detail
     ? toPredictionRequest(detail.features, detail.record.patientId)
     : null;
+  const sourceModel = detail
+    ? getPredictionModelProvenance(detail.prediction)
+    : null;
+  const explanationUnavailable =
+    explanationUnavailableMessage ??
+    (detail && !explainRequest
+      ? PREDICTION_WORKFLOW_COPY.missingStoredInputs
+      : detail && !sourceModel
+        ? PREDICTION_WORKFLOW_COPY.missingModelProvenance
+        : null);
   const exportRows: [string, string][] = detail
     ? [
         ["Paciente", detail.record.patientId],
@@ -508,15 +569,22 @@ export default function PredictionDetailPage() {
 
           <section className="lg:col-span-2 border border-slate-300 bg-white p-3 sm:p-4">
             <ExplicacionPanel
-              hasPrediction={explainRequest !== null}
+              hasPrediction={
+                explainRequest !== null &&
+                sourceModel !== null &&
+                explanationUnavailableMessage === null
+              }
               loading={loadingExplain}
               onExplain={(method) => void handleExplain(method)}
               method={explanationMethod}
               onMethodChange={(method) => {
+                explanationRequestSequence.current += 1;
+                setLoadingExplain(false);
                 setExplanationMethod(method);
                 setExplicacion(null);
               }}
               result={explicacion}
+              unavailableMessage={explanationUnavailable}
             />
           </section>
         </div>

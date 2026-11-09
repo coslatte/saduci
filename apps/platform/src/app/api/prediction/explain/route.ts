@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveCoreApiUrl } from "@/lib/apiProxy";
+import { getTokenFromRequest, resolveCoreApiUrl } from "@/lib/apiProxy";
 
 const CORE_API_URL = resolveCoreApiUrl();
 const EXPLAIN_ENDPOINTS = [
@@ -43,9 +43,14 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePredictionExplainRequest(
-  req: Request | NextRequest,
+  req: NextRequest,
   fetcher: typeof fetch = fetch,
 ) {
+  const token = await getTokenFromRequest(req);
+  if (!token) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -68,7 +73,10 @@ async function handlePredictionExplainRequest(
       lastUrl = endpoint;
       const upstream = await fetcher(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       });

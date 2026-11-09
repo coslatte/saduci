@@ -30,6 +30,7 @@ interface ExplicacionPanelProps {
   method: ExplanationMethod;
   onMethodChange: (method: ExplanationMethod) => void;
   result: ExplicacionResponse | null;
+  unavailableMessage?: string | null;
 }
 
 interface ChartEntry {
@@ -54,6 +55,7 @@ export function ExplicacionPanel({
   method,
   onMethodChange,
   result,
+  unavailableMessage,
 }: ExplicacionPanelProps) {
   const { message: loadingMessage } = useProgressiveStatus(loading, {
     phases: EXPLANATION_LOADING_PHASES,
@@ -87,7 +89,8 @@ export function ExplicacionPanel({
       <div className="flex flex-col w-full gap-4">
         {!hasPrediction && (
           <Alert variant="info">
-            Primero realice una predicción para activar la explicación.
+            {unavailableMessage ??
+              "Primero realice una predicción para activar la explicación."}
           </Alert>
         )}
 

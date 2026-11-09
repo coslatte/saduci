@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveCoreApiUrl } from "@/lib/apiProxy";
+import { getTokenFromRequest, resolveCoreApiUrl } from "@/lib/apiProxy";
 
 const CORE_API_URL = resolveCoreApiUrl();
 const PREDICTION_ENDPOINTS = [
@@ -43,9 +43,14 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePredictionRequest(
-  req: Request | NextRequest,
+  req: NextRequest,
   fetcher: typeof fetch = fetch,
 ) {
+  const token = await getTokenFromRequest(req);
+  if (!token) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -59,9 +64,6 @@ async function handlePredictionRequest(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
-  // Forward the caller token so the gateway persists user_id/created_by.
-  const authorization = req.headers.get("authorization");
-
   try {
     let lastStatus = 502;
     let lastUrl = PREDICTION_ENDPOINTS[0];
@@ -73,7 +75,7 @@ async function handlePredictionRequest(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authorization ? { Authorization: authorization } : {}),
+          Authorization: "Bearer " + token,
         },
         body: JSON.stringify(body),
         signal: controller.signal,

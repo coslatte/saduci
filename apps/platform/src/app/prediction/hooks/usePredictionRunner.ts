@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { showToast } from "@/components/molecules/Toast";
+import { PREDICTION_WORKFLOW_COPY } from "@/constants/prediction";
 import { useAuth } from "@/lib/auth";
 import { fetchNextPatientSku } from "@/lib/recordsApi";
 import {
   PREDICTION_LIMITS,
   runPrediction,
+  type PredictionRequest,
   type PredictionResponse,
 } from "@/lib/prediction";
 
@@ -46,6 +48,8 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
 
   const [loadingPredict, setLoadingPredict] = useState<boolean>(false);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [predictionInput, setPredictionInput] =
+    useState<PredictionRequest | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -91,10 +95,11 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
       return;
     }
     setPrediction(null);
+    setPredictionInput(null);
     setLoadingPredict(true);
 
     try {
-      const result = await runPrediction({
+      const request: PredictionRequest = {
         patient_id: patientId,
         edad,
         diag_ing1: diagIng1,
@@ -102,15 +107,28 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
         diag_egr2: diagEgr2,
         apache,
         tiempo_vam: tiempoVam,
-      });
+      };
+      const result = await runPrediction(request);
 
       setPrediction(result);
-      showToast({
-        title: "Predicción completada",
-        description: `Probabilidad de fallecer: ${(result.probability * 100).toFixed(1)}%. El registro se guardó correctamente.`,
-        type: "success",
-      });
-      onSuccess?.();
+      setPredictionInput(request);
+      if (result.persisted) {
+        showToast({
+          title: "Predicción completada",
+          description:
+            "Probabilidad de fallecer: " +
+            (result.probability * 100).toFixed(1) +
+            "%. El registro se guardó correctamente.",
+          type: "success",
+        });
+        onSuccess?.();
+      } else {
+        showToast({
+          title: "Predicción calculada sin guardar",
+          description: PREDICTION_WORKFLOW_COPY.notPersisted,
+          type: "error",
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       showToast({
@@ -140,6 +158,7 @@ export function usePredictionRunner(options: UsePredictionRunnerOptions = {}) {
     setTiempoVam,
     loadingPredict,
     prediction,
+    predictionInput,
     handlePredict,
   };
 }
