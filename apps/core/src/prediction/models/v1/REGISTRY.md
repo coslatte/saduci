@@ -34,3 +34,41 @@ calidad clínica.
 Permanecen abiertas la unidad de ventilación, el dominio evaluado, la definición
 temporal del desenlace y la correspondencia de los explicadores históricos.
 Esta entrega conserva las conversiones y los rangos anteriores.
+
+## Evidencia para las explicaciones con modelos de lenguaje
+
+El servicio calcula una probabilidad original y seis contrastes, sustituyendo una
+variable por vez y ejecutando el pipeline completo. Las seis entradas clínicas
+se transforman en 93 entradas para el MLP, cuyas capas ocultas son
+`200, 150, 100, 50` con activación ReLU. No se explica una red alternativa.
+
+`PlatformExplanationEvidence` reúne el resultado, las referencias, la probabilidad
+de cada sustitución, los cambios y la procedencia del artefacto. La respuesta HTTP,
+el gráfico y el prompt se construyen con esa evidencia. Los prompts incluyen las
+seis variables y las descripciones de las categorías observadas y de referencia.
+
+El método disponible es `Impacto local por referencia`, con versión
+`reference-impact-v1` y estrategia `schema-midpoint-v1`. Las referencias actuales
+son puntos medios del esquema: no representan normalidad ni una población clínica
+validada. Esa limitación se devuelve a la interfaz y al generador de texto.
+
+El repositorio investigativo conserva otras generaciones de explicadores:
+
+- El pickle `Explainers/ig_explainer.pkl` contiene una red con entrada de tamaño
+  6 y activaciones Tanh. `Classification.ipynb`, celdas JSON 77, 94 y 96,
+  describe la transferencia de una red anterior, su explicación y su guardado.
+  No se incorpora ese objeto al pipeline actual sin probar equivalencia.
+- `llms/model-explain-text.ipynb`, celda JSON 9, construye SHAP sobre
+  `model.predict`. Explica etiquetas, no directamente la probabilidad que muestra
+  SADUCI. La idea de transformar valores y contribuciones en texto se conserva;
+  sus atribuciones necesitan una implementación nueva sobre la salida pertinente.
+
+Los índices de celdas comienzan en cero. La inspección del pickle se hizo con
+`pickletools`, sin ejecutarlo ni deserializar redes PyTorch. Los demás explicadores
+guardados permanecen pendientes de verificar contra este artefacto.
+
+Los proveedores `embedded`, `local`, `gemini` y `huggingface` reciben los mismos
+hechos y restricciones. Si fallan o devuelven texto vacío, el servicio conserva
+la evidencia y usa una plantilla identificada. Los estados de narrativa son
+`disabled`, `generated`, `template` y `fallback`. Esto no verifica que un texto
+generado por un LLM sea clínicamente correcto; requiere revisión independiente.

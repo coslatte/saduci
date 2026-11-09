@@ -87,6 +87,43 @@ curso tampoco se consideran validados por estas pruebas.
 
 ## 2. Objetivo funcional de la primera entrega
 
+### Segunda entrega técnica y aportes del repositorio investigativo
+
+Se conectó la inferencia con la narrativa mediante `PlatformExplanationEvidence`.
+El servicio calcula el resultado original y seis sustituciones usando el pipeline
+completo. La respuesta y el prompt derivan de esa misma estructura, con método,
+versión del predictor, checksum, referencias legibles, probabilidades de las
+sustituciones y diferencias. El LLM recibe las seis variables, no solo las cuatro
+de mayor cambio. El identificador del paciente queda fuera del prompt.
+
+| Fuente investigativa | Información encontrada | Decisión de integración |
+| --- | --- | --- |
+| `new_workflow.joblib` | Preprocesamiento y MLP con 93 entradas transformadas, capas ocultas 200/150/100/50 y ReLU. | Reutilizar el pipeline completo para probabilidad y contrastes. |
+| `web_app.py` | Seis valores clínicos, mapa de códigos y construcción de texto a partir de valores y atribuciones. | Conservar el concepto de evidencia estructurada, usando los cálculos del predictor vigente. |
+| `Explainers/ig_explainer.pkl` | Red con entrada de tamaño 6 y Tanh; se inspeccionaron metadatos con `pickletools`, sin ejecutarla. | No asociarla automáticamente al pipeline actual. |
+| `Classification.ipynb`, celdas JSON 77, 94 y 96 | Transferencia de pesos de una red anterior a PyTorch, Integrated Gradients y guardado del explicador. | Preservar como investigación hasta demostrar correspondencia. |
+| `llms/model-explain-text.ipynb`, celdas JSON 9 y 19 | SHAP sobre `model.predict` y conversión de valores y atribuciones en narrativa. | Adoptar la separación entre explicación numérica y redacción. Para explicar probabilidades hay que calcular atribuciones de esa salida, no reutilizar las de etiquetas. |
+
+Los índices JSON comienzan en cero. La inspección de la red guardada y de las
+matrices del modelo actual no establece equivalencia; muestra que corresponden
+a representaciones distintas. Los otros explicadores serializados requieren
+verificación propia. No se copiaron datos clínicos ni se ejecutaron notebooks.
+
+La API y la UI exponen únicamente `Impacto local por referencia`. Los otros
+métodos se rechazan explícitamente. Las referencias actuales siguen siendo
+técnicas, con estrategia `schema-midpoint-v1` y una advertencia visible de que
+no son normalidad ni una referencia clínica validada. B03 queda corregida para
+el método servido; B04 sigue abierta respecto a la justificación clínica.
+
+Los cuatro proveedores de narrativa reciben los mismos hechos y restricciones.
+Un fallo o texto vacío devuelve una plantilla y estado `fallback`, conservando
+probabilidad y filas. Una plantilla pedida explícitamente se distingue con
+`template`; se mantienen `disabled` y `generated` para los otros casos.
+
+Esta entrega no resuelve la vinculación a un resultado histórico, la edición del
+formulario tras predecir, las unidades ni la evaluación clínica de las referencias
+y del texto. Son condiciones pendientes del siguiente tramo de integración.
+
 El personal autorizado introduce los seis datos del modelo y obtiene una
 probabilidad de muerte estimada, una clasificación según el umbral configurado y
 el estado real del guardado. Puede explicar ese mismo resultado con un método
@@ -279,6 +316,30 @@ sin atribuir al texto una capacidad predictiva adicional.
 
 ## 9. Verificación realizada y pendiente
 
+### Verificación de la segunda entrega técnica
+
+Pasan 169 pruebas de backend, incluidas 62 de predicción, y 164 de frontend.
+TypeScript y el lint de los archivos de esta entrega pasan. El lint global del
+frontend termina sin errores, con advertencias existentes. El backend mantiene
+el conflicto ajeno de importaciones de `update` en el módulo de pacientes.
+
+Las pruebas comparan cada probabilidad de sustitución con el pipeline, comprueban
+los siete cálculos esperados por explicación y verifican que el prompt contiene
+los resultados de las seis variables. Cubren rechazo de métodos no implementados,
+fallos y respuestas vacías de proveedores, estados de narrativa y presentación
+del respaldo y de las limitaciones.
+
+Los adaptadores `local`, `gemini` y `huggingface` se ejercitaron con transporte HTTP
+simulado para comprobar sus mensajes y payloads sin contactar proveedores. La
+rama `embedded` se comprobó con un generador simulado. El entorno de prueba no
+tiene el archivo GGUF previsto en la ruta local por defecto; no se midió generación
+real, concurrencia ni calidad clínica de un LLM.
+
+Una comprobación adicional ejecutó el BFF real contra procesos HTTP temporales
+del gateway y del predictor. El caso sintético devolvió probabilidad `0.9246`,
+seis filas completas y estado `fallback` al solicitar el modelo local ausente.
+La misma ruta rechazó SHAP con 422. No se contactaron proveedores de nube.
+
 ### Verificación de la primera entrega técnica
 
 Las seis suites del backend pasan con 153 pruebas; predicción aporta 46.
@@ -374,3 +435,133 @@ Summary2026 sirven como antecedentes, no como aceptación automática del candid
 Antes de activar una versión nueva se fijan población, métricas y criterios de
 aceptación. Se conserva el paquete anterior y se prueba la reversión. La mejora
 de integración y una eventual mejora predictiva se evalúan por separado.
+
+## 11. Hoja de ruta para la siguiente implementación
+
+### Objetivo y alcance
+
+Consolidar en SADUCI un recorrido confiable desde la entrada de datos hasta la
+predicción, la explicación numérica y la narrativa opcional. Cada explicación
+debe corresponder a la predicción y versión del modelo que la originaron. La
+narrativa redacta la evidencia calculada y no sustituye la inferencia ni el
+criterio clínico.
+
+Esta hoja de ruta no cambia el desenlace, no reentrena modelos ni añade alertas
+tempranas. La integración de proveedores externos con datos clínicos requiere
+una decisión de privacidad y validación aparte.
+
+### Puertas de decisión antes de ampliar el uso clínico
+
+- [ ] Confirmar qué significa `Fallece`, qué plazo define «mortalidad oculta
+  post» y en qué momento se usaría el resultado.
+- [ ] Confirmar con documentación la población del modelo, el significado de
+  los diagnósticos y las unidades de `TiempoVAM`.
+- [ ] Acordar si la explicación actual por puntos medios se conserva solo como
+  contraste técnico o si debe reemplazarse por una referencia clínica aprobada.
+- [ ] Determinar si las variables clínicas pueden enviarse a un proveedor
+  externo. No se habilita ese envío para este flujo antes de resolverlo.
+- [ ] Definir quién revisará las explicaciones y qué errores bloquean su uso.
+
+### Entrega A. Vincular la explicación al resultado ejecutado
+
+**Dependencias.** Ninguna decisión de proveedor ni cambio del modelo.
+
+**Trabajo.** Recorrer la pantalla de predicción, el guardado y el detalle del
+historial. Verificar si editar el formulario después de predecir permite
+explicar datos distintos; si un resultado guardado puede consultarse con la
+versión correcta; y si un fallo al guardar se presenta como guardado. Corregir
+solo las discrepancias demostradas. La explicación debe recibir el mismo
+conjunto de datos y la misma versión usados para producir el resultado asociado.
+
+**Aceptación.** Un caso nuevo y uno del historial muestran una explicación
+asociada al resultado correspondiente. Editar datos no cambia silenciosamente
+la evidencia de un resultado anterior. Si no se puede recuperar la versión del
+modelo de un registro antiguo, la interfaz lo indica.
+
+**Verificación.** Pruebas del flujo y de persistencia, más una ejecución en la
+interfaz que compruebe predicción, edición, guardado e historial.
+
+### Entrega B. Confirmar el contrato clínico de entradas
+
+**Depende de.** Respuestas a las puertas de decisión sobre desenlace, población,
+diagnósticos y unidades.
+
+**Trabajo.** Registrar el diccionario confirmado junto al modelo. Comparar los
+códigos admitidos por SADUCI con la fuente del modelo. Ajustar etiquetas,
+unidades, validaciones o conversiones únicamente cuando la fuente lo justifique.
+Conservar rechazos explícitos para valores no compatibles y no inferir códigos
+ni límites clínicos desde los nombres de campo.
+
+**Aceptación.** Cada entrada tiene definición, unidad, origen, valores admitidos
+y comportamiento ante datos desconocidos documentados. Casos de equivalencia
+demuestran que una misma entrada llega sin conversión accidental al predictor.
+
+**Verificación.** Pruebas de contrato para entradas válidas, códigos no
+admitidos, datos fuera de rango y unidades confirmadas. Comparar con inferencias
+de referencia del artefacto versionado.
+
+### Entrega C. Elegir y validar la explicación numérica
+
+**Depende de.** Entrega A y decisión clínica sobre qué comparación necesita el
+personal médico. Para una referencia poblacional, también depende de contar con
+datos de referencia autorizados y documentados.
+
+**Trabajo.** Mantener identificada la explicación por sustitución de una
+variable como contraste del pipeline actual, no como causalidad ni normalidad.
+Evaluar un explicador basado en probabilidad del artefacto actual solo si se
+pueden fijar versión, datos de referencia y comprobaciones de fidelidad. No
+reutilizar el IG serializado del proyecto de investigación hasta demostrar que
+corresponde a este artefacto y que sus salidas se interpretan correctamente.
+
+**Aceptación.** Se publica el método realmente ejecutado y su referencia. Las
+pruebas comprueban que sus valores concuerdan con el predictor vigente y que
+ninguna pantalla lo presenta como causa o recomendación clínica. Si no existe
+referencia poblacional aprobada, el producto conserva explícitamente el alcance
+técnico de la comparación.
+
+**Verificación.** Usar casos sintéticos reproducibles y comparar con el
+pipeline completo. Pedir a profesionales clínicos que revisen ejemplos antes
+de ampliar las afirmaciones de la interfaz.
+
+### Entrega D. Habilitar narrativa con condiciones conocidas
+
+**Depende de.** Entregas A y C, además de la decisión de privacidad y acceso.
+
+**Trabajo.** Medir el proveedor local en el equipo real, incluida latencia,
+memoria, concurrencia y comportamiento ante ausencia del modelo. Mantener el
+fallback estructurado. Evaluar una opción de nube solo si existe autorización
+explícita para los datos que se transmitirían; documentar proveedor, modelo,
+campos enviados y tratamiento de errores antes de habilitarla.
+
+**Aceptación.** Fallos de generación nunca alteran la probabilidad ni la
+evidencia numérica. Las narrativas evaluadas preservan cifras, no inventan
+causas, diagnósticos ni tratamientos y comunican incertidumbre. La opción
+externa queda desactivada mientras no se confirme su autorización.
+
+**Verificación.** Ejecutar pruebas con proveedor simulado y fallback. Medir el
+modelo local instalado. Pedir a clínicos que revisen ejemplos a ciegas con
+criterios fijados antes de evaluar los resultados.
+
+### Orden de ejecución y regla de avance
+
+1. Resolver las decisiones de desenlace, datos, explicación deseada y privacidad.
+2. Implementar y verificar la Entrega A, que puede comenzar sin cambiar el modelo.
+3. Completar la Entrega B con el diccionario confirmado.
+4. Prototipar y decidir la Entrega C antes de sustituir la explicación actual.
+5. Medir la Entrega D y habilitar solo proveedores autorizados.
+6. Mantener detección temprana como una línea posterior con definición de
+   desenlace y evaluación independiente.
+
+Cada entrega se revisa por separado y no avanza si falla su aceptación. Las
+respuestas pendientes que condicionan B, C y D se solicitan junto a este plan;
+no se presumen a partir del código ni de `Summary2026`.
+
+### Criterio de finalización de esta integración
+
+La integración de la versión actual termina cuando el personal puede obtener
+una predicción reproducible; consultar una explicación vinculada al resultado y
+versión correctos; entender qué evidencia es técnica y cuáles son sus límites;
+y recibir una narrativa fiel o un fallback claro. Debe existir evidencia de
+pruebas automáticas, recorrido real de la interfaz y revisión clínica de la
+narrativa habilitada. Este criterio no implica validación prospectiva ni
+autorización para alertas tempranas.

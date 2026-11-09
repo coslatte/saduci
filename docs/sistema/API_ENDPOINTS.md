@@ -117,6 +117,43 @@ La procedencia de una explicación identifica el modelo usado para ese cálculo.
 Todavía no vincula la explicación al ID de una predicción histórica ni garantiza
 que use su versión original tras un cambio de artefacto.
 
+### Evidencia numérica y narrativa
+
+`POST /prediction/explain` y su alias aceptan únicamente
+`method: "Impacto local por referencia"`; ese es también el valor por defecto.
+LIME, SHAP, Gradientes Integrados y Mapas de Saliencia responden 422 mientras no
+tengan una implementación verificada. La interfaz solo ofrece el método efectivo.
+
+La respuesta añade `explainer_version`, `reference_strategy` y
+`reference_warning`. Cada fila de `rows` contiene `baseline_value_display` y
+`baseline_probability`, además del valor observado, referencia numérica,
+contribución y dirección. La contribución es la probabilidad original menos la
+probabilidad al sustituir esa variable, con el redondeo documentado. Los contrastes
+no tienen por qué sumar la probabilidad ni representar causas clínicas.
+
+La estrategia actual `schema-midpoint-v1` utiliza puntos medios de los límites
+del esquema, con códigos válidos en los campos actuales. No constituye una
+referencia clínica validada. El aviso acompaña los datos, aparece en el panel y
+se incluye en el prompt. Las unidades de ventilación siguen pendientes de confirmar.
+
+El generador recibe una `PlatformExplanationEvidence` con las seis variables,
+sus categorías legibles, resultados de sustitución, método, umbral y procedencia.
+No recibe el identificador del paciente. Todos los proveedores comparten las
+restricciones de interpretación del predictor.
+
+`narrative_status` distingue estos resultados:
+
+| Estado | Significado |
+| --- | --- |
+| `disabled` | No se solicitó narrativa. |
+| `generated` | El proveedor devolvió texto no vacío; no implica validación clínica del texto. |
+| `template` | Se pidió explícitamente el proveedor de plantilla `stub`. |
+| `fallback` | Falló el proveedor o devolvió texto vacío y se utilizó una plantilla. |
+
+La indisponibilidad de un proveedor no elimina probabilidad ni filas calculadas.
+En el fallback, `narrative_provider` es `stub` y `narrative_model` es
+`template-reference-v2`. La UI distingue este caso de una generación con IA.
+
 ## Simulation Service (:7004)
 
 - `GET /health`, `POST /simulation`

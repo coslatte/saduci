@@ -6,6 +6,37 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
 
 ## [Unreleased]
 
+### Fixed — Vínculo entre el resultado y su explicación
+
+- La pantalla conserva la solicitud exacta de la última predicción y la usa al
+  calcular su explicación. Si el formulario cambia, avisa que la explicación
+  corresponde al resultado previo.
+- El historial bloquea explicaciones cuando el registro no conserva la versión
+  y el checksum del modelo, y descarta resultados calculados con otro artefacto.
+- La plataforma informa cuando el backend calcula una probabilidad pero no
+  logra guardar el registro. No presenta ese caso como un guardado exitoso.
+- Las respuestas tardías de una explicación se descartan si cambian la
+  predicción, el método elegido o el registro abierto.
+- Los BFF de predicción y explicación resuelven el JWT desde la cabecera o la
+  cookie httpOnly. Sin sesión devuelven 401 y no envían datos clínicos al gateway.
+
+### Changed — Evidencia de inferencia para las narrativas
+
+- Una estructura tipada reúne probabilidad, referencias, seis contrastes y
+  procedencia del mismo pipeline; alimenta tanto la respuesta como el prompt.
+  Las referencias categóricas incluyen descripciones y cada fila informa la
+  probabilidad obtenida al sustituir la variable.
+- El método expuesto es impacto local por referencia. La API rechaza métodos
+  todavía no implementados y la plataforma deja de anunciarlos como disponibles.
+- Todos los proveedores de narrativa reciben los mismos hechos y límites de
+  interpretación. Un fallo o una respuesta vacía conserva la explicación numérica
+  y genera una plantilla con estado `fallback`, visible en la interfaz.
+- Se distingue narrativa desactivada, texto generado, plantilla solicitada y
+  respaldo por fallo. Las referencias técnicas se presentan con su limitación
+  clínica, sin atribuirles normalidad ni causalidad.
+- Se documenta por qué el explicador IG histórico y el notebook SHAP no se
+  trasladan directamente al predictor vigente.
+
 ### Changed — Primera integración verificable del predictor original
 
 - Se conserva el artefacto `new_workflow.joblib` original y se añade un manifiesto
@@ -96,7 +127,7 @@ aplicación se conserva en `docs/sistema/history/core-changelog.md` y
   (estado y acciones). Las acciones ya eran estables con `useCallback`, así que
   ahora un cambio de notificación no las invalida. Se exportan
   `useNotificationsState` y `useNotificationsActions`.
-- `README.md`: el diagrama de arquitectura pasa de ASCII a Mermaid.
+- La vista de arquitectura de `README.md` usa un diagrama Excalidraw con vista previa PNG y archivo editable.
 
 ### Added — Skills del proyecto
 
